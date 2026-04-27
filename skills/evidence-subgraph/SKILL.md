@@ -67,6 +67,10 @@ Produce a table (Markdown or JSON) with columns at minimum:
 
 Separate section listing **unresolved** premises and **empty** premises.
 
+### 8. Optional: source ground-truth loop
+
+When the root (or a same-package upstream) is tied to a `paper:<numeric_id>` and any of the following hold — the root cites **specific numerical values / figure numbers / equation labels**, you need to disambiguate **near-miss candidates**, the paper is likely to contain **multiple parallel sub-models**, or a `$scholarly-review` handoff is imminent — pull the cleaned OCR markdown via **`$lkm-api papers-ocr`** and use it as an independent anchor. Follow `references/source-ground-truth.md`: add `source_page_anchor` cells to the audit (e.g. `"Fig. 12 caption"`, `"§ RESULTS FOR THE J-Q MODEL"`), keep the markdown under a local `sources/` directory, **do not** commit it, and **do not** promote OCR paragraphs into synthetic premises — use them only to ratify / reject edges and to enumerate sub-models LKM may have split across multiple claim ids.
+
 ## Edge styling (suggested)
 
 - **solid dark:** `direct_support` (native evidence-chain edge)
