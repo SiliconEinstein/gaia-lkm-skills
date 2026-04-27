@@ -104,10 +104,12 @@ Use `scripts/lkm.mjs` for deterministic API calls:
 node skills/lkm-api/scripts/lkm.mjs search --query "your query" --top-k 10 --out search.json
 node skills/lkm-api/scripts/lkm.mjs evidence --id gcn_xxx --max-chains 10 --out evidence.json
 node skills/lkm-api/scripts/lkm.mjs variables --ids var1,var2 --out variables.json
-node skills/lkm-api/scripts/lkm.mjs papers-ocr --ids paper:123,paper:456 --out ocr.json
+node skills/lkm-api/scripts/lkm.mjs papers-ocr --ids 812114964624965633,paper:812079052750848000 --out ocr.json
 ```
 
 The helper uses Node built-in `fetch` and writes JSON to stdout or `--out`.
+
+`papers-ocr` accepts both raw numeric ids and ids prefixed with `paper:` (the helper strips the prefix); the response carries **signed TOS URLs that expire in 24 hours** — follow up with `curl` on `markdown_url` / `images[].url` to persist the content. See `references/api-contract.md` for field and id-format details.
 
 ## Handoff
 

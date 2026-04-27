@@ -78,11 +78,39 @@ Body:
 
 ```json
 {
-  "ids": ["paper:123", "paper:456"]
+  "paper_ids": ["812114964624965633", "812079052750848000"]
 }
 ```
 
-Returns OCR content for each paper. Response includes `expires_at` for signed URLs/cached content.
+Field/id format pitfalls (observed in prod and test):
+
+- Body field must be **`paper_ids`** (snake_case). `ids` / `PaperIDs` return `290002` validation errors.
+- Ids must be **plain numeric strings without the `paper:` prefix**. Ids carrying the prefix end up in `data.not_found`. The CLI helper (`scripts/lkm.mjs papers-ocr --ids …`) strips the prefix automatically; callers writing raw HTTP must strip it themselves.
+
+Response shape:
+
+```json
+{
+  "code": 0,
+  "data": {
+    "items": [
+      {
+        "paper_id": "812114964624965633",
+        "markdown_url": "https://…tos-cn-beijing.volces.com/paper_ocr/md/<id>.md?X-Tos-Signature=…",
+        "images": [
+          {"rel_path": "<id>_1.jpg", "url": "https://…paper_ocr/images/<id>/<id>_1.jpg?…"}
+        ]
+      }
+    ],
+    "not_found": [],
+    "expires_at": "2026-04-28T19:24:22+08:00"
+  }
+}
+```
+
+- `markdown_url` / `images[].url` are **signed TOS URLs that expire in 24 hours** (see `expires_at`). Download immediately if you need an offline artefact — do not store the URL and rely on it later.
+- The body response does **not** inline the markdown; you must fetch `markdown_url` separately (e.g. `curl "$url" -o paper.md`).
+- The markdown is OCR-cleaned: preserves LaTeX, figure captions, section headers, and reference keys — suitable as a **ground-truth anchor** for downstream evidence-graph auditing (see `$evidence-subgraph` → `references/source-ground-truth.md`).
 
 ## Retrieval Discipline
 

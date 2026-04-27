@@ -111,11 +111,14 @@ async function main() {
 
   if (command === "papers-ocr") {
     if (!args.ids) throw new Error("Missing --ids (comma-separated paper IDs)");
-    const ids = args.ids.split(",").map((s) => s.trim());
+    const paper_ids = args.ids
+      .split(",")
+      .map((s) => s.trim())
+      .map((s) => (s.startsWith("paper:") ? s.slice("paper:".length) : s));
     const result = await fetchJson(`${baseUrl}/papers/ocr/batch`, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ ids }),
+      body: JSON.stringify({ paper_ids }),
     });
     await writeResult(result, args.out);
     return;
