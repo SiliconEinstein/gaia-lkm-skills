@@ -20,6 +20,8 @@ Write for a reader who has never seen the retrieval system. The review should ex
 3. Reconstruct reasoning.
    Explain how prior work got from evidence to conclusion. Use the audited graph as a guide, but avoid system terms such as claim, premise, factor, or ID in the main prose.
 
+   When the graph was built **conclusion-first** with **`upstream_conclusion_support`** edges, narrate in two layers: (a) how **earlier papers’ established results** license each needed intermediate claim, and (b) how those intermediates compose the **target conclusion**. Make the **inferential bridge** explicit where wording differs between sources.
+
 4. Compare sources.
    Discuss agreements and discrepancies: theory vs experiment, model vs model, measurement vs measurement, textual interpretation vs textual interpretation, or dataset vs dataset.
 

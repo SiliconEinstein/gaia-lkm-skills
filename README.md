@@ -6,10 +6,10 @@ The repository is organized so the same skill bodies can be used by Codex, Claud
 
 ## Skills
 
-- `lkm-api`: query LKM search/evidence APIs and preserve raw retrieval artifacts.
-- `evidence-subgraph`: construct and audit evidence-dependence subgraphs from claims, premises, contexts, or extracted propositions.
-- `scholarly-review`: write standalone academic reviews from audited evidence structures.
-- `evidence-graph-review`: thin orchestrator that runs the above skills in sequence.
+- `lkm-api`: query LKM search/evidence APIs, preserve raw retrieval artifacts, and run **premise-driven search bundles** to find **prior papers’ conclusion-type claims** that may support each premise **on content** (not verbatim).
+- `evidence-subgraph`: build graphs **rooted on a chain-backed user conclusion** (`evidence` → `total_chains>0`); treat **native** premises as a **worklist item** (including **empty-text** premises anchored on **`steps`**); classify edges including **`upstream_conclusion_support`**; render Graphviz/Mermaid with **locale-aware human labels**, **publication-style (premium) colors**, and audit tables (see `references/premise-upstream-support.md`, `references/graph-output.md`).
+- `scholarly-review`: write standalone academic reviews from audited evidence structures, including **prior-result → premise → conclusion** narration when applicable.
+- `evidence-graph-review`: orchestrator for the default pipeline: **chain-backed conclusion (`total_chains>0`) → native premises → per-premise upstream retrieval → audited graph → review** (chain-less synthetic mode only with explicit waiver).
 
 ## Plugin Manifests
 

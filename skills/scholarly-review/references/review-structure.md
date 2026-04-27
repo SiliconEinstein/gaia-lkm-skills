@@ -24,7 +24,9 @@
 
 State relation semantics explicitly:
 
-> Solid edges denote direct evidence-chain support; dashed edges denote manually verified support across sources; dotted edges denote background context and should not be read as proof dependencies.
+> Solid edges denote direct evidence-chain support; dashed edges denote manually verified support across sources; **blue dashed edges** (when used) denote **prior paper conclusion → premise** support judged on **propositional content**; dotted edges denote background context and should not be read as proof dependencies.
+>
+> Figures delivered to readers should use **natural-language node captions** (e.g. 中文) keyed to the same claims referenced in the audit table, not raw ids alone—see `skills/evidence-subgraph/references/graph-output.md`.
 
 ## Quality Checklist
 
@@ -33,4 +35,5 @@ State relation semantics explicitly:
 - Are assumptions and open problems named?
 - Are measured, computed, fitted, and inferred claims separated?
 - Is the graph caption honest about dependencies vs context?
+- For **conclusion-rooted** graphs, does the prose (or appendix) make clear **which prior established results license which premises**, without confusing lexical similarity with support?
 - Does the final PDF render correctly?

@@ -13,6 +13,7 @@ Draw an edge as support only if:
 
 - `direct_support`: explicit returned evidence-chain edge.
 - `verified_support`: manually verified support not directly returned as the downstream chain.
+- `upstream_conclusion_support`: manually verified support where the **upstream node is a prior paper’s conclusion-type claim** (or equivalent standalone result) and **propositional content**—not wording—supports a **downstream premise** of the user’s root conclusion. See `references/premise-upstream-support.md`.
 - `context`: relevant background, method, definition, or experimental setting.
 - `weak_context`: generic or cross-system background.
 - `reversed`: downstream conclusion retrieved as upstream support.
@@ -26,6 +27,7 @@ Break cycles created only by semantic retrieval. Keep a cycle only when explicit
 
 ## Common False Positives
 
+- **lexical hit, no inferential link** to the specific premise (especially across subfields or homonyms)
 - shared keywords but different system
 - generic formulas used as if they proved case-specific values
 - method terms matching across unrelated fields

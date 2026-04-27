@@ -7,6 +7,8 @@ function usage() {
   console.log(`Usage:
   lkm.mjs search --query "terms" [--top-k 10] [--base-url URL] [--out file]
   lkm.mjs evidence --id CLAIM_ID [--max-chains 10] [--sort-by comprehensive] [--base-url URL] [--out file]
+
+Optional env: LKM_API_BASE_URL (full base including /api/v1) when --base-url is omitted.
 `);
 }
 
@@ -59,7 +61,7 @@ async function writeResult(result, outPath) {
 async function main() {
   const args = parseArgs(process.argv.slice(2));
   const command = args._[0];
-  const baseUrl = args["base-url"] || DEFAULT_BASE_URL;
+  const baseUrl = args["base-url"] || process.env.LKM_API_BASE_URL || DEFAULT_BASE_URL;
 
   if (!command || args.help) {
     usage();
