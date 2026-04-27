@@ -13,12 +13,14 @@ When the task is **conclusion-rooted dependency mapping**, retrieval is **premis
 
 ## Default Endpoints
 
-Use `https://lkm.bohrium.com/api/v1` unless the user provides a different base URL, CLI `--base-url`, or `LKM_API_BASE_URL` (full base including `/api/v1`).
+Use `https://lkm.test.bohrium.com/api/v1` unless the user provides a different base URL, CLI `--base-url`, or `LKM_API_BASE_URL` (full base including `/api/v1`).
 
 Common operations:
 
 - search: `POST /search`
 - evidence: `GET /claims/{id}/evidence`
+- variables: `POST /variables/batch`
+- papers-ocr: `POST /papers/ocr/batch`
 
 Read `references/api-contract.md` for request/response expectations.
 
@@ -101,6 +103,8 @@ Use `scripts/lkm.mjs` for deterministic API calls:
 ```bash
 node skills/lkm-api/scripts/lkm.mjs search --query "your query" --top-k 10 --out search.json
 node skills/lkm-api/scripts/lkm.mjs evidence --id gcn_xxx --max-chains 10 --out evidence.json
+node skills/lkm-api/scripts/lkm.mjs variables --ids var1,var2 --out variables.json
+node skills/lkm-api/scripts/lkm.mjs papers-ocr --ids paper:123,paper:456 --out ocr.json
 ```
 
 The helper uses Node built-in `fetch` and writes JSON to stdout or `--out`.

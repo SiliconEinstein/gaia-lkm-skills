@@ -1,12 +1,14 @@
 #!/usr/bin/env node
 import fs from "node:fs/promises";
 
-const DEFAULT_BASE_URL = "https://lkm.bohrium.com/api/v1";
+const DEFAULT_BASE_URL = "https://lkm.test.bohrium.com/api/v1";
 
 function usage() {
   console.log(`Usage:
   lkm.mjs search --query "terms" [--top-k 10] [--base-url URL] [--out file]
   lkm.mjs evidence --id CLAIM_ID [--max-chains 10] [--sort-by comprehensive] [--base-url URL] [--out file]
+  lkm.mjs variables --ids id1,id2,... [--base-url URL] [--out file]
+  lkm.mjs papers-ocr --ids id1,id2,... [--base-url URL] [--out file]
 
 Optional env: LKM_API_BASE_URL (full base including /api/v1) when --base-url is omitted.
 `);
@@ -91,6 +93,30 @@ async function main() {
     const sortBy = args["sort-by"] || "comprehensive";
     const url = `${baseUrl}/claims/${encodeURIComponent(args.id)}/evidence?max_chains=${maxChains}&sort_by=${encodeURIComponent(sortBy)}`;
     const result = await fetchJson(url);
+    await writeResult(result, args.out);
+    return;
+  }
+
+  if (command === "variables") {
+    if (!args.ids) throw new Error("Missing --ids (comma-separated)");
+    const ids = args.ids.split(",").map((s) => s.trim());
+    const result = await fetchJson(`${baseUrl}/variables/batch`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ ids }),
+    });
+    await writeResult(result, args.out);
+    return;
+  }
+
+  if (command === "papers-ocr") {
+    if (!args.ids) throw new Error("Missing --ids (comma-separated paper IDs)");
+    const ids = args.ids.split(",").map((s) => s.trim());
+    const result = await fetchJson(`${baseUrl}/papers/ocr/batch`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ ids }),
+    });
     await writeResult(result, args.out);
     return;
   }
