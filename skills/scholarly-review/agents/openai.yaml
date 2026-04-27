@@ -1,0 +1,4 @@
+interface:
+  display_name: "Scholarly Review"
+  short_description: "Write standalone reviews from audited evidence"
+  default_prompt: "Use $scholarly-review to write a standalone academic review from this audited evidence graph."

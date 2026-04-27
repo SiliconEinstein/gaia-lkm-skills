@@ -1,0 +1,15 @@
+---
+description: Use Gaia LKM skills for LKM evidence-chain retrieval, audited evidence subgraphs, and scholarly reviews.
+globs: "**/*"
+alwaysApply: false
+---
+
+When the user asks to query LKM, inspect claim evidence, trace premises or contexts, build a dependency/evidence graph, render Graphviz diagrams, or write a scholarly review from retrieved claims:
+
+1. Read the relevant skill under `skills/`.
+2. Use `skills/lkm-api/SKILL.md` for API usage.
+3. Use `skills/evidence-subgraph/SKILL.md` for dependency auditing and graph construction.
+4. Use `skills/scholarly-review/SKILL.md` for standalone academic prose.
+5. Use `skills/evidence-graph-review/SKILL.md` when the task combines all stages.
+
+Never treat semantic similarity as proof of dependency. Distinguish dependencies from context/background in both graph and prose.

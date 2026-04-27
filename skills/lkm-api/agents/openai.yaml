@@ -1,0 +1,4 @@
+interface:
+  display_name: "LKM API"
+  short_description: "Query LKM search and evidence-chain APIs"
+  default_prompt: "Use $lkm-api to search LKM and fetch evidence chains for these claims."
