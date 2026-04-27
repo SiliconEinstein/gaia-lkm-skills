@@ -1,13 +1,13 @@
 # API Contract
 
-默认 Base：`https://lkm.bohrium.com/api/v1`。联调其他部署时用 `lkm.mjs --base-url …` 或环境变量 `LKM_API_BASE_URL`（须含 `/api/v1`）。
+默认 Base：`https://lkm.test.bohrium.com/api/v1`。联调其他部署时用 `lkm.mjs --base-url …` 或环境变量 `LKM_API_BASE_URL`（须含 `/api/v1`）。
 
 ## Search
 
 Endpoint:
 
 ```http
-POST https://lkm.bohrium.com/api/v1/search
+POST https://lkm.test.bohrium.com/api/v1/search
 ```
 
 Default body:
@@ -34,7 +34,7 @@ Record:
 Endpoint:
 
 ```http
-GET https://lkm.bohrium.com/api/v1/claims/{id}/evidence?max_chains=10&sort_by=comprehensive
+GET https://lkm.test.bohrium.com/api/v1/claims/{id}/evidence?max_chains=10&sort_by=comprehensive
 ```
 
 Record:
@@ -47,6 +47,42 @@ Record:
 - every premise ID and content
 
 `sort_by=premises` may not be valid on all deployments. Prefer `comprehensive` or `recent`.
+
+## Variables (Batch)
+
+Endpoint:
+
+```http
+POST https://lkm.test.bohrium.com/api/v1/variables/batch
+```
+
+Body:
+
+```json
+{
+  "ids": ["var_id_1", "var_id_2"]
+}
+```
+
+Returns variable details for each requested ID.
+
+## Papers OCR (Batch)
+
+Endpoint:
+
+```http
+POST https://lkm.test.bohrium.com/api/v1/papers/ocr/batch
+```
+
+Body:
+
+```json
+{
+  "ids": ["paper:123", "paper:456"]
+}
+```
+
+Returns OCR content for each paper. Response includes `expires_at` for signed URLs/cached content.
 
 ## Retrieval Discipline
 
