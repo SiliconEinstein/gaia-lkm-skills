@@ -1,7 +1,7 @@
 {
   "name": "gaia-lkm-skills",
   "version": "0.1.0",
-  "description": "Field-neutral agent skills for LKM API retrieval, evidence-subgraph auditing, graph rendering, and scholarly review writing.",
+  "description": "Field-neutral agent skills for LKM API retrieval, evidence-subgraph auditing, graph rendering, and scholarly synthesis writing.",
   "author": {
     "name": "SiliconEinstein"
   },
@@ -13,13 +13,13 @@
     "claim-graph",
     "evidence-chain",
     "graphviz",
-    "review"
+    "synthesis"
   ],
   "skills": "./skills/",
   "interface": {
     "displayName": "Gaia LKM Skills",
-    "shortDescription": "Evidence-chain retrieval, graph auditing, and scholarly reviews",
-    "longDescription": "Use Gaia LKM Skills to query LKM APIs, inspect reasoning chains, build audited evidence subgraphs, render dependency diagrams, and write standalone academic reviews across disciplines.",
+    "shortDescription": "Evidence-chain retrieval, graph auditing, and scholarly syntheses",
+    "longDescription": "Use Gaia LKM Skills to query LKM APIs, inspect reasoning chains, build audited evidence subgraphs, render dependency diagrams, and write standalone academic syntheses across disciplines.",
     "developerName": "SiliconEinstein",
     "category": "Research",
     "capabilities": [
@@ -29,7 +29,7 @@
     ],
     "defaultPrompt": [
       "Use Gaia LKM Skills to trace this claim's evidence chain and build an audited dependency graph.",
-      "Use Gaia LKM Skills to turn these retrieved claims into a standalone scholarly review."
+      "Use Gaia LKM Skills to turn these retrieved claims into a standalone scholarly synthesis."
     ],
     "websiteURL": "https://github.com/SiliconEinstein/gaia-lkm-skills",
     "brandColor": "#2563EB",
