@@ -1,6 +1,6 @@
 ---
 name: evidence-subgraph
-description: Build, audit, and render a methodological-decomposition evidence graph rooted on a chain-backed quantitative claim of the form "<system or setting> has <quantity> = <value>" or "<computation / measurement> yields <observable>". The graph is the anatomy of how that single result is closed inside one paper's reasoning — observational / experimental constraints, theoretical or computational inputs, intermediate computed quantities, derivation / inversion / fitting steps, parameter and approximation choices, and external-paper / setting context. Multiple labelled joint-support factor diamonds, three-class edge taxonomy (chain support / background / verification support — render in the user's locale, e.g. 链式支撑 / 背景 / 核验支撑 in Chinese), auto-layout (Graphviz neato/sfdp or Mermaid flowchart with linkStyle for per-edge classes — Mermaid mindmap is NOT acceptable), CJK-safe fonts and labels. Domain-agnostic: physics, chemistry, materials, biology, ML, climate, astrophysics, etc. Inputs come from `$lkm-api` (chain payload + `data.papers` metadata + OCR'd root paper). Hand off to `$scholarly-review` for the prose.
+description: Build, audit, and render a methodological-decomposition evidence graph rooted on a chain-backed quantitative claim of the form "<system or setting> has <quantity> = <value>" or "<computation / measurement> yields <observable>". The graph is the anatomy of how that single result is closed inside one paper's reasoning — observational / experimental constraints, theoretical or computational inputs, intermediate computed quantities, derivation / inversion / fitting steps, parameter and approximation choices, and external-paper / setting context. Multiple labelled joint-support factor diamonds, three-class edge taxonomy (chain support / background / verification support — render in the user's locale, e.g. 链式支撑 / 背景 / 核验支撑 in Chinese), auto-layout (Graphviz neato/sfdp or Mermaid flowchart with linkStyle for per-edge classes — Mermaid mindmap is NOT acceptable), CJK-safe fonts and labels. Domain-agnostic: physics, chemistry, materials, biology, ML, climate, astrophysics, etc. Inputs come from `$lkm-api` (chain payload + `data.papers` metadata). The graph is strictly chain-bounded — only LKM-returned premises and their explicit content are admitted as nodes; no synthetic bridging from external sources. Hand off to `$scholarly-review` for the prose.
 ---
 
 # Evidence Subgraph
@@ -11,7 +11,7 @@ The graph shows the **anatomy of one quantitative result**, not a literature gen
 
 `(observational / experimental anchors) + (theoretical / computational inputs) + (parameter / approximation choices) → (intermediate quantities) → (derivation / inversion / fitting) → (root result)`.
 
-External papers do **not** become "tier-1 upstream conclusions" — they appear as named **context** nodes (named by the formula, dataset, method, or theorem they contributed; *not* by paper id) attached to whichever reasoning step uses them. The backbone is the root paper's own reasoning chain (from LKM `evidence`), enriched with method/parameter/setting context drawn from the OCR'd paper text.
+External papers do **not** become "tier-1 upstream conclusions" — they appear as named **context** nodes (named by the formula, dataset, method, or theorem they contributed *as named in the LKM premise content*; *not* by paper id) attached to whichever reasoning step uses them. The backbone is the root paper's own reasoning chain returned by LKM `evidence`. The graph is strictly chain-bounded: every node and edge must trace to content that LKM returned. Do not mint synthetic intermediate nodes to bridge gaps in the chain payload — gaps are recorded as audit-table observations, not papered over.
 
 The same paradigm applies across domains:
 
@@ -20,7 +20,7 @@ The same paradigm applies across domains:
 - **ML / AI** — `(architecture + dataset + hyperparameters) → (training curves / intermediate metrics) → (eval protocol) → (benchmark score / scaling exponent)`.
 - **Modeling-driven fields** (climate, astrophysics, epidemiology) — `(forcings / initial conditions + model resolution + parameterizations) → (simulated observables) → (comparison / inversion) → (sensitivity parameter)`.
 
-The skill text below is domain-agnostic. Every domain-specific term in the produced graph comes from the OCR'd root paper, not from the skill.
+The skill text below is domain-agnostic. Every domain-specific term in the produced graph comes from the LKM chain payload (premise / factor / step content and `data.papers` metadata), not from the skill.
 
 ## Default root
 
@@ -34,18 +34,9 @@ If invoked with a chain-less claim id (`total_chains == 0`), stop and return the
 
 The `$lkm-api evidence` payload for the root must have `total_chains > 0`. Synthetic premises only with explicit user waiver. If the root id does not satisfy the gate, return to `$lkm-api` for re-discovery — do not proceed.
 
-### 1. OCR the root paper
+The chain payload itself is the **single source of truth** for every node and audit anchor in this skill: claim `content`, factor `subtype`, premise `id` and `content`, optional `steps[].reasoning`, and the `data.papers` metadata block. No external paper text is admitted as a node.
 
-The orchestrator should have already run `papers/ocr/batch` on the root paper (resolved via `data.papers[<source_package>]` from the evidence response, falling back to `evidence_chains[].source_package`). If not, run it now via `$lkm-api`. The OCR is the source of truth for:
-
-- numerical anchors (parameter values, equation labels, computed or measured quantities);
-- method choices (which simulation method, which fit model, which approximation regime, which reduction);
-- external-paper invocations (named formulas, named datasets, named theorems, cited benchmarks);
-- the equation or procedure that closes the inversion / fit (the step that fixes the root result).
-
-Cite OCR page or equation anchors in the audit table.
-
-### 2. Factor diamonds (one per `gfac_*`)
+### 1. Factor diamonds (one per `gfac_*`)
 
 Each `gfac_*` factor in the root's evidence chains becomes a labelled diamond (`shape=diamond` in DOT, or analogous in Mermaid). The label is two short lines:
 
@@ -56,7 +47,7 @@ If the chain has **multiple** `gfac_*` nodes, render multiple factor diamonds �
 
 If the chain has **exactly one** `gfac_*` node, render exactly one diamond. Use the bottom-line tag to summarise the cumulative semantic of all premises (e.g. *"inversion-step closure"*, *"computation + fitting"*) — do not leave the bottom line empty or generic.
 
-### 3. Native premises → typed reasoning nodes
+### 2. Native premises → typed reasoning nodes
 
 The primary text source for each premise is `factors[].premises[].content` in the parent chain payload. Some chain payloads also expose `steps[].reasoning` — that field is **optional**. Do not require `steps`; do not fail when it is absent.
 
@@ -67,23 +58,23 @@ For each native premise (chain-internal id; `total_chains == 0` standalone but f
 - **parameter choice** — an explicitly chosen scalar / categorical setting, with its value. Examples: "isotropy assumption true", "cutoff ω_c = 3 Ω_max", "mini-batch size = 64", "fixed prior σ = 0.1".
 - **derivation step** — an equation, inversion, or fitting procedure that determines a downstream quantity. Examples: "Δ_{m=1}(μ*, T_c) = 0 ⇒ μ* fixed", "argmax over θ", "linear regression on log-log axes".
 
-Render each as a labelled box (filled, locale-safe font). Label is two short lines: first line = tag (the role this node plays in the chain), second line = numerical / equation / symbol anchor (from the OCR).
+Render each as a labelled box (filled, locale-safe font). Label is two short lines: first line = tag (the role this node plays in the chain), second line = numerical / equation / symbol anchor lifted verbatim from the premise `content` (or, when present, `steps[].reasoning`).
 
 **Empty-content premises (temporary).** Some premises currently come back from `$lkm-api` with only an `id` populated and an empty `content` — this is a temporary corpus state and the LKM is being progressively populated. Render as gray dashed nodes with the placeholder label "未展开前提 / unexpanded premise" only when the user explicitly asks for full premise coverage; the default is to omit. The audit table must mark them `content unavailable (temporary)` so a future pipeline run (when content is populated) can revisit them.
 
-**OCR-sourced intermediate-result nodes.** The four reasoning-node types may also be populated from the OCR'd paper text, *in addition to* the LKM-listed premises, when an intermediate quantity sits between two premises in the closure chain and would otherwise leave the audit table without a back-bone. Mark such nodes clearly in the audit table's bridge sentence as OCR-sourced (e.g. *"from §V Table II"*); they must still satisfy the page-anchor rule. Do not invent intermediate-result nodes that do not appear verbatim in the OCR.
+**No synthetic bridging.** The graph is strictly chain-bounded. If an intermediate quantity is implied but not present in any premise / step / claim content returned by LKM, do **not** mint a node for it — record the gap in the audit table as `gap: <description>` and move on. Inventing nodes silently switches the graph from chain-backed to synthetic.
 
-### 4. Background / context nodes
+### 3. Background / context nodes
 
 Add a panel-style node (visually distinct from reasoning nodes — different fill colour, `shape=note` in DOT) for each of:
 
-- **external paper / formula / dataset / theorem invoked in the OCR** — name it by the formula, dataset, theorem, or method it contributed (e.g. *"AD formula"*, *"Morel–Anderson renormalization"*, *"ImageNet-1k"*, *"GPCR-Bench"*, *"Anderson's theorem"*) — **never** by paper id. The actual paper bibliography lives in `data.papers` and is consumed by `$scholarly-review` for the references list.
+- **external paper / formula / dataset / theorem named inside an LKM premise's `content`** — name it by the formula, dataset, theorem, or method it contributed (e.g. *"AD formula"*, *"Morel–Anderson renormalization"*, *"ImageNet-1k"*, *"GPCR-Bench"*, *"Anderson's theorem"*) — **never** by paper id, and **never** drawn from outside the chain payload. The actual paper bibliography lives in `data.papers` and is consumed by `$scholarly-review` for the references list.
 - **parameter-setting / approximation / regularization choice** — e.g. *"real-axis solution, weak damping"*, *"hybrid functional"*, *"early stopping"*.
 - **scope-bounding empirical fact** — a fact that bounds where the analysis applies (e.g. *"linear-T resistivity"*, *"validation set held out"*, *"Migdal small parameter ω_ph/E_F ≪ 1"*).
 
 Connect to the reasoning node(s) they justify, scope, or limit using **background** edges. Background nodes never participate in the conjunction structure; they annotate it. Background nodes have **no incoming chain edges**.
 
-### 5. Edge taxonomy (exactly three classes)
+### 4. Edge taxonomy (exactly three classes)
 
 | class | render style | when to use |
 |-------|--------------|-------------|
@@ -95,7 +86,7 @@ The label rendered on the edge is in the user's locale. The taxonomy itself is f
 
 **Do not introduce other classes.** No "literature support", no "tier-2 support", no `upstream_conclusion_support`. External-paper inputs are background; cross-method comparisons (confirming or partially disconfirming) are verification support — note polarity in the audit table's bridge sentence rather than inventing a fourth class.
 
-### 6. Layout, fonts, and labels (CJK-safe)
+### 5. Layout, fonts, and labels (CJK-safe)
 
 - **Auto-layout renderer**: Graphviz `neato` / `sfdp` for DOT (preferred for archival), or Mermaid `flowchart` with `linkStyle` for per-edge classes (preferred when no Graphviz install). Do **not** use Mermaid `mindmap` — it has no per-edge styling and cannot encode the three-class taxonomy.
 - **Title format**: `<root system / topic> <quantity or theme>: evidence chain and context (auto-layout)`. Localize to the user's prompt language (e.g. `<topic>：证据链与上下文（自动布局）` for Chinese). The "(auto-layout)" tag tells the reader spatial arrangement is non-semantic.
@@ -116,34 +107,34 @@ The label rendered on the edge is in the user's locale. The taxonomy itself is f
 - **Math and symbols**: inline Unicode (μ*, λ, ∫, ⊗) when the renderer supports it; LaTeX-style `\mu^*` only where the renderer supports it. When using DOT HTML-like labels (`<...>`), prefer Unicode for cross-renderer safety.
 - **Brevity**: every node label ≤ 2 lines. First line = tag (role of node). Second line = numerical / equation / symbol anchor.
 
-### 7. Audit table
+### 6. Audit table
 
-One row per non-trivial edge. **Background and verification-support edges must always be documented in full** (downstream / upstream / class / bridge sentence / page anchor). For chain-support edges through a `gfac_*` factor (premises → diamond → root), full rows are *recommended but optional*: at minimum, document them once with the factor label as the bridge sentence; preferably, log each premise with its own page anchor so the reader can verify the premise text is faithful to the paper. Err on the side of more rows when the audit table is the user's only window into provenance.
+One row per non-trivial edge. **Background and verification-support edges must always be documented in full** (downstream / upstream / class / bridge sentence / chain-payload anchor). For chain-support edges through a `gfac_*` factor (premises → diamond → root), full rows are *recommended but optional*: at minimum, document them once with the factor label as the bridge sentence; preferably, log each premise with its own anchor so the reader can verify the premise text is faithful to the chain payload.
 
-| downstream | upstream | edge class | bridge sentence | source page anchor |
-|------------|----------|------------|-----------------|--------------------|
+| downstream | upstream | edge class | bridge sentence | chain-payload anchor |
+|------------|----------|------------|-----------------|----------------------|
 
-The bridge sentence cites the OCR'd paper page or equation number whenever possible. For verification-support edges that **partially disconfirm** the downstream node, state the polarity explicitly ("confirms within 5%", "partially disconfirms: independent value differs by 30%"). Without a page anchor, the graph is just paraphrase.
+The chain-payload anchor points back into the LKM JSON: a premise id (`gcn_…`), factor id (`gfac_…`), `factors[i].steps[j].reasoning`, or claim content quoted verbatim. For verification-support edges that **partially disconfirm** the downstream node, state the polarity explicitly ("confirms within 5%", "partially disconfirms: independent value differs by 30%"). Without a chain-payload anchor, the row is just paraphrase.
 
-### 8. Cycle check
+### 7. Cycle check
 
 Run `node skills/evidence-subgraph/scripts/check_dot_cycles.mjs <path-to-graph.dot>` for DOT graphs. The decomposition is a DAG; cycles usually indicate a misclassified background edge — for example, a verification-style fact mis-rendered as background creates a cycle through the inversion step.
 
-### 9. Verify against OCR
+### 8. Best-effort numerical-anchor check
 
-Before hand-off, walk every numerical anchor in every reasoning node and confirm it appears verbatim (or with explicit unit conversion) in the OCR'd paper text. Missing anchors mean either (a) the agent hallucinated a value or (b) the OCR missed a passage — either way, fix before publishing.
+Before hand-off, walk every numerical anchor in every reasoning node and try to locate it inside the chain payload — premise `content`, claim content, or `factors[i].steps[j].reasoning`. The check is **soft**: chain payloads are sometimes incomplete, and an anchor may legitimately not be locatable inside the JSON. When you can confirm an anchor, log the chain-payload location in the audit row. When you cannot, mark the row `anchor not locatable in chain payload` and leave the node in place — do not delete the node, do not invent a substitute, and do not fail the run on this alone. A node whose value is contradicted by some other piece of the chain payload, however, is a real error and must be fixed.
 
 ## Standalone use (graph only, no review)
 
 This skill is also invocable directly when the user asks for "just build the evidence graph" without a review. In that case:
 
 - the orchestrator (`$evidence-graph-review`) still handles discovery + the user-selection checkpoint upstream of this skill;
-- after step 9, return the graph source + audit table + cycle-check report directly to the user, with the relevant `data.papers` metadata appended so the user can refer back to the original sources;
+- after step 8, return the graph source + audit table + cycle-check report directly to the user, with the relevant `data.papers` metadata appended so the user can refer back to the original sources;
 - **do not** invoke `$scholarly-review`.
 
 ## Hand-off
 
-Hand off to **`$scholarly-review`** with: the rendered graph source, the audit table, the OCR markdown, and the relevant subset of `data.papers` (so the review's references list can cite by author–year). The review skill writes the prose; this skill does not.
+Hand off to **`$scholarly-review`** with: the rendered graph source, the audit table, and the relevant subset of `data.papers` (so the review's references list can cite by author–year). The review skill writes the prose; this skill does not.
 
 ## What this skill is NOT
 

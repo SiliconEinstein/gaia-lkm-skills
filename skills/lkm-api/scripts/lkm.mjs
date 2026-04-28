@@ -8,7 +8,6 @@ function usage() {
   lkm.mjs search --query "terms" [--top-k 10] [--out file]
   lkm.mjs evidence --id CLAIM_ID [--max-chains 10] [--sort-by comprehensive] [--out file]
   lkm.mjs variables --ids id1,id2,... [--out file]
-  lkm.mjs papers-ocr --ids id1,id2,... [--out file]
 `);
 }
 
@@ -101,21 +100,6 @@ async function main() {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ ids }),
-    });
-    await writeResult(result, args.out);
-    return;
-  }
-
-  if (command === "papers-ocr") {
-    if (!args.ids) throw new Error("Missing --ids (comma-separated paper IDs)");
-    const paper_ids = args.ids
-      .split(",")
-      .map((s) => s.trim())
-      .map((s) => (s.startsWith("paper:") ? s.slice("paper:".length) : s));
-    const result = await fetchJson(`${BASE_URL}/papers/ocr/batch`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ paper_ids }),
     });
     await writeResult(result, args.out);
     return;

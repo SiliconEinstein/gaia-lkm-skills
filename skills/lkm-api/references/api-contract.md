@@ -146,48 +146,6 @@ Body:
 
 Call only when a chain step references a `var_*` id. If no `var_*` ids appear in the chain, skip this endpoint.
 
-## Papers OCR (Batch)
-
-```http
-POST https://lkm.bohrium.com/api/v1/papers/ocr/batch
-```
-
-Body:
-
-```json
-{ "paper_ids": ["812114964624965633", "812079052750848000"] }
-```
-
-Field / id format pitfalls:
-
-- Body field must be **`paper_ids`** (snake_case). `ids` / `PaperIDs` return `290002` validation errors.
-- Ids must be **plain numeric strings without the `paper:` prefix**. Ids carrying the prefix end up in `data.not_found`. The CLI helper (`scripts/lkm.mjs papers-ocr --ids …`) strips the prefix automatically; callers writing raw HTTP must strip it themselves.
-
-Response shape:
-
-```json
-{
-  "code": 0,
-  "data": {
-    "items": [
-      {
-        "paper_id": "812114964624965633",
-        "markdown_url": "https://…tos-cn-beijing.volces.com/paper_ocr/md/<id>.md?X-Tos-Signature=…",
-        "images": [
-          {"rel_path": "<id>_1.jpg", "url": "https://…paper_ocr/images/<id>/<id>_1.jpg?…"}
-        ]
-      }
-    ],
-    "not_found": [],
-    "expires_at": "2026-04-28T19:24:22+08:00"
-  }
-}
-```
-
-- `markdown_url` / `images[].url` are **signed TOS URLs that expire in 24 hours** (see `expires_at`). Download immediately if you need an offline artefact — do not store the URL and rely on it later.
-- The body response does **not** inline the markdown; fetch `markdown_url` separately (e.g. `curl "$url" -o paper.md`).
-- The markdown is OCR-cleaned: preserves LaTeX, figure captions, section headers, reference keys. Use as a **ground-truth anchor** for `$evidence-subgraph` (see `references/source-ground-truth.md` in that skill).
-
 ## Known transient: `code=290001`
 
 Sometimes the first call after a quiet period returns:

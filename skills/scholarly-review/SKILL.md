@@ -1,6 +1,6 @@
 ---
 name: scholarly-review
-description: Write a domain-vocabulary scholarly review centered on one chain-backed quantitative claim about a system or setting (any field — physics, chemistry, materials, biology, ML, climate, astrophysics, etc.). Section structure traces the closure chain from observational / experimental anchors → theoretical or computational inputs → derivation / inversion / fitting → cross-method comparison → open problems. Heavy on equations, units, and named author–year references resolved via the `$lkm-api` `data.papers` metadata block. Banned-phrase audit (no LKM/system vocabulary in main narrative). **Mandatory inputs:** an audited evidence graph (from `$evidence-subgraph`), the audit table, the OCR'd root paper, and the `data.papers` metadata. If the graph is not provided, stop and require the user to generate one first via `$evidence-subgraph`.
+description: Write a domain-vocabulary scholarly review centered on one chain-backed quantitative claim about a system or setting (any field — physics, chemistry, materials, biology, ML, climate, astrophysics, etc.). Section structure traces the closure chain from observational / experimental anchors → theoretical or computational inputs → derivation / inversion / fitting → cross-method comparison → open problems. Heavy on equations, units, and named author–year references resolved via the `$lkm-api` `data.papers` metadata block. Banned-phrase audit (no LKM/system vocabulary in main narrative). **Mandatory inputs:** an audited evidence graph (from `$evidence-subgraph`), the audit table, and the `data.papers` metadata. If the graph is not provided, stop and require the user to generate one first via `$evidence-subgraph`.
 ---
 
 # Scholarly Review
@@ -18,15 +18,14 @@ The graph and audit table from `$evidence-subgraph` are **mandatory scaffolding*
 This skill **requires** the following inputs to be supplied (typically by the orchestrator `$evidence-graph-review`, or the user directly):
 
 1. **Audited evidence graph** — DOT or Mermaid `flowchart` source from `$evidence-subgraph`.
-2. **Audit table** — per-edge bridge sentences with OCR page anchors.
-3. **OCR markdown of the root paper** — the source of truth for numerical anchors and equation labels.
-4. **`data.papers` metadata** (from `$lkm-api`) — the authoritative paper-id → bibliographic-metadata map; the references list is built from this.
+2. **Audit table** — per-edge bridge sentences with chain-payload anchors (premise / factor / step references into the LKM JSON).
+3. **`data.papers` metadata** (from `$lkm-api`) — the authoritative paper-id → bibliographic-metadata map; the references list is built from this.
 
 If the **graph is not provided**, stop and instruct the user to first run `$evidence-subgraph` (via `$evidence-graph-review` or directly) on their chosen root claim. Do not attempt to write a review from raw chain JSON without the audited graph — the graph is what disciplines the review's structure and prevents drift into ungrounded prose.
 
 ## Topic-agnosticism
 
-This skill is installed by users across many fields. Domain-specific terms in the produced review come from the OCR'd root paper and the user-selected claim, **not** from the skill text. The closure-chain abstraction generalizes:
+This skill is installed by users across many fields. Domain-specific terms in the produced review come from the LKM chain payload (premise / factor / step / claim content) and the user-selected claim, plus bibliographic context from `data.papers` — **not** from the skill text. The closure-chain abstraction generalizes:
 
 - **Computational / first-principles fields** — `(electronic structure / force field / simulation inputs) → (intermediate computed quantities) → (derivation / inversion) → (parameter or predicted observable)`.
 - **Experimental / observational fields** — `(measurement protocol + calibration + sample / observation conditions) → (raw signal / dataset) → (analysis / inversion) → (extracted parameter or property)`.
@@ -114,9 +113,9 @@ If LaTeX is requested:
 
 Before declaring the review complete:
 
-1. **Mandatory-inputs check.** Confirm graph + audit table + OCR markdown + `data.papers` were all supplied. If any is missing, STOP and request it.
+1. **Mandatory-inputs check.** Confirm graph + audit table + `data.papers` were all supplied. If any is missing, STOP and request it.
 2. **Banned-phrase grep.** Run a regex grep for the ban list (English + locale mirror) against the main-narrative source (excluding the appendix). Zero hits required. The allow-list above clarifies legitimate uses of words like "chain" / "tier" in the domain sense.
-3. **Numerical anchor check.** Every number in the review traces back to the OCR'd root paper or a cited paper — no orphan numerics.
+3. **Best-effort numerical-anchor check.** For every number in the review, try to locate it in the chain payload (premise `content`, factor steps, claim content) or — for numbers attributed to a different paper — in that paper's `data.papers` entry plus the chain payload of the root. The check is **soft**: chain payloads are sometimes incomplete, and a number may legitimately not be locatable inside the JSON we have. When a number cannot be confirmed, do not delete it — note `anchor not locatable in chain payload` next to the audit-table row that supplied it. A number that the chain payload **contradicts**, however, is a real error and must be fixed.
 4. **Citation completeness.** Every author–year mention in the body has a matching reference entry built from `data.papers`, and vice versa.
 5. **Equation-number consistency.** No undefined `\eqref{...}`, no duplicated labels.
 

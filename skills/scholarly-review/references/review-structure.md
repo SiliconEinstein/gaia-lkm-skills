@@ -62,9 +62,8 @@ For any language other than English or Simplified Chinese, mirror each banned te
 The skill **requires** the following from `$evidence-graph-review` (or directly from the user, if invoked outside the orchestrator):
 
 1. Audited evidence graph source (DOT or Mermaid `flowchart`).
-2. Audit table with OCR page anchors.
-3. OCR markdown of the root paper.
-4. `data.papers` subset (paper-id → bibliographic-metadata) for the references list.
+2. Audit table with chain-payload anchors (premise / factor / step references into the LKM JSON).
+3. `data.papers` subset (paper-id → bibliographic-metadata) for the references list.
 
 If any input is missing, **stop** and request it. Do not write a review from raw chain JSON without the audited graph — the graph is what disciplines the review's structure and prevents drift.
 

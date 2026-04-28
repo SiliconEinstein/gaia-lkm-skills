@@ -9,10 +9,10 @@ description: Universal entry point for any LKM-driven evidence-and-review task. 
 
 This is the **single front door** for every LKM-driven request. The orchestrator inspects the user's intent and routes:
 
-- **Raw API access** (e.g. "search LKM for X", "fetch evidence for `gcn_…`", "OCR paper Y") → delegate to **`$lkm-api`** directly. No graph, no review.
-- **Topical evidence graph + review** (e.g. broad topic, family of materials/systems, specific phenomenon) → run the full pipeline `$lkm-api` discovery → user-selection checkpoint → `$lkm-api` OCR → `$evidence-subgraph` → `$scholarly-review`.
+- **Raw API access** (e.g. "search LKM for X", "fetch evidence for `gcn_…`", "look up paper metadata Y") → delegate to **`$lkm-api`** directly. No graph, no review.
+- **Topical evidence graph + review** (e.g. broad topic, family of materials/systems, specific phenomenon) → run the full pipeline `$lkm-api` discovery → user-selection checkpoint → `$evidence-subgraph` → `$scholarly-review`.
 - **Graph-only on a topic** ("just build the evidence graph, no review") → run the pipeline through `$evidence-subgraph` and stop; do not invoke `$scholarly-review`.
-- **Already-narrowed input** (user names a specific system AND a specific quantity / paper / claim id) → skip the broad-discovery step; go straight to OCR + graph (+ review unless graph-only).
+- **Already-narrowed input** (user names a specific system AND a specific quantity / paper / claim id) → skip the broad-discovery step; go straight to graph (+ review unless graph-only).
 
 The orchestrator does **not** retrieve, draw, or write itself. It sequences the downstream skills, gates the user-selection checkpoint, and hands artifacts forward.
 
@@ -20,10 +20,10 @@ The orchestrator does **not** retrieve, draw, or write itself. It sequences the 
 
 Apply each rule until one matches; that determines the path.
 
-1. **User supplies a claim id or paper id directly and asks only for raw data** → route to `$lkm-api`. Return the raw JSON / OCR markdown to the user. Stop.
-2. **User asks for graph only** (explicitly: "no review", "just the graph", "evidence subgraph only") → run discovery + checkpoint + OCR + `$evidence-subgraph`. Stop after handing the graph + audit table back. Do not invoke `$scholarly-review`.
-3. **User supplies a specific narrow target** (system + quantity, or a specific paper) and wants the e2e build → skip discovery; verify the chain-backed gate; OCR; graph; review.
-4. **User supplies a broad / topical prompt** (no specific system + value yet) and wants the e2e build (graph + review) → run discovery → user-selection checkpoint → continue with chosen root → OCR → graph → review.
+1. **User supplies a claim id or paper id directly and asks only for raw data** → route to `$lkm-api`. Return the raw JSON to the user. Stop.
+2. **User asks for graph only** (explicitly: "no review", "just the graph", "evidence subgraph only") → run discovery + checkpoint + `$evidence-subgraph`. Stop after handing the graph + audit table back. Do not invoke `$scholarly-review`.
+3. **User supplies a specific narrow target** (system + quantity, or a specific paper) and wants the e2e build → skip discovery; verify the chain-backed gate; graph; review.
+4. **User supplies a broad / topical prompt** (no specific system + value yet) and wants the e2e build (graph + review) → run discovery → user-selection checkpoint → continue with chosen root → graph → review.
 5. **Ambiguous** → ask the user one short clarifying question: "do you want raw API access, the evidence graph alone, or the full graph + review?" Default if the user does not answer: full e2e (option 4).
 
 ## End-to-End Workflow (full pipeline path)
@@ -52,40 +52,40 @@ If you are running in an autonomous-test harness where the user cannot be reache
 
 The candidate list itself is a **first-class deliverable**: write it to `candidates.md` in the run folder so the choice is reproducible and auditable.
 
-### 4. `$lkm-api` — root paper OCR
+### 4. `$lkm-api` — pin the root and persist `data.papers`
 
 Once the user has selected a candidate (claim id supplied) — or the user already supplied a narrow target:
 
 - Re-fetch `evidence` for the chosen claim if more than a few minutes have passed (corpus may have changed). Confirm `total_chains > 0`.
 - Identify the root paper id via `data.papers[<source_package>]` if populated; otherwise via `evidence_chains[].source_package`.
-- Run `papers/ocr/batch` on the root paper. Save the OCR markdown locally. The OCR is the source of truth for downstream steps; if OCR fails, stop and escalate.
 - Persist the relevant subset of `data.papers` (the entries for the root paper and any background-cited papers surfacing in the chain) — `$scholarly-review` will need them for the references list.
 
 ### 5. `$evidence-subgraph`
 
-Hand off `(root evidence JSON, OCR markdown, data.papers subset, save-folder path)`. The graph skill produces:
+Hand off `(root evidence JSON, data.papers subset, save-folder path)`. The graph skill produces:
 
-- a rendered graph in **DOT (Graphviz `neato` / `sfdp`)** as the canonical artifact, optionally with a **Mermaid `flowchart`** secondary using `linkStyle` for per-edge classes. Mermaid `mindmap` is **not** acceptable. Defer to `$evidence-subgraph` §6 for the authoritative renderer rules.
-- an audit table with one row per non-trivial edge, page-anchored to the OCR;
+- a rendered graph in **DOT (Graphviz `neato` / `sfdp`)** as the canonical artifact, optionally with a **Mermaid `flowchart`** secondary using `linkStyle` for per-edge classes. Mermaid `mindmap` is **not** acceptable. Defer to `$evidence-subgraph` §5 for the authoritative renderer rules.
+- an audit table with one row per non-trivial edge, anchored to the chain payload (premise / factor / step references);
 - a cycle-check report.
 
 Verify that:
 
-- every numerical anchor in a reasoning node is findable in the OCR;
 - the edge taxonomy is exactly the three **semantic** classes — *chain support*, *background*, *verification support* — rendered in any locale (e.g. `链式支撑` / `背景` / `核验支撑` for Chinese). No fourth class such as `文献支撑`, `upstream_conclusion_support`, or `tier-2 文献支撑`;
+- the graph is strictly chain-bounded — every node and edge traces back to LKM-returned content, no synthetic bridging;
+- the best-effort numerical-anchor check has been run, and any unconfirmed anchors are explicitly noted in the audit (not silently dropped);
 - CJK glyphs render correctly (no `□` tofu boxes) in any rendered PNG/SVG.
 
-If either check fails, return to the graph skill with the gap report.
+If a check fails, return to the graph skill with the gap report.
 
 **Graph-only mode:** if the user requested graph-only, return the graph + audit table + cycle-check + relevant `data.papers` to the user here and **stop**. Skip step 6.
 
 ### 6. `$scholarly-review`
 
-Hand off `(graph artifact, audit table, OCR markdown, data.papers subset, save-folder path)`. The review skill produces a Markdown or LaTeX article following the 9-section closure-chain structure. Run the verification suite the review skill specifies:
+Hand off `(graph artifact, audit table, data.papers subset, save-folder path)`. The review skill produces a Markdown or LaTeX article following the 9-section closure-chain structure. Run the verification suite the review skill specifies:
 
-- mandatory-inputs check (graph + audit table + OCR + `data.papers` all present);
+- mandatory-inputs check (graph + audit table + `data.papers` all present);
 - banned-phrase grep with English + locale-mirror lists (zero hits in main narrative or references);
-- numerical-anchor check (every number traces to OCR or a cited paper);
+- best-effort numerical-anchor check (each number located in the chain payload where possible; rows where it cannot be located are noted, not deleted);
 - citation completeness (body ↔ references list, references built from `data.papers`);
 - equation-number consistency.
 
@@ -114,7 +114,8 @@ The reproducibility target is *not* byte-equivalence — it is steady **behaviou
 
 - **Chain-backed root only.** No synthetic premises without explicit waiver.
 - **User-selected root only** when more than one chain-backed candidate exists at the discovery step. The orchestrator never picks a root autonomously; it surfaces them and waits.
-- **OCR is the source of truth for numbers.** Agent paraphrase never overrides the paper text.
+- **Chain payload is the source of truth.** The LKM JSON returned by `$lkm-api` (premise / factor / step / claim content + `data.papers`) is the only admissible source for graph nodes, edges, and audit anchors. No external paper text — no PDFs, no rendered article fetches, no web scrapes — is admitted.
+- **Strict chain-bounded graph.** No synthetic bridging nodes for missing intermediates; gaps are recorded in the audit table, not papered over.
 - **Three edge classes only** in the graph (any locale).
 - **Banned-phrase main narrative** in the review (English + locale-mirror).
 - **Mandatory graph for the review** — `$scholarly-review` does not run without an audited graph from `$evidence-subgraph`.

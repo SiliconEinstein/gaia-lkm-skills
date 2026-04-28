@@ -1,86 +1,68 @@
-# Source Ground-Truth Loop (via `papers-ocr`)
+# Chain-Payload Audit Discipline
 
-LKM claims are extracted propositions; the **source paper** still holds the final authority over wording, figure captions, and numerical values. Whenever a `claim.provenance.source_packages[0]` corresponds to a `paper:<numeric_id>`, the agent can pull a cleaned OCR markdown via `$lkm-api`'s `papers-ocr` endpoint and use it as a **third, independent check** beyond LKM `search` and `evidence`.
+LKM chain payloads (`/search` results + `/claims/{id}/evidence` chains) are this skill's **single source of truth**. Every node in the graph and every audit row must trace back into that JSON — no external paper text, no agent paraphrase, no synthetic bridging.
 
-This closes a verification loop:
+## Why the discipline matters
 
-```text
-LKM search  ──▶ candidate claim text
-LKM evidence ──▶ factor/premise topology
-papers-ocr ──▶ ORIGINAL paper markdown + figures  ◀── final ground truth
-```
+The graph claims to be *chain-backed*. That claim is meaningful only if a reviewer can take any node or edge and follow the audit table back to a specific piece of LKM-returned content. Two failure modes silently break the contract:
 
-## When to invoke
+1. **Synthetic bridging** — minting an intermediate-result node because "the closure chain obviously needs one here", even though no premise / step / claim content in the payload mentions it. This makes the graph indistinguishable from agent paraphrase.
+2. **Floating numerical anchors** — quoting a value on a node that does not appear inside any premise content, claim content, or `steps[].reasoning` in the chain. The number then has no provenance the user can verify.
 
-Pull the OCR markdown when **any** of the following hold:
+The discipline below is what prevents both.
 
-1. The root conclusion's factor `steps[].reasoning` references specific **numerical values**, **figure numbers**, or **equation labels**. The cleaned markdown keeps LaTeX, Fig/Table captions, and Eq. numbers, so you can find the exact sentence.
-2. You need to resolve a **near-miss** candidate (same paper family, different numerical report) before accepting or rejecting a verification-support edge. Reading the primary source usually settles direction and scope faster than running more search queries.
-3. The paper may contain **multiple parallel results / sub-models** that LKM has split across several claims (e.g. one paper analysing both an XY and a Heisenberg variant, each with its own conclusion). The section structure in the markdown tells you how many sub-models to expect; if LKM has returned fewer claim ids, you know to search again.
-4. You are about to write a `$scholarly-review`: reviewers will ask "does the paper actually say X?" — having the markdown open makes that direct.
+## Anchor sources (in priority order)
 
-## CLI usage (via `$lkm-api` helper)
+For each node and edge, pick the most specific anchor available:
 
-```bash
-# 1) fetch signed URLs
-node skills/lkm-api/scripts/lkm.mjs papers-ocr \
-  --ids 812114964624965633,paper:812079052750848000 \
-  --out ocr.json
-
-# 2) pull the markdown (signed URLs expire in 24 hours — download now)
-mkdir -p sources
-node -e '
-const d=require("./ocr.json").data;
-for (const it of d.items) {
-  console.log(it.paper_id, it.markdown_url);
-}
-' | while read pid url; do
-  curl -sS "$url" -o "sources/${pid}.md"
-done
-```
-
-Images (figures, plots) can be pulled the same way from `items[].images[].url` when you need to inspect Fig. <n> data-collapse shapes.
-
-## How to use the markdown in the audit
-
-Add a **`source_page_anchor`** column (or sub-field) to the audit table for each premise / upstream edge. Typical anchors:
-
-| What to cite | Example anchor |
+| Anchor | What it points to |
 | --- | --- |
-| A section header | `§ RESULTS FOR THE J-Q MODEL` |
-| A figure caption | `Fig. 12 caption, line 205 of sources/812114964624965633.md` |
-| A specific equation | `Eq. (4), line 64` |
-| A verbatim sentence | `"On the other hand, for the SU(2) symmetric J-Q model…" (SUMMARY)` |
+| `gcn_<premise_id>` | A native premise inside `evidence_chains[].factors[].premises[]`. Quote `content` verbatim. |
+| `gfac_<factor_id>` | A factor diamond. Quote `subtype` and the cluster semantics implied by its premises. |
+| `factors[i].steps[j].reasoning` | An optional step note inside a factor — not always populated. When present, treat as second-class evidence after premise content. |
+| Root `data.claim.content` | The root claim text itself. Use only on the root node. |
+| `data.papers[paper:<id>]` | Bibliographic metadata for a `source_package`. Use for `$scholarly-review` references; **never** as the source of a graph node's text. |
 
-Line numbers refer to the downloaded markdown (helpful for long papers). Attach them once in the audit so a reviewer can grep the same file.
+If none of these contain what you want to assert, the assertion does not belong in the graph.
 
-### Minimal worked example
+## Chain-payload anchor in the audit row
 
-Root claim `gcn_efdd79a286bf4c0e` (Sandvik 2006, `paper:812114964624965633`) references `Δ/Q ≈ 0.066` inside `steps[0].reasoning`. The OCR markdown's **Figure 12 caption** reads:
+Every audit-table row carries a `chain-payload anchor` column (last column). Examples:
 
-> FIGURE 12. … the solid curve is a cubic fit to the J/Q=0 data, extrapolating to **Δ(L=∞)/Q ≈ 0.066**. The dashed line shows the linear in 1/L behavior expected at a quantum-critical point with z=1.
+| What you are anchoring | Anchor value |
+| --- | --- |
+| A premise rendered as an intermediate-result node | `gcn_a1b2c3…` |
+| A factor diamond label | `gfac_d4e5f6… (subtype=noisy_and)` |
+| A step-level numerical claim | `gfac_d4e5f6…/steps[0].reasoning` |
+| The root result | `data.claim.content` |
+| A polarity remark on a verification edge | `gcn_…/content: "…differs by 30%…"` |
 
-That single line ratifies the claim's numerical content. Record it as `source_page_anchor = "Fig. 12 caption"` next to the verification-support edge from the same-package conclusion.
+Where a quotation is short and load-bearing, include it inline (`gcn_…/content: "Δ/Q ≈ 0.066"`) rather than just the id.
 
-## Cross-checking multi-sub-model papers
+## Best-effort numerical-anchor check
 
-For papers that LKM has split into several claims (one per sub-model), the markdown's **section headers** give you an enumeration:
+Walk every numerical anchor on every reasoning node and try to find it inside the chain payload. The check is **soft**:
 
-```bash
-grep -nE "^#+ " sources/<paper_id>.md
-```
+- **Located** → record the anchor cell and move on.
+- **Not located, but consistent with related premises** → mark `anchor not locatable in chain payload`. Leave the node and value in place; do not delete, do not substitute. Chain payloads are sometimes incomplete and this row simply records that fact.
+- **Located, but contradicted** by another premise / step / claim in the same payload → real error. Fix the node (re-read the contradicting premise) before publishing.
 
-Compare that list with the claims you already have from `search` / same-package queries. If the markdown lists `RESULTS FOR <model A>` and `RESULTS FOR <model B>` but your LKM set only covers A, run targeted `search` queries for B's terminology (model name, key coupling, distinctive result) before closing the subgraph. Document the gap in the audit under "unresolved".
+The goal is no fabrication — not exhaustive coverage. A graph with a few `anchor not locatable` rows is still chain-bounded; a graph with one undeclared synthetic node is not.
 
-## Do not promote OCR text into synthetic premises
+## What is forbidden
 
-The markdown is an **auditing anchor**, not a new premise source. Do not type paraphrases of OCR paragraphs into the graph as if they were LKM premises — that quietly switches the subgraph from chain-backed to synthetic. When the original paper contains content LKM has not extracted, either:
+- Reading the original paper (PDF, HTML rendering, scanned image, or otherwise) and pulling text from it into a node, label, or audit row.
+- Paraphrasing a premise into a "tighter" form. Quote `content` verbatim or summarise it inside the audit row's bridge sentence — never both, never altered.
+- Naming background nodes by paper id (`paper:…`). Background nodes are named by the formula / dataset / theorem / method as it appears in the LKM premise content; bibliographic metadata stays in `data.papers`.
+- Adding a node whose label asserts a fact that no premise / step / claim content in the payload supports, even when the fact is "obviously true" in the field.
 
-- file it as `unresolved` with `source_page_anchor` pointing at the markdown, or
-- if the claim is important enough to trace upstream, return to `$lkm-api` and run a new per-claim search (LKM may have the result under a different `source_package`).
+## Multi-sub-model papers
 
-## Caching & re-fetch discipline
+When a single paper analyses multiple sub-models / variants and LKM has split it into several claims, each chain-backed claim id is a candidate root. Pick **one** as the root for this graph and limit nodes to that claim's `evidence_chains`. If the user wants the other sub-models, that is a separate run with a different root id.
 
-- Store OCR responses under `sources/` with the paper_id as filename; keep the raw `ocr.json` alongside so you know when `expires_at` was.
-- Re-issue `papers-ocr` whenever the TOS signatures expire (>24h). Content behind them is stable, so re-downloading is idempotent.
-- Do **not** commit the downloaded markdown into the skill repo — the OCR output belongs to the paper's rights holder. Keep it in working directories only.
+If the chain you receive is missing a sub-model the user expected to see, return to `$lkm-api` and run targeted `search` queries for that sub-model's distinctive terms — do **not** import sub-model content from outside the chain payload.
+
+## Caching
+
+- Persist the raw `evidence` JSON (and the `search` JSON that surfaced the candidate) under the run's working folder. The audit anchors are line-item references into that JSON; without the JSON the anchors lose meaning.
+- Re-issue `evidence` if more than a few minutes pass between discovery and graph build — the corpus may have moved, and an anchor that used to resolve may not after a re-fetch. When this happens, prefer re-pinning the anchor over editing the graph.
