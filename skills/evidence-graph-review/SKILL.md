@@ -38,6 +38,37 @@ Convert the user's prompt to one or more free-text queries in the language(s) mo
 
 For each distinct candidate (deduplicated by claim id), call `GET /claims/{id}/evidence` with `sort_by=comprehensive`. Retain candidates with `total_chains > 0`. Drop the rest from root consideration.
 
+### 2b. Discovery flag pass — contradictions and equivalences
+
+Run a best-effort scan over the **full** match response from step 1 (both chain-backed and chain-less candidates — open questions whose conflicting side has no chain are still valuable). The discovery flow itself (chain-backed filter, user-selection checkpoint) is unaffected by this pass; the saved files are consumed downstream by `$evidence-subgraph` (for equivalence-pair dedup decisions) and `$scholarly-review` (for §5 cross-method narrative and §6 open-problems narrative).
+
+For each candidate-vs-candidate comparison, the agent uses semantic judgement on `content` fields plus paper metadata in `data.papers`:
+
+- **Contradiction pair** — two claims that, on the same topic with the same system / setting, assert numerically or qualitatively conflicting values, signs, scaling regimes, or directional outcomes. (e.g. one says μ\* = 0.13, another μ\* = 0.21 for the same compound; one says effect-X is positive, another says it is negative.) Save to **`contradictions.md`** in the run folder, one row per pair:
+
+  ```
+  | pair (id_a / id_b) | topic | side A claim | side B claim | source A (paper, role) | source B (paper, role) | why contradictory |
+  ```
+
+- **Equivalence pair** — two claims that assert the same proposition on the same topic. For each pair, classify the lineage using `data.papers`:
+  - **same paper, different version** — both `source_packages` resolve to the same paper, OR one is an arXiv preprint and the other is the published journal version of the same work. Detect via DOI prefix `10.48550/arxiv.` and `area: "arXiv-…"` on one entry plus a matching non-arXiv DOI / journal entry; matching titles or author lists make this near-certain.
+  - **independent experimental** — different papers, both observational / experimental in method.
+  - **independent theoretical / computational** — different papers, both derive the result by theory / computation / simulation.
+  - **cross-paradigm confirmation** — different papers, one experimental and one theoretical / computational.
+  - **unclassified** — lineage cannot be confidently assigned from `data.papers` alone; flag for user inspection.
+
+  Save to **`equivalences.md`** in the run folder:
+
+  ```
+  | pair (id_a / id_b) | topic | shared claim | source A | source B | lineage classification | note |
+  ```
+
+**Caps.** Cap each list at the **top 10 most-interesting pairs**. If more candidates exist, append a single trailing line `…and N more (see raw match JSON: <path>)`. "Most interesting" means: high-relevance candidates (top of the match score), pairs that disagree about a quantity central to the user's prompt, or pairs whose papers are widely cited.
+
+**Empty case.** If no pairs are found, still write the file with a single line `(no pairs detected in this run)` so downstream skills can detect the empty case unambiguously.
+
+**Narrow-target case (discovery skipped).** When the user supplies a narrow target and step 1 is skipped, the orchestrator still must produce both files for the downstream skills, even though there is no broad match response to scan. Write both files with a single line `(discovery skipped — narrow target supplied; no pairs scanned)` and proceed to step 4. Do **not** invent pairs from the chain payload alone; the discovery scan needs the broader candidate set to be meaningful.
+
 ### 3. **User-selection checkpoint (mandatory unless narrow target supplied)**
 
 Present the chain-backed candidates to the user as a numbered short-list — typically 3–8 entries; never more than 10 — each as a single line of:
@@ -62,11 +93,14 @@ Once the user has selected a candidate (claim id supplied) — or the user alrea
 
 ### 5. `$evidence-subgraph`
 
-Hand off `(root evidence JSON, data.papers subset, save-folder path)`. The graph skill produces:
+Hand off `(root evidence JSON, data.papers subset, equivalences.md path, save-folder path)`. The graph skill produces:
 
-- a rendered graph in **DOT (Graphviz `neato` / `sfdp`)** as the canonical artifact, optionally with a **Mermaid `flowchart`** secondary using `linkStyle` for per-edge classes. Mermaid `mindmap` is **not** acceptable. Defer to `$evidence-subgraph` §5 for the authoritative renderer rules.
+- a **graph source** in **DOT (Graphviz `neato` / `sfdp`)** as the canonical format, optionally with a **Mermaid `flowchart`** secondary using `linkStyle` for per-edge classes. Mermaid `mindmap` is **not** acceptable. Defer to `$evidence-subgraph` §5 for the authoritative renderer rules.
+- a **rendered raster** of the graph (PNG, PDF, or SVG) — required, not optional. `$scholarly-review` embeds this raster as Figure 1 of the body, so it must render with the right fonts (no `□` CJK tofu) before this step is considered complete.
 - an audit table with one row per non-trivial edge, anchored to the chain payload (premise / factor / step references);
 - a cycle-check report.
+
+The graph skill consults `equivalences.md` when deciding whether to merge or keep separate two claims that assert the same proposition (see `$evidence-subgraph` §2's no-duplicate-nodes rule).
 
 Verify that:
 
@@ -81,9 +115,10 @@ If a check fails, return to the graph skill with the gap report.
 
 ### 6. `$scholarly-review`
 
-Hand off `(graph artifact, audit table, data.papers subset, save-folder path)`. The review skill produces a Markdown or LaTeX article following the 9-section closure-chain structure. Run the verification suite the review skill specifies:
+Hand off `(graph artifact, audit table, data.papers subset, contradictions.md path, equivalences.md path, save-folder path)`. The review skill produces a Markdown or LaTeX article following the closure-chain structure. The **rendered graph is Figure 1 of the body**, placed immediately after the abstract — see `$scholarly-review` for the figure-placement rules. Run the verification suite the review skill specifies:
 
-- mandatory-inputs check (graph + audit table + `data.papers` all present);
+- mandatory-inputs check (graph + audit table + `data.papers` all present; `contradictions.md` and `equivalences.md` present even if empty);
+- Figure 1 presence at the front of the body, with a domain-language caption that satisfies the banned-phrase rule;
 - banned-phrase grep with English + locale-mirror lists (zero hits in main narrative or references);
 - best-effort numerical-anchor check (each number located in the chain payload where possible; rows where it cannot be located are noted, not deleted);
 - citation completeness (body ↔ references list, references built from `data.papers`);
@@ -96,9 +131,11 @@ If LaTeX, compile to PDF and inspect the log for missing-glyph / overfull / unde
 Report:
 
 - the user-chosen root (system + value + paper id + author–year);
-- artefact paths (`candidates.md`, graph source, audit table, review markdown / LaTeX, compiled PDF);
+- artefact paths (`candidates.md`, graph source `.dot` / `.mmd`, **rendered graph raster** `.png` / `.pdf` / `.svg`, audit table, review markdown / LaTeX, compiled PDF, `contradictions.md`, `equivalences.md`, `missing-material.md` if the review skill produced one);
 - the relevant `data.papers` metadata so the user can refer to the original sources for further detail;
-- any unresolved gaps (anchors that could not be page-confirmed, candidate roots that almost matched, LKM endpoint anomalies, empty-content premises flagged for revisit).
+- a **discovery-flags summary**: a one-paragraph reminder that `contradictions.md` lists potential open questions surfaced during discovery and `equivalences.md` lists same-proposition pairs with lineage classification; encourage the user to skim both. Mention the count of pairs in each file. If a file is empty, say so explicitly rather than omitting the line;
+- a **missing-material reminder**, sourced from `missing-material.md` (which `$scholarly-review` writes when its best-effort figure/table reproduction needs to leave gaps): every place in the review where the prose references a figure or data table from a source paper that the chain payload could not supply verbatim — listed by section, with the cited paper's DOI so the user can fetch it for camera-ready. If `missing-material.md` is empty or absent (e.g. graph-only mode), say so explicitly rather than omitting the line;
+- any unresolved gaps (chain-payload anchors that could not be located, candidate roots that almost matched, LKM endpoint anomalies, empty-content premises flagged for revisit).
 
 ## Reproducibility contract
 

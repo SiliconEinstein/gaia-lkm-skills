@@ -1,23 +1,24 @@
-# Review Structure Reference (closure chain, 9 sections)
+# Review Structure Reference (closure chain)
 
 This file complements `SKILL.md`. It contains the reusable section outline plus the banned-phrase checklist.
 
 ## Standard outline (any domain)
 
-The review answers exactly one question: **how is this result closed?** All nine sections serve that question. Adapt the closure-chain expression in §1 to the domain.
+The review answers exactly one question: **how is this result closed?** All sections serve that question. Adapt the closure-chain expression in §1 to the domain.
 
 | § | section | what goes here |
 |---|---------|----------------|
 | — | **Title** | system / setting + quantitative result + framing question. Localize to user's prompt language. |
 | — | **Abstract** | ≤ 250 English-word equivalents (~ 350 CJK characters). System, observational signals, theoretical task, central inversion result, what it resolves, what it leaves open. End with keywords. |
-| 1 | Introduction: the closure chain | State the closure-chain schematic explicitly: `(theoretical / computational inputs) → (intermediate quantities) → (observables / benchmarks) ↔ (target parameter)`. Instantiate with domain symbols. Frame the question as "does this number close the chain consistently", not "is this case typical". |
+| — | **Figure 1** | The rendered closure-chain map (from `$evidence-subgraph`), embedded immediately after the abstract and before §1. Caption in domain language — e.g. *"Closure-chain map of <topic>: how the inputs combine to fix <target>."* — with zero banned phrases. §1 references it. |
+| 1 | Introduction: the closure chain | State the closure-chain schematic explicitly: `(theoretical / computational inputs) → (intermediate quantities) → (observables / benchmarks) ↔ (target parameter)`. Instantiate with domain symbols. Frame the question as "does this number close the chain consistently", not "is this case typical". Reference Figure 1. |
 | 2 | Observational / experimental constraints | Anchoring measurements with units and uncertainties. Which observation disciplines which input. |
 | 3 | Theoretical / computational inputs | Method (computational / fit / simulation); intermediate quantities computed; model prunings; validity conditions. Quote computed numbers by author–year. |
 | 4 | Inversion / fitting | The equation, optimization, or procedure that fixes the target result. Quote it explicitly. Resulting value. Clean separation of measured / computed / fitted / assumed. |
-| 5 | Cross-method or cross-formalism comparison | Analytical vs numerical, mean-field vs many-body, model-A vs model-B, in-distribution vs out-of-distribution, etc. Quote discrepancies with units. Explain origin. Narrate any partial-disconfirm verification edges from the graph. |
-| 6 | Open problems and what would discriminate | Assumptions carrying the conclusion; theory-experiment gaps; theory-theory tensions; *specific* experiments / calculations to discriminate. Name measurements and thresholds. |
+| 5 | Cross-method or cross-formalism comparison | Analytical vs numerical, mean-field vs many-body, model-A vs model-B, in-distribution vs out-of-distribution, etc. Quote discrepancies with units. Explain origin. Narrate any partial-disconfirm verification edges from the graph. **Pull equivalence pairs** from `equivalences.md` whose lineage is `independent experimental`, `independent theoretical / computational`, or `cross-paradigm confirmation`. |
+| 6 | Open problems and what would discriminate | Assumptions carrying the conclusion; theory-experiment gaps; theory-theory tensions; *specific* experiments / calculations to discriminate. Name measurements and thresholds. **Pull contradiction pairs** from `contradictions.md` that fall within the topic of the user-selected root: each is a candidate open question. |
 | 9 | References | Author–year, fully bibliographic. Build entries from the `data.papers` metadata block (`en_title` or `zh_title`, `authors` split on `\|`, `publication_date`, `publication_name`, `doi`). End with: *"For further information about each cited result, refer to the original paper via the DOI listed above."* |
-| 10 | (Optional) methodology / provenance appendix | Only place where the evidence graph image, audit table, or any system identifiers may appear. Caption disclaims them as preparation scaffolding. |
+| 10 | (Optional) methodology / provenance appendix | Only place where the audit table or system identifiers (`gcn_*`, `gfac_*`, `paper:<id>`) may appear. The rendered graph itself is **not** appendix material — it has been promoted to Figure 1. |
 
 ## Banned-phrase checklist (run before declaring done)
 
@@ -61,9 +62,10 @@ For any language other than English or Simplified Chinese, mirror each banned te
 
 The skill **requires** the following from `$evidence-graph-review` (or directly from the user, if invoked outside the orchestrator):
 
-1. Audited evidence graph source (DOT or Mermaid `flowchart`).
+1. Audited evidence graph source (DOT or Mermaid `flowchart`) **plus a rendered raster** (PNG / PDF / SVG) — the raster becomes Figure 1 of the body.
 2. Audit table with chain-payload anchors (premise / factor / step references into the LKM JSON).
 3. `data.papers` subset (paper-id → bibliographic-metadata) for the references list.
+4. `contradictions.md` and `equivalences.md` from the orchestrator's discovery flag pass — empty files are acceptable but must exist. The empty marker is `(no pairs detected in this run)` for full-discovery runs, or `(discovery skipped — narrow target supplied; no pairs scanned)` when the orchestrator skipped discovery because the user supplied a narrow target.
 
 If any input is missing, **stop** and request it. Do not write a review from raw chain JSON without the audited graph — the graph is what disciplines the review's structure and prevents drift.
 

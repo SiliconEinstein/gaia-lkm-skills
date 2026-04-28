@@ -64,6 +64,8 @@ Render each as a labelled box (filled, locale-safe font). Label is two short lin
 
 **No synthetic bridging.** The graph is strictly chain-bounded. If an intermediate quantity is implied but not present in any premise / step / claim content returned by LKM, do **not** mint a node for it — record the gap in the audit table as `gap: <description>` and move on. Inventing nodes silently switches the graph from chain-backed to synthetic.
 
+**No duplicate nodes for equivalent premises.** When two premises (or a premise and a verification-support claim) assert the **same proposition** — same equation, same numerical value, same formal statement, just from different parts of the chain or different source packages — render them as a **single node**. List the two source packages in parentheses on a second label line, or as a side note in the audit table; do not draw two near-identical boxes. This rule applies whether the equivalence comes from within the root chain itself or is flagged in the orchestrator's `equivalences.md`. The exception: if the orchestrator's lineage classification on the equivalence pair is `independent experimental`, `independent theoretical / computational`, or `cross-paradigm confirmation`, **do** keep the second claim as a distinct verification-support node — the independent confirmation is informative for the closure-chain reader and merging it would erase that information. Pairs classified `same paper, different version` (arXiv preprint and journal version) must be merged.
+
 ### 3. Background / context nodes
 
 Add a panel-style node (visually distinct from reasoning nodes — different fill colour, `shape=note` in DOT) for each of:
@@ -89,7 +91,7 @@ The label rendered on the edge is in the user's locale. The taxonomy itself is f
 ### 5. Layout, fonts, and labels (CJK-safe)
 
 - **Auto-layout renderer**: Graphviz `neato` / `sfdp` for DOT (preferred for archival), or Mermaid `flowchart` with `linkStyle` for per-edge classes (preferred when no Graphviz install). Do **not** use Mermaid `mindmap` — it has no per-edge styling and cannot encode the three-class taxonomy.
-- **Title format**: `<root system / topic> <quantity or theme>: evidence chain and context (auto-layout)`. Localize to the user's prompt language (e.g. `<topic>：证据链与上下文（自动布局）` for Chinese). The "(auto-layout)" tag tells the reader spatial arrangement is non-semantic.
+- **Title format**: `<root system / topic> <quantity or theme>: closure-chain map (auto-layout)`. Localize to the user's prompt language (e.g. `<topic>：闭合链图（自动布局）` for Chinese). The "(auto-layout)" tag tells the reader spatial arrangement is non-semantic. Do **not** use phrases that the `$scholarly-review` ban list forbids (e.g. "evidence chain", "证据链与上下文", "subgraph", "证据图") — the rendered graph becomes Figure 1 of the body and any banned phrase in its title will trip the review's banned-phrase grep. "Closure chain" / "闭合链" are explicitly on the review's allow-list.
 - **Locale**: labels in the user's prompt language.
 - **CJK fonts (avoid Graphviz tofu pit).** Default Graphviz fonts (Helvetica, Times) **omit Chinese / Japanese / Korean glyphs**, producing tofu (`□`) blocks in the rendered PNG/SVG. Set fonts explicitly on `graph`, `node`, and `edge` for any non-Latin script:
 
@@ -134,7 +136,12 @@ This skill is also invocable directly when the user asks for "just build the evi
 
 ## Hand-off
 
-Hand off to **`$scholarly-review`** with: the rendered graph source, the audit table, and the relevant subset of `data.papers` (so the review's references list can cite by author–year). The review skill writes the prose; this skill does not.
+Hand off to **`$scholarly-review`** with: the graph source (DOT or Mermaid), a **rendered raster** (PNG / PDF / SVG), the audit table, and the relevant subset of `data.papers`. The rendered raster is what `$scholarly-review` embeds as Figure 1 of the body — this means the rendered graph is consumed by domain readers, not just by other agents. Two consequences for this skill:
+
+1. The graph's **title** (the `label` on the DOT `graph` attribute, or the equivalent on the Mermaid front-matter) must be domain-language and free of `$scholarly-review`'s banned phrases. §5's `<topic>: closure-chain map (auto-layout)` template satisfies this; older drafts that used "evidence chain and context" / "证据链与上下文" must be regenerated, not just recaptioned, because the title is baked into the rendered raster.
+2. The rendered raster must visually open in any PDF / Markdown viewer the user has — this is what the CJK-tofu check (§5) prevents from breaking.
+
+The review skill writes the prose; this skill does not.
 
 ## What this skill is NOT
 
