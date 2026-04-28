@@ -1,0 +1,4 @@
+interface:
+  display_name: "Evidence Graph Synthesis"
+  short_description: "End-to-end LKM evidence graph and synthesis workflow"
+  default_prompt: "Use $evidence-graph-synthesis to retrieve evidence, audit the dependency graph, render it, and write a scholarly synthesis."

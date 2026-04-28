@@ -1,10 +1,10 @@
-# Review Structure Reference (closure chain)
+# Synthesis Structure Reference (closure chain)
 
 This file complements `SKILL.md`. It contains the reusable section outline plus the banned-phrase checklist.
 
 ## Standard outline (any domain)
 
-The review answers exactly one question: **how is this result closed?** All sections serve that question. Adapt the closure-chain expression in §1 to the domain.
+The synthesis answers exactly one question: **how is this result closed?** All sections serve that question. Adapt the closure-chain expression in §1 to the domain.
 
 | § | section | what goes here |
 |---|---------|----------------|
@@ -60,14 +60,14 @@ For any language other than English or Simplified Chinese, mirror each banned te
 
 ## Mandatory inputs reminder
 
-The skill **requires** the following from `$evidence-graph-review` (or directly from the user, if invoked outside the orchestrator):
+The skill **requires** the following from `$evidence-graph-synthesis` (or directly from the user, if invoked outside the orchestrator):
 
 1. Audited evidence graph source (DOT or Mermaid `flowchart`) **plus a rendered raster** (PNG / PDF / SVG) — the raster becomes Figure 1 of the body.
 2. Audit table with chain-payload anchors (premise / factor / step references into the LKM JSON).
 3. `data.papers` subset (paper-id → bibliographic-metadata) for the references list.
 4. `contradictions.md` and `equivalences.md` from the orchestrator's discovery flag pass — empty files are acceptable but must exist. The empty marker is `(no pairs detected in this run)` for full-discovery runs, or `(discovery skipped — narrow target supplied; no pairs scanned)` when the orchestrator skipped discovery because the user supplied a narrow target.
 
-If any input is missing, **stop** and request it. Do not write a review from raw chain JSON without the audited graph — the graph is what disciplines the review's structure and prevents drift.
+If any input is missing, **stop** and request it. Do not write a synthesis from raw chain JSON without the audited graph — the graph is what disciplines the synthesis's structure and prevents drift.
 
 ## Citation rendering from `data.papers`
 

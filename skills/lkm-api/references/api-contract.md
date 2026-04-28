@@ -148,7 +148,7 @@ Both `/claims/match` and `/claims/{id}/evidence` return a `data.papers` map keye
 This is the authoritative paper-id → bibliographic-metadata map. Use it for:
 
 - resolving `source_package` (`paper:<id>`) to a citation;
-- building the references list in `$scholarly-review` (author–year, DOI, title);
+- building the references list in `$scholarly-synthesis` (author–year, DOI, title);
 - surfacing source pointers to the user ("for further information, refer to the original paper" with the DOI).
 
 If `data.papers` is empty or missing a key the chain references, fall back to `evidence_chains[].source_package` for the id alone — but log the absence as a corpus-quality observation; do not silently substitute.

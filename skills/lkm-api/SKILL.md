@@ -1,6 +1,6 @@
 ---
 name: lkm-api
-description: Query the Bohrium Large Knowledge Model (LKM) HTTP API; discover chain-backed roots; fetch evidence chains; resolve paper metadata; preserve raw JSON. Returned reasoning chains are sourced from the papers listed in `data.papers` (paper metadata block) on every response — agents and downstream skills should treat that block as the authoritative paper-id → bibliographic-metadata map and surface it to the user as "for further information, refer to the original paper(s)". Hands off to `$evidence-subgraph` (graph) and `$scholarly-review` (review), orchestrated by `$evidence-graph-review`.
+description: Query the Bohrium Large Knowledge Model (LKM) HTTP API; discover chain-backed roots; fetch evidence chains; resolve paper metadata; preserve raw JSON. Returned reasoning chains are sourced from the papers listed in `data.papers` (paper metadata block) on every response — agents and downstream skills should treat that block as the authoritative paper-id → bibliographic-metadata map and surface it to the user as "for further information, refer to the original paper(s)". Hands off to `$evidence-subgraph` (graph) and `$scholarly-synthesis` (synthesis), orchestrated by `$evidence-graph-synthesis`.
 ---
 
 # LKM API
@@ -73,7 +73,7 @@ Both `/claims/match` and `/claims/{id}/evidence` return a `data.papers` map keye
 }
 ```
 
-**Use this block for paper resolution.** When you need to translate a `source_package` (`paper:<id>`) into a citation, look it up in `data.papers`, not in any external service. When you hand off to `$scholarly-review`, include the relevant subset of `data.papers` so the review's references list can cite by author–year.
+**Use this block for paper resolution.** When you need to translate a `source_package` (`paper:<id>`) into a citation, look it up in `data.papers`, not in any external service. When you hand off to `$scholarly-synthesis`, include the relevant subset of `data.papers` so the synthesis's references list can cite by author–year.
 
 If `data.papers` is empty or missing a key the chain references, fall back to `evidence_chains[].source_package` — but log the absence as a corpus-quality observation; do not silently substitute.
 
@@ -114,9 +114,9 @@ Do **not** invent or paraphrase content for an empty-content premise.
 After retrieval, hand off to:
 
 - **`$evidence-subgraph`** for the audited evidence graph (factor diamonds, typed reasoning nodes, three-class edge taxonomy, chain-payload-anchored audit table).
-- **`$scholarly-review`** for the closure-chain academic review (graph + audit table + `data.papers` are mandatory inputs).
+- **`$scholarly-synthesis`** for the closure-chain academic synthesis (graph + audit table + `data.papers` are mandatory inputs).
 
-The whole flow is orchestrated by **`$evidence-graph-review`**, which is the unified entry point for any LKM-driven evidence-and-review task. Agents handling user prompts should route through that orchestrator first.
+The whole flow is orchestrated by **`$evidence-graph-synthesis`**, which is the unified entry point for any LKM-driven evidence-and-synthesis task. Agents handling user prompts should route through that orchestrator first.
 
 ## CLI helper
 

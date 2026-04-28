@@ -1,0 +1,4 @@
+interface:
+  display_name: "Scholarly Synthesis"
+  short_description: "Write standalone syntheses from audited evidence"
+  default_prompt: "Use $scholarly-synthesis to write a standalone academic synthesis from this audited evidence graph."

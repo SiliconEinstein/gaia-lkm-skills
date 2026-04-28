@@ -1,7 +1,7 @@
 {
   "name": "gaia-lkm-skills",
   "displayName": "Gaia LKM Skills",
-  "description": "Skills and Cursor rules for LKM retrieval, evidence graph auditing, and scholarly review generation.",
+  "description": "Skills and Cursor rules for LKM retrieval, evidence graph auditing, and scholarly synthesis generation.",
   "version": "0.1.0",
   "author": {
     "name": "SiliconEinstein"
@@ -13,7 +13,7 @@
     "lkm",
     "gaia",
     "evidence-graph",
-    "review"
+    "synthesis"
   ],
   "skills": "./skills/"
 }

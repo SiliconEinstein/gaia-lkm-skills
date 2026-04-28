@@ -1,6 +1,6 @@
 {
   "name": "gaia-lkm-skills",
-  "description": "Skills for querying LKM evidence chains, auditing evidence subgraphs, drawing dependency graphs, and writing scholarly reviews from claim graphs.",
+  "description": "Skills for querying LKM evidence chains, auditing evidence subgraphs, drawing dependency graphs, and writing scholarly syntheses from claim graphs.",
   "author": {
     "name": "SiliconEinstein"
   },
@@ -11,7 +11,7 @@
     "lkm",
     "gaia",
     "evidence-graph",
-    "scholarly-review"
+    "scholarly-synthesis"
   ],
   "skills": "./skills/"
 }

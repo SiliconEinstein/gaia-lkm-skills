@@ -1,6 +1,6 @@
 ---
 name: evidence-subgraph
-description: Build, audit, and render a methodological-decomposition evidence graph rooted on a chain-backed quantitative claim of the form "<system or setting> has <quantity> = <value>" or "<computation / measurement> yields <observable>". The graph is the anatomy of how that single result is closed inside one paper's reasoning — observational / experimental constraints, theoretical or computational inputs, intermediate computed quantities, derivation / inversion / fitting steps, parameter and approximation choices, and external-paper / setting context. Multiple labelled joint-support factor diamonds, three-class edge taxonomy (chain support / background / verification support — render in the user's locale, e.g. 链式支撑 / 背景 / 核验支撑 in Chinese), auto-layout (Graphviz neato/sfdp or Mermaid flowchart with linkStyle for per-edge classes — Mermaid mindmap is NOT acceptable), CJK-safe fonts and labels. Domain-agnostic: physics, chemistry, materials, biology, ML, climate, astrophysics, etc. Inputs come from `$lkm-api` (chain payload + `data.papers` metadata). The graph is strictly chain-bounded — only LKM-returned premises and their explicit content are admitted as nodes; no synthetic bridging from external sources. Hand off to `$scholarly-review` for the prose.
+description: Build, audit, and render a methodological-decomposition evidence graph rooted on a chain-backed quantitative claim of the form "<system or setting> has <quantity> = <value>" or "<computation / measurement> yields <observable>". The graph is the anatomy of how that single result is closed inside one paper's reasoning — observational / experimental constraints, theoretical or computational inputs, intermediate computed quantities, derivation / inversion / fitting steps, parameter and approximation choices, and external-paper / setting context. Multiple labelled joint-support factor diamonds, three-class edge taxonomy (chain support / background / verification support — render in the user's locale, e.g. 链式支撑 / 背景 / 核验支撑 in Chinese), auto-layout (Graphviz neato/sfdp or Mermaid flowchart with linkStyle for per-edge classes — Mermaid mindmap is NOT acceptable), CJK-safe fonts and labels. Domain-agnostic: physics, chemistry, materials, biology, ML, climate, astrophysics, etc. Inputs come from `$lkm-api` (chain payload + `data.papers` metadata). The graph is strictly chain-bounded — only LKM-returned premises and their explicit content are admitted as nodes; no synthetic bridging from external sources. Hand off to `$scholarly-synthesis` for the prose.
 ---
 
 # Evidence Subgraph
@@ -24,7 +24,7 @@ The skill text below is domain-agnostic. Every domain-specific term in the produ
 
 ## Default root
 
-A chain-backed claim returned by `$lkm-api` whose conclusion text names a system / setting and a quantitative result. The orchestrator (`$evidence-graph-review`) provides the user-selected root id; this skill does not perform discovery itself.
+A chain-backed claim returned by `$lkm-api` whose conclusion text names a system / setting and a quantitative result. The orchestrator (`$evidence-graph-synthesis`) provides the user-selected root id; this skill does not perform discovery itself.
 
 If invoked with a chain-less claim id (`total_chains == 0`), stop and return the failure to the orchestrator. Do not invent premises.
 
@@ -70,7 +70,7 @@ Render each as a labelled box (filled, locale-safe font). Label is two short lin
 
 Add a panel-style node (visually distinct from reasoning nodes — different fill colour, `shape=note` in DOT) for each of:
 
-- **external paper / formula / dataset / theorem named inside an LKM premise's `content`** — name it by the formula, dataset, theorem, or method it contributed (e.g. *"AD formula"*, *"Morel–Anderson renormalization"*, *"ImageNet-1k"*, *"GPCR-Bench"*, *"Anderson's theorem"*) — **never** by paper id, and **never** drawn from outside the chain payload. The actual paper bibliography lives in `data.papers` and is consumed by `$scholarly-review` for the references list.
+- **external paper / formula / dataset / theorem named inside an LKM premise's `content`** — name it by the formula, dataset, theorem, or method it contributed (e.g. *"AD formula"*, *"Morel–Anderson renormalization"*, *"ImageNet-1k"*, *"GPCR-Bench"*, *"Anderson's theorem"*) — **never** by paper id, and **never** drawn from outside the chain payload. The actual paper bibliography lives in `data.papers` and is consumed by `$scholarly-synthesis` for the references list.
 - **parameter-setting / approximation / regularization choice** — e.g. *"real-axis solution, weak damping"*, *"hybrid functional"*, *"early stopping"*.
 - **scope-bounding empirical fact** — a fact that bounds where the analysis applies (e.g. *"linear-T resistivity"*, *"validation set held out"*, *"Migdal small parameter ω_ph/E_F ≪ 1"*).
 
@@ -91,7 +91,7 @@ The label rendered on the edge is in the user's locale. The taxonomy itself is f
 ### 5. Layout, fonts, and labels (CJK-safe)
 
 - **Auto-layout renderer**: Graphviz `neato` / `sfdp` for DOT (preferred for archival), or Mermaid `flowchart` with `linkStyle` for per-edge classes (preferred when no Graphviz install). Do **not** use Mermaid `mindmap` — it has no per-edge styling and cannot encode the three-class taxonomy.
-- **Title format**: `<root system / topic> <quantity or theme>: closure-chain map (auto-layout)`. Localize to the user's prompt language (e.g. `<topic>：闭合链图（自动布局）` for Chinese). The "(auto-layout)" tag tells the reader spatial arrangement is non-semantic. Do **not** use phrases that the `$scholarly-review` ban list forbids (e.g. "evidence chain", "证据链与上下文", "subgraph", "证据图") — the rendered graph becomes Figure 1 of the body and any banned phrase in its title will trip the review's banned-phrase grep. "Closure chain" / "闭合链" are explicitly on the review's allow-list.
+- **Title format**: `<root system / topic> <quantity or theme>: closure-chain map (auto-layout)`. Localize to the user's prompt language (e.g. `<topic>：闭合链图（自动布局）` for Chinese). The "(auto-layout)" tag tells the reader spatial arrangement is non-semantic. Do **not** use phrases that the `$scholarly-synthesis` ban list forbids (e.g. "evidence chain", "证据链与上下文", "subgraph", "证据图") — the rendered graph becomes Figure 1 of the body and any banned phrase in its title will trip the synthesis's banned-phrase grep. "Closure chain" / "闭合链" are explicitly on the synthesis's allow-list.
 - **Locale**: labels in the user's prompt language.
 - **CJK fonts (avoid Graphviz tofu pit).** Default Graphviz fonts (Helvetica, Times) **omit Chinese / Japanese / Korean glyphs**, producing tofu (`□`) blocks in the rendered PNG/SVG. Set fonts explicitly on `graph`, `node`, and `edge` for any non-Latin script:
 
@@ -126,22 +126,22 @@ Run `node skills/evidence-subgraph/scripts/check_dot_cycles.mjs <path-to-graph.d
 
 Before hand-off, walk every numerical anchor in every reasoning node and try to locate it inside the chain payload — premise `content`, claim content, or `factors[i].steps[j].reasoning`. The check is **soft**: chain payloads are sometimes incomplete, and an anchor may legitimately not be locatable inside the JSON. When you can confirm an anchor, log the chain-payload location in the audit row. When you cannot, mark the row `anchor not locatable in chain payload` and leave the node in place — do not delete the node, do not invent a substitute, and do not fail the run on this alone. A node whose value is contradicted by some other piece of the chain payload, however, is a real error and must be fixed.
 
-## Standalone use (graph only, no review)
+## Standalone use (graph only, no synthesis)
 
-This skill is also invocable directly when the user asks for "just build the evidence graph" without a review. In that case:
+This skill is also invocable directly when the user asks for "just build the evidence graph" without a synthesis. In that case:
 
-- the orchestrator (`$evidence-graph-review`) still handles discovery + the user-selection checkpoint upstream of this skill;
+- the orchestrator (`$evidence-graph-synthesis`) still handles discovery + the user-selection checkpoint upstream of this skill;
 - after step 8, return the graph source + audit table + cycle-check report directly to the user, with the relevant `data.papers` metadata appended so the user can refer back to the original sources;
-- **do not** invoke `$scholarly-review`.
+- **do not** invoke `$scholarly-synthesis`.
 
 ## Hand-off
 
-Hand off to **`$scholarly-review`** with: the graph source (DOT or Mermaid), a **rendered raster** (PNG / PDF / SVG), the audit table, and the relevant subset of `data.papers`. The rendered raster is what `$scholarly-review` embeds as Figure 1 of the body — this means the rendered graph is consumed by domain readers, not just by other agents. Two consequences for this skill:
+Hand off to **`$scholarly-synthesis`** with: the graph source (DOT or Mermaid), a **rendered raster** (PNG / PDF / SVG), the audit table, and the relevant subset of `data.papers`. The rendered raster is what `$scholarly-synthesis` embeds as Figure 1 of the body — this means the rendered graph is consumed by domain readers, not just by other agents. Two consequences for this skill:
 
-1. The graph's **title** (the `label` on the DOT `graph` attribute, or the equivalent on the Mermaid front-matter) must be domain-language and free of `$scholarly-review`'s banned phrases. §5's `<topic>: closure-chain map (auto-layout)` template satisfies this; older drafts that used "evidence chain and context" / "证据链与上下文" must be regenerated, not just recaptioned, because the title is baked into the rendered raster.
+1. The graph's **title** (the `label` on the DOT `graph` attribute, or the equivalent on the Mermaid front-matter) must be domain-language and free of `$scholarly-synthesis`'s banned phrases. §5's `<topic>: closure-chain map (auto-layout)` template satisfies this; older drafts that used "evidence chain and context" / "证据链与上下文" must be regenerated, not just recaptioned, because the title is baked into the rendered raster.
 2. The rendered raster must visually open in any PDF / Markdown viewer the user has — this is what the CJK-tofu check (§5) prevents from breaking.
 
-The review skill writes the prose; this skill does not.
+The synthesis skill writes the prose; this skill does not.
 
 ## What this skill is NOT
 

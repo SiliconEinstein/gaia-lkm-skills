@@ -4,7 +4,7 @@ LKM chain payloads (`/claims/match` results + `/claims/{id}/evidence` chains) ar
 
 ## Why the discipline matters
 
-The graph claims to be *chain-backed*. That claim is meaningful only if a reviewer can take any node or edge and follow the audit table back to a specific piece of LKM-returned content. Two failure modes silently break the contract:
+The graph claims to be *chain-backed*. That claim is meaningful only if a reader or auditor can take any node or edge and follow the audit table back to a specific piece of LKM-returned content. Two failure modes silently break the contract:
 
 1. **Synthetic bridging** — minting an intermediate-result node because "the closure chain obviously needs one here", even though no premise / step / claim content in the payload mentions it. This makes the graph indistinguishable from agent paraphrase.
 2. **Floating numerical anchors** — quoting a value on a node that does not appear inside any premise content, claim content, or `steps[].reasoning` in the chain. The number then has no provenance the user can verify.
@@ -21,7 +21,7 @@ For each node and edge, pick the most specific anchor available:
 | `gfac_<factor_id>` | A factor diamond. Quote `subtype` and the cluster semantics implied by its premises. |
 | `factors[i].steps[j].reasoning` | An optional step note inside a factor — not always populated. When present, treat as second-class evidence after premise content. |
 | Root `data.claim.content` | The root claim text itself. Use only on the root node. |
-| `data.papers[paper:<id>]` | Bibliographic metadata for a `source_package`. Use for `$scholarly-review` references; **never** as the source of a graph node's text. |
+| `data.papers[paper:<id>]` | Bibliographic metadata for a `source_package`. Use for `$scholarly-synthesis` references; **never** as the source of a graph node's text. |
 
 If none of these contain what you want to assert, the assertion does not belong in the graph.
 

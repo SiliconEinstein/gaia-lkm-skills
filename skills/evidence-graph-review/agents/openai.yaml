@@ -1,4 +1,0 @@
-interface:
-  display_name: "Evidence Graph Review"
-  short_description: "End-to-end LKM evidence graph and review workflow"
-  default_prompt: "Use $evidence-graph-review to retrieve evidence, audit the dependency graph, render it, and write a scholarly review."
