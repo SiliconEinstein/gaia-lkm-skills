@@ -1,16 +1,14 @@
 #!/usr/bin/env node
 import fs from "node:fs/promises";
 
-const DEFAULT_BASE_URL = "https://lkm.test.bohrium.com/api/v1";
+const BASE_URL = "https://lkm.bohrium.com/api/v1";
 
 function usage() {
   console.log(`Usage:
-  lkm.mjs search --query "terms" [--top-k 10] [--base-url URL] [--out file]
-  lkm.mjs evidence --id CLAIM_ID [--max-chains 10] [--sort-by comprehensive] [--base-url URL] [--out file]
-  lkm.mjs variables --ids id1,id2,... [--base-url URL] [--out file]
-  lkm.mjs papers-ocr --ids id1,id2,... [--base-url URL] [--out file]
-
-Optional env: LKM_API_BASE_URL (full base including /api/v1) when --base-url is omitted.
+  lkm.mjs search --query "terms" [--top-k 10] [--out file]
+  lkm.mjs evidence --id CLAIM_ID [--max-chains 10] [--sort-by comprehensive] [--out file]
+  lkm.mjs variables --ids id1,id2,... [--out file]
+  lkm.mjs papers-ocr --ids id1,id2,... [--out file]
 `);
 }
 
@@ -63,7 +61,6 @@ async function writeResult(result, outPath) {
 async function main() {
   const args = parseArgs(process.argv.slice(2));
   const command = args._[0];
-  const baseUrl = args["base-url"] || process.env.LKM_API_BASE_URL || DEFAULT_BASE_URL;
 
   if (!command || args.help) {
     usage();
@@ -73,7 +70,7 @@ async function main() {
   if (command === "search") {
     if (!args.query) throw new Error("Missing --query");
     const topK = Number(args["top-k"] || 10);
-    const result = await fetchJson(`${baseUrl}/search`, {
+    const result = await fetchJson(`${BASE_URL}/search`, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
@@ -91,7 +88,7 @@ async function main() {
     if (!args.id) throw new Error("Missing --id");
     const maxChains = Number(args["max-chains"] || 10);
     const sortBy = args["sort-by"] || "comprehensive";
-    const url = `${baseUrl}/claims/${encodeURIComponent(args.id)}/evidence?max_chains=${maxChains}&sort_by=${encodeURIComponent(sortBy)}`;
+    const url = `${BASE_URL}/claims/${encodeURIComponent(args.id)}/evidence?max_chains=${maxChains}&sort_by=${encodeURIComponent(sortBy)}`;
     const result = await fetchJson(url);
     await writeResult(result, args.out);
     return;
@@ -100,7 +97,7 @@ async function main() {
   if (command === "variables") {
     if (!args.ids) throw new Error("Missing --ids (comma-separated)");
     const ids = args.ids.split(",").map((s) => s.trim());
-    const result = await fetchJson(`${baseUrl}/variables/batch`, {
+    const result = await fetchJson(`${BASE_URL}/variables/batch`, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ ids }),
@@ -115,7 +112,7 @@ async function main() {
       .split(",")
       .map((s) => s.trim())
       .map((s) => (s.startsWith("paper:") ? s.slice("paper:".length) : s));
-    const result = await fetchJson(`${baseUrl}/papers/ocr/batch`, {
+    const result = await fetchJson(`${BASE_URL}/papers/ocr/batch`, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ paper_ids }),

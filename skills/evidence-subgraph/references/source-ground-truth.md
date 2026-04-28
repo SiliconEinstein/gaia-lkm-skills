@@ -15,7 +15,7 @@ papers-ocr ──▶ ORIGINAL paper markdown + figures  ◀── final ground t
 Pull the OCR markdown when **any** of the following hold:
 
 1. The root conclusion's factor `steps[].reasoning` references specific **numerical values**, **figure numbers**, or **equation labels**. The cleaned markdown keeps LaTeX, Fig/Table captions, and Eq. numbers, so you can find the exact sentence.
-2. You need to resolve a **near-miss** candidate (same paper family, different numerical report) before accepting or rejecting an `upstream_conclusion_support` edge. Reading the primary source usually settles direction and scope faster than running more search queries.
+2. You need to resolve a **near-miss** candidate (same paper family, different numerical report) before accepting or rejecting a verification-support edge. Reading the primary source usually settles direction and scope faster than running more search queries.
 3. The paper may contain **multiple parallel results / sub-models** that LKM has split across several claims (e.g. one paper analysing both an XY and a Heisenberg variant, each with its own conclusion). The section structure in the markdown tells you how many sub-models to expect; if LKM has returned fewer claim ids, you know to search again.
 4. You are about to write a `$scholarly-review`: reviewers will ask "does the paper actually say X?" — having the markdown open makes that direct.
 
@@ -60,7 +60,7 @@ Root claim `gcn_efdd79a286bf4c0e` (Sandvik 2006, `paper:812114964624965633`) ref
 
 > FIGURE 12. … the solid curve is a cubic fit to the J/Q=0 data, extrapolating to **Δ(L=∞)/Q ≈ 0.066**. The dashed line shows the linear in 1/L behavior expected at a quantum-critical point with z=1.
 
-That single line ratifies the claim's numerical content. Record it as `source_page_anchor = "Fig. 12 caption"` next to the `verified_support` edge from the same-package conclusion.
+That single line ratifies the claim's numerical content. Record it as `source_page_anchor = "Fig. 12 caption"` next to the verification-support edge from the same-package conclusion.
 
 ## Cross-checking multi-sub-model papers
 

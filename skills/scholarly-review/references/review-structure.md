@@ -1,48 +1,93 @@
-# Review Structure
+# Review Structure Reference (closure chain, 9 sections)
 
-## Audience and framing
+This file complements `SKILL.md`. It contains the reusable section outline plus the banned-phrase checklist.
 
-The deliverable is a **standalone scholarly review** of a substantive problem (a physics question, a historical debate, a method comparison…). Assume the reader has **never** seen the evidence graph, the retrieval system, or the audit workflow. The evidence graph exists only to keep the author honest; it is **not** the subject.
+## Standard outline (any domain)
 
-## Recommended sections (domain language only)
+The review answers exactly one question: **how is this result closed?** All nine sections serve that question. Adapt the closure-chain expression in §1 to the domain.
 
-1. Title and abstract — in field vocabulary; no meta-commentary about the graph.
-2. Introduction — the substantive question and why it matters.
-3. Background / preliminaries — definitions, observables, models needed to read the article.
-4. Evidence and results — grouped by **physical/scholarly theme**, not by graph tier. Each subsection presents measurements, computations, and historical claims, separating measured / computed / fitted / assumed status.
-5. Interpretation and model dependence — what the results license, under which assumptions.
-6. Tensions among sources — where papers disagree, where units/normalisations differ.
-7. Open problems and future evidence.
-8. Conclusion.
-9. Acknowledgements / references.
-10. *(Optional)* Appendix — methodology and provenance: one short section if the user wants it; may include the evidence graph figure. This is the **only** place where retrieval-system vocabulary may appear, and it must still be minimised.
+| § | section | what goes here |
+|---|---------|----------------|
+| — | **Title** | system / setting + quantitative result + framing question. Localize to user's prompt language. |
+| — | **Abstract** | ≤ 250 English-word equivalents (~ 350 CJK characters). System, observational signals, theoretical task, central inversion result, what it resolves, what it leaves open. End with keywords. |
+| 1 | Introduction: the closure chain | State the closure-chain schematic explicitly: `(theoretical / computational inputs) → (intermediate quantities) → (observables / benchmarks) ↔ (target parameter)`. Instantiate with domain symbols. Frame the question as "does this number close the chain consistently", not "is this case typical". |
+| 2 | Observational / experimental constraints | Anchoring measurements with units and uncertainties. Which observation disciplines which input. |
+| 3 | Theoretical / computational inputs | Method (computational / fit / simulation); intermediate quantities computed; model prunings; validity conditions. Quote computed numbers by author–year. |
+| 4 | Inversion / fitting | The equation, optimization, or procedure that fixes the target result. Quote it explicitly. Resulting value. Clean separation of measured / computed / fitted / assumed. |
+| 5 | Cross-method or cross-formalism comparison | Analytical vs numerical, mean-field vs many-body, model-A vs model-B, in-distribution vs out-of-distribution, etc. Quote discrepancies with units. Explain origin. Narrate any partial-disconfirm verification edges from the graph. |
+| 6 | Open problems and what would discriminate | Assumptions carrying the conclusion; theory-experiment gaps; theory-theory tensions; *specific* experiments / calculations to discriminate. Name measurements and thresholds. |
+| 9 | References | Author–year, fully bibliographic. Build entries from the `data.papers` metadata block (`en_title` or `zh_title`, `authors` split on `\|`, `publication_date`, `publication_name`, `doi`). End with: *"For further information about each cited result, refer to the original paper via the DOI listed above."* |
+| 10 | (Optional) methodology / provenance appendix | Only place where the evidence graph image, audit table, or any system identifiers may appear. Caption disclaims them as preparation scaffolding. |
 
-## Banned phrases in the main narrative
+## Banned-phrase checklist (run before declaring done)
 
-Section titles and body text must **not** read like a commentary on the graph. Do not use:
+### English ban list
 
-- ``evidence graph / dependency graph / subgraph / 深度依赖图''
-- ``evidence chain / chain-backed / chain-internal / 链内''
-- ``premise / factor / claim id / upstream support / upstream conclusion''
-- ``audit / audit trail / audit table''
-- ``tier 0 / tier 1 / tier 2 / first layer / second layer (在指图的层级时)''
-- ``LKM / gcn_* / gfac_* / source package''
-- Section titles such as ``与深度图同构的叙述'', ``图中各层在说什么'', ``链内打包的直接支撑''
+```
+\b(evidence graph|subgraph|dependency graph|evidence chain|chain-internal|chain-backed)\b
+\b(premise|factor|claim id|upstream support|upstream conclusion|upstream claim)\b
+\b(tier ?[012]|first layer|second layer)\b   # graph-tier sense only
+\b(audit table|audit trail|retrieval bundle|retrieval system)\b
+\b(LKM|Large Knowledge Model)\b
+\b(gcn_|gfac_|paper:|source package id)\b
+```
 
-Rewrite in domain language: speak of **experiments, calculations, measurements, samples, models, assumptions, prior works**.
+### Simplified Chinese ban list
 
-## Figure policy
+```
+证据图|子图|依赖图|证据链|链内|链支持
+前提|因子|声明 ?id|上游支撑|上游结论|上游声明
+第 ?[012] ?层|第一层|第二层      # graph-tier sense only
+审计表|核查表|审计轨迹|检索包|检索系统
+LKM|大知识模型
+gcn_|gfac_|paper:|来源包 ?id
+证据链与上下文                    # graph's own section title
+```
 
-- Graphs of evidence/dependency structure belong in the **provenance appendix**, not as a main figure.
-- Figures in the main text should show **physical content** (a spectrum, a dispersion, a schematic, a table of numbers), not the retrieval graph.
-- When the evidence graph is included as an appendix figure, its caption must state plainly that it is a **methodological summary of how the literature was organised**, not a scientific diagram. Edge/colour keys are listed in the same caption. Node captions must already be in natural language (see `skills/evidence-subgraph/references/graph-output.md`).
+### Word allow-list (legitimate domain uses)
 
-## Quality checklist
+These are *not* bans, even though they share roots with banned terms — the test is whether a domain reader (who has never heard of the graph) parses them in the physical / scholarly sense:
 
-- Does the article make sense to a domain reader who never opens the appendix?
-- Are the title, abstract, and section headings written in domain language only (no ``graph'', ``chain'', ``premise'', ``tier'', ``audit'')?
-- Are measured / computed / fitted / assumed claims separated?
-- Are tensions between sources discussed in physical/scholarly terms, not as edge colours?
-- Are prior works cited **as papers**, not as nodes?
-- Is the evidence graph, if present, clearly demoted to methodology?
-- Does the final PDF compile cleanly and render CJK / math correctly?
+- English: "closure chain", "reaction chain", "supply chain", "Markov chain", "tier-1 evidence" (clinical research sense).
+- Chinese: `闭合链`, `推理链`, `反应链`, `供应链`, `马尔可夫链`, `一级证据` (clinical sense).
+
+When grepping, exclude those phrases from the match (e.g. two-step grep, or `grep -v` post-filter).
+
+### Locale-mirror rule
+
+For any language other than English or Simplified Chinese, mirror each banned term to the equivalent native term before grepping. Document the locale-specific list in the run's `notes.md` so future runs in the same locale can re-use it.
+
+## Mandatory inputs reminder
+
+The skill **requires** the following from `$evidence-graph-review` (or directly from the user, if invoked outside the orchestrator):
+
+1. Audited evidence graph source (DOT or Mermaid `flowchart`).
+2. Audit table with OCR page anchors.
+3. OCR markdown of the root paper.
+4. `data.papers` subset (paper-id → bibliographic-metadata) for the references list.
+
+If any input is missing, **stop** and request it. Do not write a review from raw chain JSON without the audited graph — the graph is what disciplines the review's structure and prevents drift.
+
+## Citation rendering from `data.papers`
+
+Each entry in `data.papers` looks like:
+
+```json
+"paper:812085204238729217": {
+  "id": "812085204238729217",
+  "doi": "10.1088/...",
+  "publication_name": "Plasma Sources Sci. Technol.",
+  "zh_title": "...",
+  "en_title": "...",
+  "authors": "A A Belevtsev | V F Chinnov | E Kh Isakaev",
+  "publication_date": "2006-8-1"
+}
+```
+
+Render as a typical journal-style reference; example output:
+
+```
+[1] A. A. Belevtsev, V. F. Chinnov, E. Kh. Isakaev. <Title>. Plasma Sources Sci. Technol., 2006. https://doi.org/10.1088/...
+```
+
+Match the rendering convention to the journal / venue the user is targeting (numbered vs author-year). Always include the DOI when present, so the user can navigate to the original paper.
