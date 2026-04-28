@@ -1,6 +1,6 @@
 # Chain-Payload Audit Discipline
 
-LKM chain payloads (`/search` results + `/claims/{id}/evidence` chains) are this skill's **single source of truth**. Every node in the graph and every audit row must trace back into that JSON — no external paper text, no agent paraphrase, no synthetic bridging.
+LKM chain payloads (`/claims/match` results + `/claims/{id}/evidence` chains) are this skill's **single source of truth**. Every node in the graph and every audit row must trace back into that JSON — no external paper text, no agent paraphrase, no synthetic bridging.
 
 ## Why the discipline matters
 
@@ -60,9 +60,9 @@ The goal is no fabrication — not exhaustive coverage. A graph with a few `anch
 
 When a single paper analyses multiple sub-models / variants and LKM has split it into several claims, each chain-backed claim id is a candidate root. Pick **one** as the root for this graph and limit nodes to that claim's `evidence_chains`. If the user wants the other sub-models, that is a separate run with a different root id.
 
-If the chain you receive is missing a sub-model the user expected to see, return to `$lkm-api` and run targeted `search` queries for that sub-model's distinctive terms — do **not** import sub-model content from outside the chain payload.
+If the chain you receive is missing a sub-model the user expected to see, return to `$lkm-api` and run targeted `/claims/match` queries for that sub-model's distinctive terms — do **not** import sub-model content from outside the chain payload.
 
 ## Caching
 
-- Persist the raw `evidence` JSON (and the `search` JSON that surfaced the candidate) under the run's working folder. The audit anchors are line-item references into that JSON; without the JSON the anchors lose meaning.
+- Persist the raw `evidence` JSON (and the `/claims/match` JSON that surfaced the candidate) under the run's working folder. The audit anchors are line-item references into that JSON; without the JSON the anchors lose meaning.
 - Re-issue `evidence` if more than a few minutes pass between discovery and graph build — the corpus may have moved, and an anchor that used to resolve may not after a re-fetch. When this happens, prefer re-pinning the anchor over editing the graph.

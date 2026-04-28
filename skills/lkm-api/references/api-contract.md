@@ -1,25 +1,35 @@
 # API Contract
 
-Production base URL: **`https://lkm.bohrium.com/api/v1`** (no credentials required for public-visibility queries). All endpoints below assume this base.
+Production base URL: **`https://open.bohrium.com/openapi/v1/lkm`**. Every endpoint below requires the header `accessKey: <bohrium-access-key>` (see `SKILL.md` → "Authentication" for the agent flow that obtains and persists the key).
 
-## Search
+## Match (claim retrieval by free text)
 
 Endpoint:
 
 ```http
-POST https://lkm.bohrium.com/api/v1/search
+POST https://open.bohrium.com/openapi/v1/lkm/claims/match
+```
+
+Headers:
+
+```
+accessKey: <bohrium-access-key>
+content-type: application/json
 ```
 
 Default body:
 
 ```json
 {
-  "query": "search terms",
-  "scopes": ["claim", "setting"],
-  "visibility": "public",
-  "top_k": 10
+  "text": "search terms",
+  "top_k": 10,
+  "filters": {
+    "visibility": "public"
+  }
 }
 ```
+
+Body field name is **`text`** (required). The old field name `query` is rejected with `code=290002` (`Field validation for 'Text' failed on the 'required' tag`).
 
 Response shape:
 
@@ -27,7 +37,8 @@ Response shape:
 {
   "code": 0,
   "data": {
-    "claims": [
+    "new_claim_likely": false,
+    "variables": [
       {
         "id": "gcn_…",
         "type": "claim",
@@ -37,24 +48,34 @@ Response shape:
         "provenance": {
           "source_packages": ["paper:<id>"],
           "representative_lcn": { "local_id": "...", "package_id": "...", "version": "..." }
-        }
+        },
+        "visibility": "public"
       }
     ],
     "papers": {
       "paper:<id>": { /* paper-metadata block, see below */ }
     }
-  }
+  },
+  "trace_id": "..."
 }
 ```
 
-`data.claims` is the list field (not `items` or `results`). For each candidate, record: `id`, `score`, `content`, `provenance.source_packages`, and the corresponding `data.papers[<source_package>]` entry.
+The candidate list is at **`data.variables`** — note the rename from the previous endpoint family, which used `data.claims`. Per-entry structure (id, content, role, score, provenance, type) is unchanged. For each candidate, record: `id`, `score`, `content`, `provenance.source_packages`, and the corresponding `data.papers[<source_package>]` entry.
+
+`data.new_claim_likely` and the top-level `trace_id` are diagnostic; downstream skills can ignore them.
 
 ## Evidence
 
 Endpoint:
 
 ```http
-GET https://lkm.bohrium.com/api/v1/claims/{id}/evidence?max_chains=10&sort_by=comprehensive
+GET https://open.bohrium.com/openapi/v1/lkm/claims/{id}/evidence?max_chains=10&sort_by=comprehensive
+```
+
+Headers:
+
+```
+accessKey: <bohrium-access-key>
 ```
 
 Response shape:
@@ -103,7 +124,7 @@ Record:
 
 ## Paper metadata block (`data.papers`)
 
-Both `/search` and `/claims/{id}/evidence` return a `data.papers` map keyed by `paper:<id>`. Each entry has:
+Both `/claims/match` and `/claims/{id}/evidence` return a `data.papers` map keyed by `paper:<id>`. Each entry has:
 
 ```json
 {
@@ -135,13 +156,34 @@ If `data.papers` is empty or missing a key the chain references, fall back to `e
 ## Variables (Batch)
 
 ```http
-POST https://lkm.bohrium.com/api/v1/variables/batch
+POST https://open.bohrium.com/openapi/v1/lkm/variables/batch
+```
+
+Headers:
+
+```
+accessKey: <bohrium-access-key>
+content-type: application/json
 ```
 
 Body:
 
 ```json
 { "ids": ["var_id_1", "var_id_2"] }
+```
+
+Response shape:
+
+```json
+{
+  "code": 0,
+  "data": {
+    "variables": [ /* hydrated variable objects */ ],
+    "papers": { "paper:<id>": { /* paper-metadata block */ } },
+    "not_found": ["var_id_unknown"]
+  },
+  "trace_id": "..."
+}
 ```
 
 Call only when a chain step references a `var_*` id. If no `var_*` ids appear in the chain, skip this endpoint.
@@ -167,9 +209,9 @@ Some `factors[].premises[].id` entries currently come back with **empty `content
 
 ## Retrieval discipline
 
-Search results are candidates. Evidence chains are stronger, but still require semantic inspection before use in prose. A candidate with no evidence chain may still be useful context but cannot anchor a graph.
+`/claims/match` results are candidates. Evidence chains are stronger, but still require semantic inspection before use in prose. A candidate with no evidence chain may still be useful context but cannot anchor a graph.
 
-For evidence-graph rooting, treat **`total_chains > 0`** on `GET /claims/{id}/evidence` as the **gate** for an acceptable root. Probe additional search hits until such a root is found, or obtain an explicit user waiver for chain-less mode.
+For evidence-graph rooting, treat **`total_chains > 0`** on `GET /claims/{id}/evidence` as the **gate** for an acceptable root. Probe additional match hits until such a root is found, or obtain an explicit user waiver for chain-less mode.
 
 ## Premise A2 pit
 

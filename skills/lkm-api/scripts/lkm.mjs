@@ -1,13 +1,15 @@
 #!/usr/bin/env node
 import fs from "node:fs/promises";
 
-const BASE_URL = "https://lkm.bohrium.com/api/v1";
+const BASE_URL = "https://open.bohrium.com/openapi/v1/lkm";
 
 function usage() {
   console.log(`Usage:
-  lkm.mjs search --query "terms" [--top-k 10] [--out file]
-  lkm.mjs evidence --id CLAIM_ID [--max-chains 10] [--sort-by comprehensive] [--out file]
+  lkm.mjs match     --text "terms" [--top-k 10] [--out file]
+  lkm.mjs evidence  --id CLAIM_ID [--max-chains 10] [--sort-by comprehensive] [--out file]
   lkm.mjs variables --ids id1,id2,... [--out file]
+
+Auth: every request requires a Bohrium access key in the LKM_ACCESS_KEY env var.
 `);
 }
 
@@ -29,6 +31,24 @@ function parseArgs(argv) {
     }
   }
   return args;
+}
+
+function getAccessKey() {
+  const ak = process.env.LKM_ACCESS_KEY;
+  if (!ak) {
+    throw new Error(
+      "LKM_ACCESS_KEY is not set. Ask the user for their Bohrium access key, then export it in this shell session: `export LKM_ACCESS_KEY=<key>`. Do not commit the key to any file in the repo."
+    );
+  }
+  return ak;
+}
+
+function authHeaders(extra = {}) {
+  return {
+    accessKey: getAccessKey(),
+    accept: "*/*",
+    ...extra,
+  };
 }
 
 async function fetchJson(url, options) {
@@ -66,17 +86,16 @@ async function main() {
     return;
   }
 
-  if (command === "search") {
-    if (!args.query) throw new Error("Missing --query");
+  if (command === "match") {
+    if (!args.text) throw new Error("Missing --text");
     const topK = Number(args["top-k"] || 10);
-    const result = await fetchJson(`${BASE_URL}/search`, {
+    const result = await fetchJson(`${BASE_URL}/claims/match`, {
       method: "POST",
-      headers: { "content-type": "application/json" },
+      headers: authHeaders({ "content-type": "application/json" }),
       body: JSON.stringify({
-        query: args.query,
-        scopes: ["claim", "setting"],
-        filters: { visibility: "public" },
+        text: args.text,
         top_k: topK,
+        filters: { visibility: "public" },
       }),
     });
     await writeResult(result, args.out);
@@ -88,7 +107,7 @@ async function main() {
     const maxChains = Number(args["max-chains"] || 10);
     const sortBy = args["sort-by"] || "comprehensive";
     const url = `${BASE_URL}/claims/${encodeURIComponent(args.id)}/evidence?max_chains=${maxChains}&sort_by=${encodeURIComponent(sortBy)}`;
-    const result = await fetchJson(url);
+    const result = await fetchJson(url, { headers: authHeaders() });
     await writeResult(result, args.out);
     return;
   }
@@ -98,7 +117,7 @@ async function main() {
     const ids = args.ids.split(",").map((s) => s.trim());
     const result = await fetchJson(`${BASE_URL}/variables/batch`, {
       method: "POST",
-      headers: { "content-type": "application/json" },
+      headers: authHeaders({ "content-type": "application/json" }),
       body: JSON.stringify({ ids }),
     });
     await writeResult(result, args.out);

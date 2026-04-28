@@ -9,7 +9,7 @@ description: Universal entry point for any LKM-driven evidence-and-review task. 
 
 This is the **single front door** for every LKM-driven request. The orchestrator inspects the user's intent and routes:
 
-- **Raw API access** (e.g. "search LKM for X", "fetch evidence for `gcn_…`", "look up paper metadata Y") → delegate to **`$lkm-api`** directly. No graph, no review.
+- **Raw API access** (e.g. "match claims in LKM for X", "fetch evidence for `gcn_…`", "look up paper metadata Y") → delegate to **`$lkm-api`** directly. No graph, no review.
 - **Topical evidence graph + review** (e.g. broad topic, family of materials/systems, specific phenomenon) → run the full pipeline `$lkm-api` discovery → user-selection checkpoint → `$evidence-subgraph` → `$scholarly-review`.
 - **Graph-only on a topic** ("just build the evidence graph, no review") → run the pipeline through `$evidence-subgraph` and stop; do not invoke `$scholarly-review`.
 - **Already-narrowed input** (user names a specific system AND a specific quantity / paper / claim id) → skip the broad-discovery step; go straight to graph (+ review unless graph-only).
@@ -32,7 +32,7 @@ The pipeline has a **mandatory user-selection checkpoint** between discovery and
 
 ### 1. `$lkm-api` — broad-topic discovery (skip if narrow target supplied)
 
-Convert the user's prompt to one or more search queries in the language(s) most likely to maximize recall on the corpus (often English for scientific corpora; preserve the user's terminology and named entities). If the prompt names a system or a quantity, include them; otherwise search by topic terms. Run `search` with `scopes=["claim","setting"]`, `top_k` ≥ 20, `visibility: "public"`, and save raw JSON. Vary the query (alternate names of the same effect, formula-level vs concept-level, synonyms across sub-fields) until the union of top results stops yielding new chain-backed candidates.
+Convert the user's prompt to one or more free-text queries in the language(s) most likely to maximize recall on the corpus (often English for scientific corpora; preserve the user's terminology and named entities). If the prompt names a system or a quantity, include them; otherwise query by topic terms. Run `POST /claims/match` with body `{"text": "<query>", "top_k": ≥ 20, "filters": {"visibility": "public"}}` and save raw JSON. The candidate list is at `data.variables`. Vary the query (alternate names of the same effect, formula-level vs concept-level, synonyms across sub-fields) until the union of top results stops yielding new chain-backed candidates.
 
 ### 2. `$lkm-api` — chain-backed candidate filter (skip if narrow target supplied)
 
@@ -104,7 +104,7 @@ Report:
 
 The orchestrator is "reproducible" when, given the **same loose prompt**, two independent runs produce:
 
-1. **Steady candidate list.** The same broad-topic search yields essentially the same set of chain-backed candidates (order may drift; membership should not).
+1. **Steady candidate list.** The same broad-topic match query yields essentially the same set of chain-backed candidates (order may drift; membership should not).
 2. **Steady graph for any chosen candidate.** Once the user picks a candidate, the produced graph has the same root, same factor diamonds, same typed reasoning nodes (within wording tolerance), same three-class edge taxonomy, same audit anchors.
 3. **Same-quality review for any chosen candidate.** The review covers the same closure chain, same banned-phrase compliance, same equation/units discipline, same citation set drawn from `data.papers`.
 
