@@ -38,36 +38,29 @@ Convert the user's prompt to one or more free-text queries in the language(s) mo
 
 For each distinct candidate (deduplicated by claim id), call `GET /claims/{id}/evidence` with `sort_by=comprehensive`. Retain candidates with `total_chains > 0`. Drop the rest from root consideration.
 
-### 2b. Discovery flag pass — contradictions and equivalences
+### 2b. Discovery flag pass — contradictions, equivalences, cross-validation
 
-Run a best-effort scan over the **full** match response from step 1 (both chain-backed and chain-less candidates — open questions whose conflicting side has no chain are still valuable). The discovery flow itself (chain-backed filter, user-selection checkpoint) is unaffected by this pass; the saved files are consumed downstream by `$evidence-subgraph` (for equivalence-pair dedup decisions) and `$scholarly-synthesis` (for §5 cross-method narrative and §6 open-problems narrative).
+Run a best-effort scan over the **full** match response from step 1 (both chain-backed and chain-less candidates — open questions whose conflicting side has no chain are still valuable). The discovery flow itself (chain-backed filter, user-selection checkpoint) is unaffected by this pass; the saved files are consumed downstream by `$evidence-subgraph` (for equivalence-pair dedup decisions and chain-internal pair edges) and `$scholarly-synthesis` (for §5 cross-method narrative and §6 open-problems narrative).
+
+This step writes three structured JSON files into the run folder: `contradictions.json`, `equivalences.json`, and `cross_validation.json`. The schema and source-pointer rules are fixed by `$evidence-subgraph`'s `references/run-folder-output-contract.md` — read it for the envelope and per-record fields. Pairs whose two claims are both chain-internal (i.e. both endpoints will become nodes in `evidence_graph.json`) are also rendered as graph pair edges by `$evidence-subgraph`; pairs with one or both endpoints out of the chosen chain stay in the JSON files only (`drawn_in_graph: false`).
 
 For each candidate-vs-candidate comparison, the agent uses semantic judgement on `content` fields plus paper metadata in `data.papers`:
 
-- **Contradiction pair** — two claims that, on the same topic with the same system / setting, assert numerically or qualitatively conflicting values, signs, scaling regimes, or directional outcomes. (e.g. one says μ\* = 0.13, another μ\* = 0.21 for the same compound; one says effect-X is positive, another says it is negative.) Save to **`contradictions.md`** in the run folder, one row per pair:
-
-  ```
-  | pair (id_a / id_b) | topic | side A claim | side B claim | source A (paper, role) | source B (paper, role) | why contradictory |
-  ```
-
-- **Equivalence pair** — two claims that assert the same proposition on the same topic. For each pair, classify the lineage using `data.papers`:
+- **Contradiction pair** — two claims that, on the same topic with the same system / setting, assert numerically or qualitatively conflicting values, signs, scaling regimes, or directional outcomes (e.g. one says μ\* = 0.13, another μ\* = 0.21 for the same compound; one says effect-X is positive, another says it is negative). Append to `contradictions.json`.
+- **Equivalence pair** — two claims that assert the same proposition on the same topic. For each pair, classify the lineage using `data.papers` and store the classification in the record's `rationale` (or in an additional implementation-defined field):
   - **same paper, different version** — both `source_packages` resolve to the same paper, OR one is an arXiv preprint and the other is the published journal version of the same work. Detect via DOI prefix `10.48550/arxiv.` and `area: "arXiv-…"` on one entry plus a matching non-arXiv DOI / journal entry; matching titles or author lists make this near-certain.
   - **independent experimental** — different papers, both observational / experimental in method.
   - **independent theoretical / computational** — different papers, both derive the result by theory / computation / simulation.
   - **cross-paradigm confirmation** — different papers, one experimental and one theoretical / computational.
   - **unclassified** — lineage cannot be confidently assigned from `data.papers` alone; flag for user inspection.
+  Append to `equivalences.json`.
+- **Cross-validation pair** — two claims that confirm or partially confirm/disconfirm each other on the same observable (e.g. an independent measurement that agrees on order of magnitude but with a different exact value, or a parallel computation that confirms a sign). Each record carries an explicit `polarity` field (`confirm` / `partial_confirm` / `partial_disconfirm`). Append to `cross_validation.json`.
 
-  Save to **`equivalences.md`** in the run folder:
+**Caps.** Cap each file at the **top 10 most-interesting pairs**. "Most interesting" means: high-relevance candidates (top of the match score), pairs that disagree about a quantity central to the user's prompt, or pairs whose papers are widely cited. The cap is per-file; if more pairs exist, the run folder's `raw/match_*.json` retains the full match response for any deeper post-hoc analysis.
 
-  ```
-  | pair (id_a / id_b) | topic | shared claim | source A | source B | lineage classification | note |
-  ```
+**Empty case.** If no pairs are found, still write each file with `pairs: []` (with the contract envelope) so downstream skills can detect the empty case unambiguously. The three files must always exist per `run-folder-output-contract.md` §6.
 
-**Caps.** Cap each list at the **top 10 most-interesting pairs**. If more candidates exist, append a single trailing line `…and N more (see raw match JSON: <path>)`. "Most interesting" means: high-relevance candidates (top of the match score), pairs that disagree about a quantity central to the user's prompt, or pairs whose papers are widely cited.
-
-**Empty case.** If no pairs are found, still write the file with a single line `(no pairs detected in this run)` so downstream skills can detect the empty case unambiguously.
-
-**Narrow-target case (discovery skipped).** When the user supplies a narrow target and step 1 is skipped, the orchestrator still must produce both files for the downstream skills, even though there is no broad match response to scan. Write both files with a single line `(discovery skipped — narrow target supplied; no pairs scanned)` and proceed to step 4. Do **not** invent pairs from the chain payload alone; the discovery scan needs the broader candidate set to be meaningful.
+**Narrow-target case (discovery skipped).** When the user supplies a narrow target and step 1 is skipped, the orchestrator still must produce all three pair JSON files (with `pairs: []`), and `evidence_graph.json` must carry `discovery_performed: false` so downstream consumers know there is no broad match response to scan. Do **not** invent pairs from the chain payload alone; the discovery scan needs the broader candidate set to be meaningful.
 
 ### 3. **User-selection checkpoint (mandatory unless narrow target supplied)**
 
@@ -81,7 +74,7 @@ Then **stop and ask the user to pick one** (or to ask for more candidates, or to
 
 If you are running in an autonomous-test harness where the user cannot be reached interactively, stop after writing the candidate list to a file and return — do not autonomously pick a root. The harness operator is responsible for handing the chosen claim id back into a follow-up invocation.
 
-The candidate list itself is a **first-class deliverable**: write it to `candidates.md` in the run folder so the choice is reproducible and auditable.
+The candidate list itself is a **first-class deliverable**: write it to a `candidates.md` companion file in the run folder so the choice is reproducible and auditable. (Note: `candidates.md` is a convenience companion and is not part of the structured output contract — the authoritative record of which claims were considered lives in `raw/match_*.json`.)
 
 ### 4. `$lkm-api` — pin the root and persist `data.papers`
 
@@ -93,14 +86,13 @@ Once the user has selected a candidate (claim id supplied) — or the user alrea
 
 ### 5. `$evidence-subgraph`
 
-Hand off `(root evidence JSON, data.papers subset, equivalences.md path, save-folder path)`. The graph skill produces:
+Hand off `(root evidence JSON, data.papers subset, equivalences.json path, run-folder path)`. The graph skill produces the run-folder artifacts mandated by `$evidence-subgraph`'s `references/run-folder-output-contract.md` — namely:
 
-- a **graph source** in **DOT (Graphviz `neato` / `sfdp`)** as the canonical format, optionally with a **Mermaid `flowchart`** secondary using `linkStyle` for per-edge classes. Mermaid `mindmap` is **not** acceptable. Defer to `$evidence-subgraph` §5 for the authoritative renderer rules.
-- a **rendered raster** of the graph (PNG, PDF, or SVG) — required, not optional. `$scholarly-synthesis` embeds this raster as Figure 1 of the body, so it must render with the right fonts (no `□` CJK tofu) before this step is considered complete.
-- an audit table with one row per non-trivial edge, anchored to the chain payload (premise / factor / step references);
-- a cycle-check report.
+- `evidence_graph.json` — structured graph (nodes, edges, pair_relations) with RFC 6901 source pointers into `raw/`;
+- `evidence_graph.dot` — re-renderable canonical Graphviz source (`neato` / `sfdp` layouts; Mermaid `flowchart` `.mmd` may also be written as a non-contractual companion, but Mermaid `mindmap` is forbidden);
+- `evidence_graph.png` — human-readable raster, CJK-safe (no `□` tofu), embeddable by `$scholarly-synthesis` as Figure 1 of the body.
 
-The graph skill consults `equivalences.md` when deciding whether to merge or keep separate two claims that assert the same proposition (see `$evidence-subgraph` §2's no-duplicate-nodes rule).
+The graph skill also runs the contract's §8 self-check (every `source` pointer resolves; pair-edge cross-references are consistent; etc.) and consults `equivalences.json` when deciding whether to merge or keep separate two claims that assert the same proposition (see `$evidence-subgraph` §2's no-duplicate-nodes rule).
 
 Verify that:
 
@@ -115,9 +107,9 @@ If a check fails, return to the graph skill with the gap report.
 
 ### 6. `$scholarly-synthesis`
 
-Hand off `(graph artifact, audit table, data.papers subset, contradictions.md path, equivalences.md path, save-folder path)`. The synthesis skill produces a Markdown or LaTeX article following the closure-chain structure. The **rendered graph is Figure 1 of the body**, placed immediately after the abstract — see `$scholarly-synthesis` for the figure-placement rules. Run the verification suite the synthesis skill specifies:
+Hand off `(run-folder path, data.papers subset)`. The synthesis skill reads the contract artifacts directly from the run folder (`evidence_graph.json` / `evidence_graph.png` / the three pair JSON files / `raw/`) and produces a Markdown or LaTeX article following the closure-chain structure. The **rendered graph is Figure 1 of the body**, placed immediately after the abstract — see `$scholarly-synthesis` for the figure-placement rules. Run the verification suite the synthesis skill specifies:
 
-- mandatory-inputs check (graph + audit table + `data.papers` all present; `contradictions.md` and `equivalences.md` present even if empty);
+- mandatory-inputs check (run-folder conforms to `run-folder-output-contract.md`: `evidence_graph.{json,dot,png}` present; `contradictions.json`, `equivalences.json`, `cross_validation.json` present even if `pairs: []`; `raw/` carries the verbatim LKM responses; `data.papers` reachable via the evidence file);
 - Figure 1 presence at the front of the body, with a domain-language caption that satisfies the banned-phrase rule;
 - banned-phrase grep with English + locale-mirror lists (zero hits in main narrative or references);
 - best-effort numerical-anchor check (each number located in the chain payload where possible; rows where it cannot be located are noted, not deleted);
@@ -131,9 +123,9 @@ If LaTeX, compile to PDF and inspect the log for missing-glyph / overfull / unde
 Report:
 
 - the user-chosen root (system + value + paper id + author–year);
-- artefact paths (`candidates.md`, graph source `.dot` / `.mmd`, **rendered graph raster** `.png` / `.pdf` / `.svg`, audit table, synthesis markdown / LaTeX, compiled PDF, `contradictions.md`, `equivalences.md`, `missing-material.md` if the synthesis skill produced one);
+- artefact paths — the run-folder layout (`evidence_graph.{json,dot,png}`, `contradictions.json`, `equivalences.json`, `cross_validation.json`, `raw/`) per `run-folder-output-contract.md`, plus any companion files (`candidates.md`, synthesis markdown / LaTeX, compiled PDF, `missing-material.md` if the synthesis skill produced one);
 - the relevant `data.papers` metadata so the user can refer to the original sources for further detail;
-- a **discovery-flags summary**: a one-paragraph reminder that `contradictions.md` lists potential open questions surfaced during discovery and `equivalences.md` lists same-proposition pairs with lineage classification; encourage the user to skim both. Mention the count of pairs in each file. If a file is empty, say so explicitly rather than omitting the line;
+- a **discovery-flags summary**: a one-paragraph reminder that `contradictions.json` lists potential open questions surfaced during discovery, `equivalences.json` lists same-proposition pairs with lineage classification, and `cross_validation.json` lists confirming / partially-confirming/disconfirming pairs. Encourage the user to skim all three. Mention the count of pairs in each file. If a file's `pairs` array is empty, say so explicitly rather than omitting the line;
 - a **missing-material reminder**, sourced from `missing-material.md` (which `$scholarly-synthesis` writes when its best-effort figure/table reproduction needs to leave gaps): every place in the synthesis where the prose references a figure or data table from a source paper that the chain payload could not supply verbatim — listed by section, with the cited paper's DOI so the user can fetch it for camera-ready. If `missing-material.md` is empty or absent (e.g. graph-only mode), say so explicitly rather than omitting the line;
 - any unresolved gaps (chain-payload anchors that could not be located, candidate roots that almost matched, LKM endpoint anomalies, empty-content premises flagged for revisit).
 
