@@ -28,6 +28,12 @@ A chain-backed claim returned by `$lkm-api` whose conclusion text names a system
 
 If invoked with a chain-less claim id (`total_chains == 0`), stop and return the failure to the orchestrator. Do not invent premises.
 
+## Mandatory output contract
+
+Every successful invocation of this skill must leave a conforming run-folder on disk. The contract — directory layout, structured `evidence_graph.json` schema, the three pair JSON files (`contradictions.json` / `equivalences.json` / `cross_validation.json`), the verbatim `raw/` payloads, the source-pointer convention (RFC 6901 JSON Pointer), and the pre-success self-check — is specified canonically in `references/run-folder-output-contract.md`. Read that file before producing any output, and run its §8 self-check before declaring the task complete. Failing any check in §8 is a hard failure.
+
+The contract supersedes legacy `.md` artifact mentions (`contradictions.md`, `equivalences.md`, `audit.md`, `cycle_check.md`, `candidates.md`) found in earlier versions of this skill or in `$evidence-graph-synthesis`. Skills are free to additionally write companion `.md` summaries, but those are non-contractual and downstream consumers must read the JSON files.
+
 ## Workflow
 
 ### 0. Gate: chain-backed root
@@ -64,7 +70,7 @@ Render each as a labelled box (filled, locale-safe font). Label is two short lin
 
 **No synthetic bridging.** The graph is strictly chain-bounded. If an intermediate quantity is implied but not present in any premise / step / claim content returned by LKM, do **not** mint a node for it — record the gap in the audit table as `gap: <description>` and move on. Inventing nodes silently switches the graph from chain-backed to synthetic.
 
-**No duplicate nodes for equivalent premises.** When two premises (or a premise and a verification-support claim) assert the **same proposition** — same equation, same numerical value, same formal statement, just from different parts of the chain or different source packages — render them as a **single node**. List the two source packages in parentheses on a second label line, or as a side note in the audit table; do not draw two near-identical boxes. This rule applies whether the equivalence comes from within the root chain itself or is flagged in the orchestrator's `equivalences.md`. The exception: if the orchestrator's lineage classification on the equivalence pair is `independent experimental`, `independent theoretical / computational`, or `cross-paradigm confirmation`, **do** keep the second claim as a distinct verification-support node — the independent confirmation is informative for the closure-chain reader and merging it would erase that information. Pairs classified `same paper, different version` (arXiv preprint and journal version) must be merged.
+**No duplicate nodes for equivalent premises.** When two premises (or a premise and a verification-support claim) assert the **same proposition** — same equation, same numerical value, same formal statement, just from different parts of the chain or different source packages — render them as a **single node**. List the two source packages in parentheses on a second label line, or as a side note in the audit table; do not draw two near-identical boxes. This rule applies whether the equivalence comes from within the root chain itself or is flagged in the orchestrator's `equivalences.json`. The exception: if the orchestrator's lineage classification on the equivalence pair is `independent experimental`, `independent theoretical / computational`, or `cross-paradigm confirmation`, **do** keep the second claim as a distinct verification-support node — the independent confirmation is informative for the closure-chain reader and merging it would erase that information. Pairs classified `same paper, different version` (arXiv preprint and journal version) must be merged.
 
 ### 3. Background / context nodes
 
@@ -131,7 +137,7 @@ Before hand-off, walk every numerical anchor in every reasoning node and try to 
 This skill is also invocable directly when the user asks for "just build the evidence graph" without a synthesis. In that case:
 
 - the orchestrator (`$evidence-graph-synthesis`) still handles discovery + the user-selection checkpoint upstream of this skill;
-- after step 8, return the graph source + audit table + cycle-check report directly to the user, with the relevant `data.papers` metadata appended so the user can refer back to the original sources;
+- after step 8, return the run-folder path (with the contract artifacts under it) directly to the user, with the relevant `data.papers` metadata appended so the user can refer back to the original sources;
 - **do not** invoke `$scholarly-synthesis`.
 
 ## Hand-off
