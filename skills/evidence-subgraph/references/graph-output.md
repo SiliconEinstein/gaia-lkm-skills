@@ -4,7 +4,7 @@ This file complements `SKILL.md`. It contains the visual style and rendering det
 
 ## Minimum artifacts
 
-The authoritative on-disk layout is fixed by `run-folder-output-contract.md` in this directory. The contract requires three graph artifacts (`evidence_graph.json` / `evidence_graph.dot` / `evidence_graph.png`), three pair JSON files (`contradictions.json` / `equivalences.json` / `cross_validation.json`), and a `raw/` folder of verbatim LKM responses. Mermaid `.mmd`, additional rendered formats (SVG / PDF), and any companion `.md` summaries are non-contractual extras: write them if useful, but do not rely on them downstream.
+The authoritative on-disk layout is fixed by `run-folder-output-contract.md` in this directory. The contract requires three graph artifacts (`evidence_graph.json` / `evidence_graph.dot` / `evidence_graph.png`), four pair JSON files (`contradictions.json` / `equivalences.json` / `cross_validation.json` / `dismissed_pairs.json`), and a `raw/` folder of verbatim LKM responses. Mermaid `.mmd`, additional rendered formats (SVG / PDF), and any companion `.md` summaries are non-contractual extras: write them if useful, but do not rely on them downstream.
 
 ## Human-readable node labels (mandatory)
 
