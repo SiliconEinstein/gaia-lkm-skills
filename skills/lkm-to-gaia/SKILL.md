@@ -179,11 +179,22 @@ Output: `merge_audit.md` logs every decision for reproducibility.
    - `claim(...)` calls for every canonical claim per `$gaia-lang` §2.
    - `deduction([premises], conclusion)` for every `gfac_*` factor.
    - Cross-paper operators in `cross_paper.py`.
-   - `priors.py` for all leaf claims (floats, one per leaf, `TODO:review` marker on every justification).
+   - Empty `priors.py` (`PRIORS = {}`) — priors are filled in step 8.
    - `references.json` from `data.papers`.
    - `pyproject.toml` per `$gaia-cli` §1.
    - Copy all input files into `artifacts/lkm-discovery/`.
-8. **Self-check.** Lexical sanity (balanced parens / brackets / braces, `from gaia.lang import` present, every `claim(` has matching close, every `prior=` is a float in `[1e-3, 0.999]`). Run `python3 -c "import ast; ast.parse(open('<file>').read())"` on each `.py` module. Fail loudly if any check fails.
+7. **Self-check.** Lexical sanity + `python3 -c "import ast; ast.parse(...)"` on each `.py` module. Fail loudly if any check fails.
+8. **Compile, infer, review.**
+   ```bash
+   gaia compile . && gaia infer .
+   ```
+9. **Fill priors.** Run `gaia check --hole .` — for each hole, judge "what is the probability this claim is correct?" and fill `priors.py`. Cap at 0.9. Re-compile and re-infer.
+10. **Inquiry review.** Run `gaia inquiry review .`. Inspect belief report, unreviewed warrants, structural holes. For each suspicious claim or reasoning chain, add an obligation:
+    ```bash
+    gaia inquiry obligation add <claim_qid> -c "<what needs verification>"
+    gaia inquiry obligation add <strategy_qid> -c "<why the reasoning is suspect>"
+    ```
+    Obligations form the refinement checklist for the next exploration iteration.
 
 ## Workflow (incremental mode)
 
@@ -199,7 +210,10 @@ This skill makes **no network calls**. All retrieval was already done by `$lkm-a
 
 ## Hand-off
 
-Batch mode hands the `<name>-gaia/` directory back to the user. Next step: `cd <name>-gaia/ && gaia compile .`
+Batch mode hands the `<name>-gaia/` directory back to the user with:
+- Compiled IR, inferred beliefs, inquiry review results
+- `gaia inquiry obligation list` showing the refinement checklist
+- Next step: resolve obligations → update DSL/priors → `gaia compile && gaia infer && gaia inquiry review` (repeat)
 
 Incremental mode hands the source fragment back to the host, which appends to `plan.gaia.py`.
 
