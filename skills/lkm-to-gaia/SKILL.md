@@ -285,10 +285,12 @@ The exploration is **obligation-driven**: each iteration identifies gaps via `ga
 
 **Detect.** A claim needs decomposition if it contains multiple sub-assertions joined by comparison language: "X is larger/smaller than Y", "A predicts ... while B observes ...", "comparing M₁ and M₂ shows disagreement/agreement". Also: universal quantifiers ("all semiconductors", "always") are compound — they hide the specific instances.
 
-**Extract.** For each sub-assertion, write an atomic claim with explicit system, method, and value. Example:
+**Extract.** For each sub-assertion, write an atomic claim with explicit system, method, and value. CRITICAL: every numerical value must be traceable to its source — was it stated in the original claim, or extracted from the evidence chain? If the latter, note it. Example:
 - Compound: "PBE predicts gaps ~40% smaller than experiment for BeX"
-- Atomic A: "PBE-GGA for BeSe gives indirect gap = 2.51 eV"
-- Atomic B: "Experimental BeSe indirect gap = 4-4.5 eV"
+- Atomic A: "PBE-GGA for BeSe gives indirect gap = 2.51 eV" *(value from evidence chain step 3, not in original claim)*
+- Atomic B: "Experimental BeSe indirect gap = 4-4.5 eV" *(value from evidence chain step 3)*
+
+Do NOT invent precision the original paper didn't claim. If the original only says "~40%", do not write "2.51 eV" without attribution.
 
 **Connect.** Write the Gaia operator linking the atomic claims:
 - Conflict → `contradiction(A, B, reason="...", prior=...)`
