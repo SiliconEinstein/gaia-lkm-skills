@@ -168,33 +168,58 @@ Output: `merge_audit.md` logs every decision for reproducibility.
 
 ## Workflow (batch mode)
 
-1. **Read evidence.** Load raw LKM evidence JSON for each selected root. Read `contradictions.md` from the orchestrator. Scan all 20 match candidates for potential contradictions. Search LKM upstream for each premise to find supporting conclusions.
-2. **Dedup.** Merge claims with identical content text, and arXiv↔published pairs (match DOI/author/title). Surface ambiguous merges to `merge_decisions.todo` (default: KEEP).
-3. **Emit DSL.** Write each module:
-   - `claim(...)` calls for every canonical claim per `$gaia-lang` §2.
-   - `deduction([premises], conclusion)` for every `gfac_*` factor.
-   - Cross-paper operators in `cross_paper.py`.
-   - Empty `priors.py` (`PRIORS = {}`).
-   - `references.json` from `data.papers`.
-   - `pyproject.toml` per `$gaia-cli` §1.
-   - Copy all input files into `artifacts/lkm-discovery/`.
-4. **Refinement loop.** Repeat until exit conditions are met:
+Start from the selected root claim(s). The core loop expands the graph outward
+by searching upstream for each premise, then recursively for each new upstream
+claim found. Compile/infer/review happens at each layer to surface holes and
+obligations before going deeper.
 
-   a. **Compile, infer.** `gaia compile . && gaia infer .`
-   b. **Fill priors.** `gaia check --hole .` — for each hole, judge "what is the probability this claim is correct?" Fill `priors.py`. Cap at 0.9.
-   c. **Inquiry review.** `gaia inquiry review .` — inspect beliefs, unreviewed warrants, holes.
-   d. **Add obligations.** For each suspicious claim or reasoning chain:
-      ```bash
-      gaia inquiry obligation add <qid> -c "<what needs verification>"
-      ```
-   e. **Resolve obligations.** For each open obligation: search LKM, refine DSL, adjust priors, or dismiss.
-   f. **Accept warrants.** Run review pass on unreviewed warrants — `gaia inquiry obligation add <strategy_qid> -c "review and accept/reject"`.
+```
+ ┌──────────────────────────────────────────────────────────┐
+ │ 1. Unpack root's evidence chain                          │
+ │    └─ claims for root + premises + deduction(reason=...)  │
+ │                                                          │
+ │ 2. For each premise P:                                   │
+ │    ├─ search LKM upstream                                │
+ │    ├─ found supporting conclusions U₁, U₂, ...          │
+ │    │   └─ claim(Uᵢ) + support([Uᵢ], P, prior=...)       │
+ │    ├─ found contradictions with P                        │
+ │    │   └─ contradiction(P, X, prior=...)                 │
+ │    └─ for each Uᵢ: recurse (treat as new premise,        │
+ │        go to step 2 with Uᵢ)                             │
+ │                                                          │
+ │ 3. Write DSL, compile, infer                             │
+ │    └─ gaia compile . && gaia infer .                     │
+ │                                                          │
+ │ 4. gaia check --hole . → fill priors.py                  │
+ │                                                          │
+ │ 5. gaia inquiry review .                                 │
+ │    ├─ beliefs ok? warrant ok?                            │
+ │    └─ suspicious claim or reasoning:                     │
+ │        gaia inquiry obligation add <qid> -c "..."        │
+ │                                                          │
+ │ 6. Resolve obligations: search LKM, refine DSL,          │
+ │    adjust priors, or dismiss → go back to step 2         │
+ │                                                          │
+ │ Exit when:                                               │
+ │  • all premises searched upstream (or search exhausted)  │
+ │  • 0 holes, 0 unreviewed warrants, 0 open obligations    │
+ └──────────────────────────────────────────────────────────┘
+```
 
-   **Exit conditions (all must be true):**
-   - `gaia check --hole` returns 0 holes
-   - `gaia inquiry review` shows 0 unreviewed warrants
-   - `gaia inquiry obligation list` shows no open obligations
-   - Agent confirms the graph is complete (no missing upstream support, no ignored contradiction)
+### Step details
+
+**1. Unpack.** For each root claim, load `GET /claims/{id}/evidence`. Emit `claim()` for the root, each premise, plus `deduction([premises], root, prior=0.95, reason="...")` with the LKM steps formatted as numbered markdown.
+
+**2. Upstream search.** For each premise in the current layer:
+- `POST /claims/match` with the premise's content as query
+- Filter to relevant conclusions (agent judgment, not exact match)
+- Emit `claim()` + `support([U], P, prior=...)` for each found
+- Check for contradictions among match results → `contradiction(...)`
+- Recurse: each upstream conclusion becomes a premise for the next layer
+
+**3–5. Validate.** Write DSL files, compile, infer, fill priors from holes, run inquiry review.
+
+**6. Resolve.** For each open obligation: search further, refine the DSL, or dismiss. Then back to step 2. Repeat until exit conditions hold.
 
 ## Workflow (incremental mode)
 
