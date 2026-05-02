@@ -283,14 +283,11 @@ The exploration is **obligation-driven**: each iteration identifies gaps via `ga
 
 **3. Decompose.** Compound claims that compare two or more sources must be broken into atomic propositions. This is the most complex step — it requires domain judgment.
 
-**Detect.** A claim needs decomposition if it contains multiple sub-assertions joined by comparison language: "X is larger/smaller than Y", "A predicts ... while B observes ...", "comparing M₁ and M₂ shows disagreement/agreement". Also: universal quantifiers ("all semiconductors", "always") are compound — they hide the specific instances.
+**Detect.** A claim needs decomposition if it explicitly compares two or more named sources: "method A predicts X, method B measures Y, they disagree". If the comparison is implicit, or the individual assertions can't be cleanly separated, keep the claim as-is.
 
-**Extract.** For each sub-assertion, write an atomic claim with explicit system, method, and value. CRITICAL: every numerical value must be traceable to its source — was it stated in the original claim, or extracted from the evidence chain? If the latter, note it. Example:
-- Compound: "PBE predicts gaps ~40% smaller than experiment for BeX"
-- Atomic A: "PBE-GGA for BeSe gives indirect gap = 2.51 eV" *(value from evidence chain step 3, not in original claim)*
-- Atomic B: "Experimental BeSe indirect gap = 4-4.5 eV" *(value from evidence chain step 3)*
+**Gate: can both sides be made self-contained?** If the evidence chain doesn't provide enough information to write two self-contained atomic claims (explicit system, method, values for both sides), do NOT decompose. A partial decomposition is worse than the original compound claim. Pass through to the next step.
 
-Do NOT invent precision the original paper didn't claim. If the original only says "~40%", do not write "2.51 eV" without attribution.
+**Extract.** For each side, write an atomic claim with explicit system, method, and value. Every numerical value must be traceable to its source (original claim vs evidence chain step N). Do not invent precision.
 
 **Connect.** Write the Gaia operator linking the atomic claims:
 - Conflict → `contradiction(A, B, reason="...", prior=...)`
@@ -300,9 +297,7 @@ Do NOT invent precision the original paper didn't claim. If the original only sa
 ```python
 equivalence(C, D, reason="the meta-claim C names the relationship expressed by D")
 ```
-where D is the `contradiction(A, B)` or `equivalence(A, B)`.
-
-**Universals.** Claims with "all" or "always" are decomposed by extracting the strongest concrete instances found in the evidence chain. "PBE always underestimates gaps" becomes "PBE underestimates the gap for BeSe by ~1.5-2.5 eV". The universal is tested via contradiction hunting on these instances.
+where D is `contradiction(A, B)` or `equivalence(A, B)`.
 
 **4. Hunt contradictions (MANDATORY).** For each new atomic claim, use scientific reasoning to design a search that would surface counter-evidence. For each found: `contradiction(P, X, prior=...)` + `gaia inquiry obligation add <qid> -c "resolve: ..."`.
 
