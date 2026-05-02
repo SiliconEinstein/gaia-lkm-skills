@@ -195,8 +195,10 @@ The exploration is **review-driven**: each iteration compiles, infers, and uses 
  │         → gaia inquiry obligation add <qid> -c "..."        │
  │                                                             │
  │  6. Back to step 2 — repeat until:                          │
- │     • gaia inquiry review shows no clear next target        │
- │     • 0 holes, 0 unreviewed warrants, 0 open obligations    │
+ │     • User-specified goal met (e.g. ≥ N nodes,              │
+ │       belief ≥ threshold, depth ≥ K layers),                │
+ │       OR review shows no clear next target                  │
+ │     • AND 0 holes, 0 unreviewed warrants, 0 open obligations│
  │                                                             │
  └─────────────────────────────────────────────────────────────┘
 ```
