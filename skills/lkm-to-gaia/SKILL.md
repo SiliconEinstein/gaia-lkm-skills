@@ -168,58 +168,59 @@ Output: `merge_audit.md` logs every decision for reproducibility.
 
 ## Workflow (batch mode)
 
-Start from the selected root claim(s). The core loop expands the graph outward
-by searching upstream for each premise, then recursively for each new upstream
-claim found. Compile/infer/review happens at each layer to surface holes and
-obligations before going deeper.
+The exploration is **review-driven**: each iteration compiles, infers, and uses `gaia inquiry review` to decide which premise to expand next. The agent searches LKM with that premise, adds new claims and edges, then re-evaluates.
 
 ```
- ┌──────────────────────────────────────────────────────────┐
- │ 1. Unpack root's evidence chain                          │
- │    └─ claims for root + premises + deduction(reason=...)  │
- │                                                          │
- │ 2. For each premise P:                                   │
- │    ├─ search LKM upstream                                │
- │    ├─ found supporting conclusions U₁, U₂, ...          │
- │    │   └─ claim(Uᵢ) + support([Uᵢ], P, prior=...)       │
- │    ├─ found contradictions with P                        │
- │    │   └─ contradiction(P, X, prior=...)                 │
- │    └─ for each Uᵢ: recurse (treat as new premise,        │
- │        go to step 2 with Uᵢ)                             │
- │                                                          │
- │ 3. Write DSL, compile, infer                             │
- │    └─ gaia compile . && gaia infer .                     │
- │                                                          │
- │ 4. gaia check --hole . → fill priors.py                  │
- │                                                          │
- │ 5. gaia inquiry review .                                 │
- │    ├─ beliefs ok? warrant ok?                            │
- │    └─ suspicious claim or reasoning:                     │
- │        gaia inquiry obligation add <qid> -c "..."        │
- │                                                          │
- │ 6. Resolve obligations: search LKM, refine DSL,          │
- │    adjust priors, or dismiss → go back to step 2         │
- │                                                          │
- │ Exit when:                                               │
- │  • all premises searched upstream (or search exhausted)  │
- │  • 0 holes, 0 unreviewed warrants, 0 open obligations    │
- └──────────────────────────────────────────────────────────┘
+ ┌─────────────────────────────────────────────────────────────┐
+ │                                                             │
+ │  1. Bootstrap from root                                     │
+ │     claim(root) + claim(premises) + deduction(reason=...)   │
+ │     └─ estimate a prior on each premise claim directly      │
+ │                                                             │
+ │  2. Mark suspicions                                         │
+ │     └─ suspicious reasoning chain or premise →              │
+ │        gaia inquiry obligation add <qid> -c "..."           │
+ │                                                             │
+ │  3. gaia compile . && gaia infer .                          │
+ │                                                             │
+ │  4. gaia inquiry review .                                   │
+ │     └─ which premise claim is most worth exploring next?    │
+ │        (lowest belief? weakest prior? least support?)       │
+ │                                                             │
+ │  5. Search LKM with that premise → top-10 results           │
+ │     ├─ found upstream evidence / equivalent conclusions     │
+ │     │   → claim(U) + support([U], P, prior=...)            │
+ │     └─ found contradictions with P or its peers             │
+ │         → contradiction(P, X, prior=...)                    │
+ │         → gaia inquiry obligation add <qid> -c "..."        │
+ │                                                             │
+ │  6. Back to step 2 — repeat until:                          │
+ │     • gaia inquiry review shows no clear next target        │
+ │     • 0 holes, 0 unreviewed warrants, 0 open obligations    │
+ │                                                             │
+ └─────────────────────────────────────────────────────────────┘
 ```
 
 ### Step details
 
-**1. Unpack.** For each root claim, load `GET /claims/{id}/evidence`. Emit `claim()` for the root, each premise, plus `deduction([premises], root, prior=0.95, reason="...")` with the LKM steps formatted as numbered markdown.
+**1. Bootstrap.** For each root claim, load `GET /claims/{id}/evidence`. Write:
+- `claim()` for the root and each premise — give each premise a direct prior estimate
+- `deduction([premises], root, prior=0.95, reason="<numbered LKM steps>")`
 
-**2. Upstream search.** For each premise in the current layer:
-- `POST /claims/match` with the premise's content as query
-- Filter to relevant conclusions (agent judgment, not exact match)
-- Emit `claim()` + `support([U], P, prior=...)` for each found
-- Check for contradictions among match results → `contradiction(...)`
-- Recurse: each upstream conclusion becomes a premise for the next layer
+**2. Mark suspicions.** If any reasoning chain or premise looks unreliable, flag it:
+```bash
+gaia inquiry obligation add <claim_or_strategy_qid> -c "<concern>"
+```
 
-**3–5. Validate.** Write DSL files, compile, infer, fill priors from holes, run inquiry review.
+**3. Compile & infer.** `gaia compile . && gaia infer .`
 
-**6. Resolve.** For each open obligation: search further, refine the DSL, or dismiss. Then back to step 2. Repeat until exit conditions hold.
+**4. Review.** `gaia inquiry review .` Inspect the belief report. Decide which premise to explore next — typically the one with lowest belief, weakest prior, or fewest support edges.
+
+**5. Search & expand.** Search LKM with the chosen premise's content (`POST /claims/match`, top-10). In the results:
+- **Upstream support**: conclusions from other reasoning chains that corroborate this premise → `claim(U)` + `support([U], P, prior=...)`. Multiple supports allowed.
+- **Contradiction**: claims that can't both be true with this premise or its peers → `contradiction(P, X, prior=...)` + `gaia inquiry obligation add <qid> -c "resolve this contradiction"`.
+
+**6. Repeat.** Back to step 2. Exit when `gaia inquiry review` shows no clear next target, all holes filled, all warrants reviewed, and all obligations resolved.
 
 ## Workflow (incremental mode)
 
