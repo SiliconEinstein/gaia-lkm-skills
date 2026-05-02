@@ -287,11 +287,16 @@ Then run `gaia inquiry obligation list` to see all unresolved obligations. **Pic
 
 **5a. Find upstream conclusions.** Search LKM with the chosen claim's content (`POST /claims/match`, top-10). Pick the **conclusion-type claims** that provide independent strong support → `claim(U)` + `support([U], P, prior=...)`. Record them in a list `new_conclusions`.
 
-**5b. Check new conclusions for contradictions (MANDATORY).** For each claim in `new_conclusions`, take its **full claim text** and use it directly as the LKM search query. In the returned top-10 results, scan for claims that **logically cannot both be true** with the search claim. These are contradiction candidates. For each found: `contradiction(P, X, prior=...)` + `gaia inquiry obligation add <qid> -c "resolve: ..."`.
+**5b. Hunt contradictions (MANDATORY).** For each claim in `new_conclusions`, the agent decides how to search for claims that would **logically contradict** it. There is no fixed query strategy — the agent uses domain reasoning:
 
-**Why the full text:** LKM's semantic search returns claims related to the query content. Using the claim's own text as the query surfaces claims on the same topic — including those that disagree. Keywords like "limitation" or "problem" bias the search and miss contradictions that are simply stated as alternative facts.
+- If the claim is experimental → search for theoretical predictions on the same system
+- If the claim is from one theoretical method → search for another method on the same system
+- If the claim asserts a numerical value → search for claims asserting a different value for the same quantity
+- If the claim asserts a universal statement → search for counterexamples
 
-**Two searches every iteration. 5a finds the evidence; 5b checks if the evidence is internally consistent.**
+For each contradiction found: `contradiction(P, X, prior=...)` + `gaia inquiry obligation add <qid> -c "resolve: ..."`.
+
+**The agent is responsible for designing the search to maximize the chance of finding contradictions. Creativity and domain knowledge are required.**
 
 **6. Repeat.** Back to step 2 — inspect the newly added claims for suspicious reasoning, then compile, review, and continue. Exit when all holes filled, all warrants reviewed, and `gaia inquiry obligation list` is empty.
 
