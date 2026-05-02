@@ -264,11 +264,10 @@ The exploration is **obligation-driven**: each iteration identifies gaps via `ga
  │      → contradiction(P, X, prior=...)                       │
  │      → gaia inquiry obligation add <qid> -c "..."           │
  │                                                             │
- │  6. Back to step 2 — inspect new claims, mark suspicions,    │
- │     then compile, review, search. Repeat until:              │
- │     • obligation list is empty                               │
- │     • 0 holes, 0 unreviewed warrants                         │
- │     • (or user-specified goal met)                           │
+ │  6. Back to step 1 — refine + decompose new claims,          │
+ │     then mark suspicions, compile, review, search.            │
+ │     Repeat until: obligation list empty, 0 holes,             │
+ │     0 unreviewed warrants (or user-specified goal met).       │
  │                                                             │
  └─────────────────────────────────────────────────────────────┘
 ```
@@ -312,7 +311,7 @@ For example:
 
 The agent uses the LKM search engine to find content related to these scientifically meaningful falsification scenarios. For each contradiction candidate found: `contradiction(P, X, prior=...)` + `gaia inquiry obligation add <qid> -c "resolve: ..."`.
 
-**6. Repeat.** Back to step 2 — inspect the newly added claims for suspicious reasoning, then compile, review, and continue. Exit when all holes filled, all warrants reviewed, and `gaia inquiry obligation list` is empty.
+**6. Repeat.** Back to step 1 — newly added claims need refinement (self-contained) and decomposition (break compound claims into atomic propositions) before the next cycle. Exit when all holes filled, all warrants reviewed, and `gaia inquiry obligation list` is empty.
 
 ## Workflow (incremental mode)
 
