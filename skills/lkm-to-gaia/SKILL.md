@@ -76,10 +76,18 @@ The agent reads the LKM evidence JSON and writes Gaia DSL, applying these rules:
 
 ### 1. Claims
 
-Every distinct `gcn_*` claim (post shared-premise extraction) → one `claim(...)` per `$gaia-lang` §2:
+Every distinct `gcn_*` claim (post shared-premise extraction) → one `claim(...)` per `$gaia-lang` §2.
+
+**Self-contained check (MANDATORY).** Before writing a claim, verify it can be judged true or false **without referring back to the evidence chain**. LKM claims often omit critical context — e.g., "the calculated band gaps" without specifying which material or method. If the claim is not self-contained, **rewrite it** to include the missing information (material, method, numerical values, conditions) extracted from the evidence chain's steps and premises. Save the original LKM text in metadata:
 
 ```python
-<label> = claim("<content>", lkm_id="gcn_xxx", source_paper="paper:xxx", provenance_source="lkm")
+<label> = claim(
+    "<self-contained content with explicit system, method, values>",
+    lkm_id="gcn_xxx",
+    source_paper="paper:xxx",
+    provenance_source="lkm",
+    lkm_original="<verbatim LKM claim text>",   # for traceability
+)
 ```
 
 - **No `prior` kwarg on claims.** After `gaia compile`, run `gaia check --hole` to surface which leaf claims need priors, then assign them in `priors.py`. LKM's `score` field is match relevance, not a prior — do not use it as one.

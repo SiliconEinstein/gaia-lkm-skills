@@ -19,6 +19,7 @@ Every distinct `gcn_*` id (post shared-premise extraction) becomes one `claim(..
 
 Rules:
 - `<label>` is mint from the `gcn_*` id and the claim's semantic content. **Must be valid Gaia QID label: `[a-z_][a-z0-9_]*`** — lowercase letters, digits, underscores only. No uppercase, no hyphens, no dots.
+- **Self-contained check.** Before writing, verify the claim can be judged true/false independently. If the LKM text says "the calculated band gaps" without specifying material/method/values, rewrite it with context from the evidence chain. Save the original in `lkm_original` metadata.
 - **No `prior` kwarg on claims.** LKM's `score` is match relevance, not a Bayesian prior. After `gaia compile`, run `gaia check --hole` to surface leaf claims that need priors, then fill them in `priors.py`.
 - When premises are merged, the kwarg becomes `lkm_ids=["gcn_a", "gcn_b"]` (plural).
 - Empty-content premises get a placeholder string + `todo="revisit when LKM corpus populates this premise"` in metadata. Do not invent content.
