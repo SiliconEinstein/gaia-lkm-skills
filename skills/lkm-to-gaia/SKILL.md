@@ -225,7 +225,7 @@ Output: `merge_audit.md` logs every decision for reproducibility.
 
 ## Workflow (batch mode)
 
-The exploration is **review-driven**: each iteration compiles, infers, and uses `gaia inquiry review` to decide which premise to expand next. The agent searches LKM with that premise, adds new claims and edges, then re-evaluates.
+The exploration is **obligation-driven**: each iteration identifies gaps via `gaia check --hole` and `gaia inquiry review`, marks them as obligations, then picks the most interesting obligation to resolve by searching LKM. Obligations persist across iterations — `gaia inquiry obligation list` is the exploration's TODO list.
 
 ```
  ┌─────────────────────────────────────────────────────────────┐
@@ -291,7 +291,7 @@ Then run `gaia inquiry obligation list` to see all unresolved obligations. **Pic
 
 **Two searches every iteration. 5a finds the evidence; 5b checks if the evidence is internally consistent.**
 
-**6. Repeat.** Back to step 2. Exit when `gaia inquiry review` shows no clear next target, all holes filled, all warrants reviewed, and all obligations resolved.
+**6. Repeat.** Back to step 3 (compile & infer). Exit when all holes filled, all warrants reviewed, and `gaia inquiry obligation list` is empty.
 
 ## Workflow (incremental mode)
 
