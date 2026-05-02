@@ -243,26 +243,31 @@ The exploration is **obligation-driven**: each iteration identifies gaps via `ga
  ┌─────────────────────────────────────────────────────────────┐
  │                                                             │
  │  1. Bootstrap from root                                     │
- │     Refine (self-contained) + decompose (atomic claims).     │
- │     └─ claim(A) + claim(B) + contradiction(A,B) etc.        │
+ │     Load evidence, write claim() + deduction(reason=...)    │
  │                                                             │
- │  2. Hunt contradictions for each new atomic claim            │
+ │  2. Refine — make every new claim self-contained             │
+ │     Add system, method, values from evidence chain           │
+ │                                                             │
+ │  3. Decompose — break compound claims into atomic propositions│
+ │     claim(A) + claim(B) + contradiction(A,B) or equivalence │
+ │                                                             │
+ │  4. Hunt contradictions for each new atomic claim            │
  │     → contradiction(P, X, prior=...)                        │
  │     → gaia inquiry obligation add <qid> -c "..."            │
  │                                                             │
- │  3. Mark suspicions on reasoning chains or weak premises     │
+ │  5. Mark suspicions on reasoning chains or weak premises     │
  │     → gaia inquiry obligation add <qid> -c "..."            │
  │                                                             │
- │  4. gaia compile . && gaia infer .                          │
+ │  6. gaia compile . && gaia infer .                          │
  │                                                             │
- │  5. gaia check --hole . → which claims need priors?         │
+ │  7. gaia check --hole . → which claims need priors?         │
  │     gaia inquiry review . → belief context                  │
  │     └─ Pick the most interesting obligation as next target   │
  │                                                             │
- │  6. Search: find upstream conclusions for the target claim   │
+ │  8. Search: find upstream conclusions for the target claim   │
  │      → claim(U) + support([U], P, prior=...)               │
  │                                                             │
- │  7. Back to step 1 — refine + decompose new claims,          │
+ │  9. Back to step 2 — refine + decompose new claims,          │
  │     hunt contradictions, mark suspicions, compile, review.    │
  │     Repeat until: obligation list empty, 0 holes,             │
  │     0 unreviewed warrants (or user-specified goal met).       │
@@ -272,30 +277,28 @@ The exploration is **obligation-driven**: each iteration identifies gaps via `ga
 
 ### Step details
 
-**1. Bootstrap.** For each root claim, load `GET /claims/{id}/evidence`. Apply §1a (refinement + decomposition): make claims self-contained, break compound claims into atomic propositions with Gaia operators. Write:
-- Atomic `claim()` for each proposition
-- `contradiction(A, B, ...)` or `equivalence(A, B, ...)` for the decomposed relationship
-- `deduction([premises], conclusion, prior=0.95, reason="<numbered LKM steps>")` for evidence chains
+**1. Bootstrap.** For each root claim, load `GET /claims/{id}/evidence`. Write `claim()` for the root and each premise, plus `deduction([premises], conclusion, prior=0.95, reason="<numbered LKM steps>")` for evidence chains.
 
-**2. Hunt contradictions (MANDATORY).** For each new atomic claim, use **scientific reasoning** to design a search that would surface counter-evidence:
-- *What physical scenario would falsify this claim?*
-- *Under what conditions would the opposite be true?*
-- *What alternative mechanism could explain the same observation?*
+**2. Refine.** Make every new claim self-contained: add system, method, numerical values, and conditions from the evidence chain. Save the original LKM text in `lkm_original` metadata.
 
-For each contradiction candidate found: `contradiction(P, X, prior=...)` + `gaia inquiry obligation add <qid> -c "resolve: ..."`.
+**3. Decompose.** Break compound claims into atomic propositions with Gaia operators:
+- `claim(A)` + `claim(B)` + `contradiction(A, B, ...)` or `equivalence(A, B, ...)`
+- Link the original claim: `equivalence(C, contradiction(A, B))`
 
-**3. Mark suspicions.** If any reasoning chain or premise looks unreliable:
+**4. Hunt contradictions (MANDATORY).** For each new atomic claim, use scientific reasoning to design a search that would surface counter-evidence. For each found: `contradiction(P, X, prior=...)` + `gaia inquiry obligation add <qid> -c "resolve: ..."`.
+
+**5. Mark suspicions.** Flag unreliable reasoning chains or premises:
 ```bash
 gaia inquiry obligation add <claim_or_strategy_qid> -c "<concern>"
 ```
 
-**4. Compile & infer.** `gaia compile . && gaia infer .`
+**6. Compile & infer.** `gaia compile . && gaia infer .`
 
-**5. Review.** Run `gaia check --hole .` and `gaia inquiry review .`. Use domain judgment to identify gaps and mark obligations. Run `gaia inquiry obligation list` and **pick the most interesting obligation as the next target.**
+**7. Review.** Run `gaia check --hole .` and `gaia inquiry review .`. Use domain judgment to identify gaps and mark obligations. Run `gaia inquiry obligation list` and pick the most interesting obligation.
 
-**6. Search supports.** Search LKM with the target claim's content (`POST /claims/match`, top-10). Pick conclusion-type claims that provide independent strong support → `claim(U)` + `support([U], P, prior=...)`.
+**8. Search supports.** Search LKM with the target claim (`POST /claims/match`, top-10). Pick conclusion-type claims → `claim(U)` + `support([U], P, prior=...)`.
 
-**7. Repeat.** Back to step 1 — newly added claims need refinement and decomposition before the next cycle. Exit when `gaia inquiry obligation list` is empty, 0 holes, 0 unreviewed warrants.
+**9. Repeat.** Back to step 2. Exit when obligation list empty, 0 holes, 0 unreviewed warrants.
 
 ## Workflow (incremental mode)
 
