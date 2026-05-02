@@ -281,9 +281,26 @@ The exploration is **obligation-driven**: each iteration identifies gaps via `ga
 
 **2. Refine.** Make every new claim self-contained: add system, method, numerical values, and conditions from the evidence chain. Save the original LKM text in `lkm_original` metadata.
 
-**3. Decompose.** Break compound claims into atomic propositions with Gaia operators:
-- `claim(A)` + `claim(B)` + `contradiction(A, B, ...)` or `equivalence(A, B, ...)`
-- Link the original claim: `equivalence(C, contradiction(A, B))`
+**3. Decompose.** Compound claims that compare two or more sources must be broken into atomic propositions. This is the most complex step — it requires domain judgment.
+
+**Detect.** A claim needs decomposition if it contains multiple sub-assertions joined by comparison language: "X is larger/smaller than Y", "A predicts ... while B observes ...", "comparing M₁ and M₂ shows disagreement/agreement". Also: universal quantifiers ("all semiconductors", "always") are compound — they hide the specific instances.
+
+**Extract.** For each sub-assertion, write an atomic claim with explicit system, method, and value. Example:
+- Compound: "PBE predicts gaps ~40% smaller than experiment for BeX"
+- Atomic A: "PBE-GGA for BeSe gives indirect gap = 2.51 eV"
+- Atomic B: "Experimental BeSe indirect gap = 4-4.5 eV"
+
+**Connect.** Write the Gaia operator linking the atomic claims:
+- Conflict → `contradiction(A, B, reason="...", prior=...)`
+- Agreement → `equivalence(A, B, reason="...", prior=...)`
+
+**Preserve.** The original LKM claim C is kept as `claim(C, lkm_original="...")`. Link it:
+```python
+equivalence(C, D, reason="the meta-claim C names the relationship expressed by D")
+```
+where D is the `contradiction(A, B)` or `equivalence(A, B)`.
+
+**Universals.** Claims with "all" or "always" are decomposed by extracting the strongest concrete instances found in the evidence chain. "PBE always underestimates gaps" becomes "PBE underestimates the gap for BeSe by ~1.5-2.5 eV". The universal is tested via contradiction hunting on these instances.
 
 **4. Hunt contradictions (MANDATORY).** For each new atomic claim, use scientific reasoning to design a search that would surface counter-evidence. For each found: `contradiction(P, X, prior=...)` + `gaia inquiry obligation add <qid> -c "resolve: ..."`.
 
