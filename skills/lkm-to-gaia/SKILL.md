@@ -301,7 +301,7 @@ where D is `contradiction(A, B)` or `equivalence(A, B)`.
 
 **4. Hunt contradictions (MANDATORY).** For each new atomic claim, use **scientific falsification** to design a search that would surface counter-evidence.
 
-**Principle: retain the system, challenge the value.** Keep the specific material/method/quantity from the claim. Add terms that would appear in a paper that found a *different* result for the same quantity.
+**Principle: retain the subject, challenge the assertion.** Keep what the claim is *about* (the specific entity, system, or phenomenon). Add terms that would appear in a source that reached a *different* conclusion about the same subject.
 
 - Claim: "PBE BeSe gap = 2.51 eV" → search: "BeSe band gap measured optical absorption different value"
 - Claim: "HSE06 ZnO within 10% of experiment" → search: "HSE06 ZnO underestimates gap by more than 0.5 eV"
