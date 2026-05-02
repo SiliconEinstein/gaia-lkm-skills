@@ -54,6 +54,24 @@ Warrant prior for each support:
 
 If no relevant upstream conclusions are found, skip. Do not invent.
 
+### 2c. Shared-factor extraction (≥2 supports converging on same premise)
+
+When ≥2 upstream supports converge on the same premise P, check whether the upstream claims share a common factor (same method, model assumption, dataset, physical approximation). If they do, BP would incorrectly treat them as independent evidence. Extract the shared factor as a new claim and route supports through it:
+
+```
+Before:  U1 ──support──→ P
+         U2 ──support──→ P      ← double counting
+
+After:   U1 ──support──→ shared_factor ←──support── U2
+                                 │
+                              support
+                                 │
+                                 ▼
+                                 P
+```
+
+Judge the shared factor's prior normally (cap 0.9).
+
 ## 2b. Factors (`gfac_*`)
 
 Every factor in `evidence_chains[].factors[]` → `deduction(...)` (positional-first per `$gaia-lang` §4):

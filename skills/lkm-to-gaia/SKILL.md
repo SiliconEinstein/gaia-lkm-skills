@@ -157,12 +157,26 @@ Every paper in the union of `data.papers` across all evidence + match files → 
 
 ## Shared-premise extraction (avoiding double counting)
 
-Runs before any operator emission. The agent reads all claim contents across all loaded evidence JSON files:
+Runs before any operator emission, and **again whenever ≥2 supports converge on the same premise**. The agent reads claim contents and checks whether the supporting upstream claims share a common factor or assumption.
 
 1. **Auto-merge** premises with **identical content text** (normalized: trimmed, whitespace-collapsed) → one claim, `lkm_ids=[...]` in `**metadata`.
 2. **Auto-merge** same paper, different version (arXiv ↔ published, detected by matching DOI/author/title) → one claim.
-3. **Keep distinct** for independent confirmations from different papers — multiple `support()` calls from different sources naturally converge under BP.
-4. **Surface** to `merge_decisions.todo` when the agent can't decide whether to merge — default: KEEP (safe).
+3. **Extract shared factor.** When ≥2 upstream supports converge on the same premise P, check whether those upstream claims share a common factor (same method, same model assumption, same dataset, same physical approximation). If so, extract it as a new `claim(shared_factor, prior=...)` and route the supports through it:
+
+   ```
+   Before:  U1 ──support──→ P
+            U2 ──support──→ P     ← BP treats as independent → double counting
+
+   After:   U1 ──support──→ shared_factor ←──support── U2
+                                    │
+                                 support
+                                    │
+                                    ▼
+                                    P
+   ```
+
+4. **Keep distinct** when supports are genuinely independent (different methods, different labs, different paradigms).
+5. **Surface** to `merge_decisions.todo` when the agent can't decide — default: KEEP (safe).
 
 Output: `merge_audit.md` logs every decision for reproducibility.
 
