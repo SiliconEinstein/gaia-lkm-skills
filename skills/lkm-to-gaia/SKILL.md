@@ -240,12 +240,12 @@ The exploration is **review-driven**: each iteration compiles, infers, and uses 
  │        whether a premise, an upstream, or the weak side      │
  │        of a contradiction — is always the next target.       │
  │                                                             │
- │  5. Search LKM with that premise → top-10 results           │
- │     ├─ found upstream evidence / equivalent conclusions     │
- │     │   → claim(U) + support([U], P, prior=...)            │
- │     └─ found contradictions with P or its peers             │
- │         → contradiction(P, X, prior=...)                    │
- │         → gaia inquiry obligation add <qid> -c "..."        │
+ │  5a. Search LKM for SUPPORTS (top-10)                       │
+ │      → claim(U) + support([U], P, prior=...)               │
+ │                                                             │
+ │  5b. Search LKM for CONTRADICTIONS (required, 2nd query)    │
+ │      → contradiction(P, X, prior=...)                       │
+ │      → gaia inquiry obligation add <qid> -c "..."           │
  │                                                             │
  │  6. Back to step 2 — repeat until:                          │
  │     • User-specified goal met (e.g. ≥ N nodes,              │
@@ -271,10 +271,16 @@ gaia inquiry obligation add <claim_or_strategy_qid> -c "<concern>"
 
 **4. Review.** `gaia inquiry review .` Sort beliefs ascending. **The claim with the lowest belief is always the next target** — whether it's a premise lacking upstream support, or the weak side of a contradiction that needs balancing.
 
-**5. Search & expand.** Search LKM with the chosen claim's content (`POST /claims/match`, top-10). **Every search is a chance to discover new contradictions.** Scan the full top-10 for:
-- **Upstream support**: conclusions that corroborate this claim → `claim(U)` + `support([U], P, prior=...)`.
-- **Contradiction candidates**: claims that can't both be true with this claim or any peer already in the graph. Each is a potential **new open problem**. Flag them: `contradiction(P, X, prior=...)` + `gaia inquiry obligation add <qid> -c "resolve: ..."`.
-- **Resolution**: if new evidence explains why the contradiction occurs (e.g. sample quality differences), the contradiction weakens — this is progress, not failure. A contradiction that survives after both sides have strong evidence is a genuine open problem.
+**5a. Find supports.** Search LKM with the chosen claim's content (`POST /claims/match`, top-10). Scan for conclusions that corroborate this claim → `claim(U)` + `support([U], P, prior=...)`.
+
+**5b. Hunt contradictions (MANDATORY — do not skip).** Run a **second search** specifically for contradictions. Use a query designed to find claims that would conflict with the target claim or any of its peers already in the graph. For example:
+- If the target is "PBE underestimates band gaps", search for "PBE band gap accurate reliable agrees with experiment"
+- If the target is "experimental gap values are reliable", search for "experimental band gap unreliable technique dependent varies"
+- For the weak side of any existing contradiction, search for evidence that would reinforce it
+
+For each contradiction candidate found: `contradiction(P, X, prior=...)` + `gaia inquiry obligation add <qid> -c "resolve: ..."`.
+
+**Two searches every iteration — one for support, one for contradiction. Always both.**
 
 **6. Repeat.** Back to step 2. Exit when `gaia inquiry review` shows no clear next target, all holes filled, all warrants reviewed, and all obligations resolved.
 
