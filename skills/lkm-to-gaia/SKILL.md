@@ -122,7 +122,11 @@ Warrant prior reflects how strongly the upstream corroborates the premise:
 
 **No equivalence needed here.** Two upstream claims that both strongly support the same premise naturally converge in BP through their shared conclusion. The agent just writes separate `support()` edges.
 
-### 4. Contradiction
+### 4. Contradiction — prioritize open problems
+
+**Finding contradictions is more important than finding supports.** An unresolved contradiction is a potential open problem — the most valuable output of exploration. The agent must actively search for conflicting claims, especially across different paradigms.
+
+**Highest priority: experiment vs theory conflict.** When one claim comes from an experimental measurement and the other from a theoretical prediction, a contradiction between them signals either new physics or a flaw in the theory — either way, it's a first-class open problem.
 
 Contradictions come from **two sources**:
 
@@ -130,17 +134,23 @@ Contradictions come from **two sources**:
 
 | Situation | Action |
 |---|---|
-| Real tension (can't both be true; may be an open problem) | `contradiction(a, b, reason="... | new_question: ...", prior=<float>)` |
+| Real tension (can't both be true; may be an open problem) | `contradiction(a, b, reason="... \| new_question: ...", prior=<float>)` |
 | False alarm (boundary conditions differ, etc.) | Dismiss; no DSL emitted |
 
-**Source B — Upstream search.** While searching upstream for a premise P, the agent may find claims (conclusions or otherwise) that **contradict** P — i.e., they can't both be true. These should also be marked:
+**Source B — Upstream search.** While searching upstream for a premise P, the agent must also look for claims that **contradict** P. Pay special attention to claims from different paradigms (experiment vs theory, different materials, different methods):
 
 ```python
 contradiction(P, <conflicting_claim>, reason="found during upstream search for P: <why they can't both be true>", prior=<float>)
 ```
 
-Prior reflects how strongly the contradiction holds:
-- Direct conflict on the same quantity → 0.90
+Every contradiction should also be marked as an obligation:
+```bash
+gaia inquiry obligation add <qid> -c "resolve contradiction: <new_question>"
+```
+
+Prior reflects the strength of the contradiction:
+- Experiment vs theory on the same quantity → 0.90–0.95 (highest priority)
+- Direct conflict on the same quantity (same paradigm) → 0.85–0.90
 - Different boundary conditions may explain it → 0.50–0.60
 - Unclear → 0.50
 
