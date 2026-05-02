@@ -44,25 +44,18 @@ For each distinct candidate (deduplicated by claim id), call `GET /claims/{id}/e
 
 Run a best-effort scan over the **full** match response from step 1 (both chain-backed and chain-less candidates — open questions whose conflicting side has no chain are still valuable). The discovery flow itself (chain-backed filter, user-selection checkpoint) is unaffected by this pass; the saved files are consumed downstream by `$evidence-subgraph` (for equivalence-pair dedup decisions) and `$scholarly-synthesis` (for §5 cross-method narrative and §6 open-problems narrative).
 
-For each candidate-vs-candidate comparison, the agent uses semantic judgement on `content` fields plus paper metadata in `data.papers`:
+For each candidate-vs-candidate comparison, the agent uses semantic judgement on `content` fields plus paper metadata in `data.papers`. **Discovery only flags candidates — deep classification (lineage, hypothesized cause, independence basis) is deferred to `$lkm-to-gaia`'s Gaia formalization stage.** The goal here is recall, not precision: flag pairs that might be interesting; the formalization step will refine or dismiss them.
 
-- **Contradiction pair** — two claims that, on the same topic with the same system / setting, assert numerically or qualitatively conflicting values, signs, scaling regimes, or directional outcomes. (e.g. one says μ\* = 0.13, another μ\* = 0.21 for the same compound; one says effect-X is positive, another says it is negative.) Save to **`contradictions.md`** in the run folder, one row per pair:
-
-  ```
-  | pair (id_a / id_b) | topic | side A claim | side B claim | source A (paper, role) | source B (paper, role) | why contradictory |
-  ```
-
-- **Equivalence pair** — two claims that assert the same proposition on the same topic. For each pair, classify the lineage using `data.papers`:
-  - **same paper, different version** — both `source_packages` resolve to the same paper, OR one is an arXiv preprint and the other is the published journal version of the same work. Detect via DOI prefix `10.48550/arxiv.` and `area: "arXiv-…"` on one entry plus a matching non-arXiv DOI / journal entry; matching titles or author lists make this near-certain.
-  - **independent experimental** — different papers, both observational / experimental in method.
-  - **independent theoretical / computational** — different papers, both derive the result by theory / computation / simulation.
-  - **cross-paradigm confirmation** — different papers, one experimental and one theoretical / computational.
-  - **unclassified** — lineage cannot be confidently assigned from `data.papers` alone; flag for user inspection.
-
-  Save to **`equivalences.md`** in the run folder:
+- **Contradiction candidate** — two claims that **cannot simultaneously be true**. This is the only criterion — no requirement to verify they share the same topic, system, or setting. The LKM search query already scoped candidates to a common theme; if two claims logically exclude each other, flag them. (e.g. one says μ\* = 0.13, another says μ\* = 0.21; one says an effect is positive, another says it's negative.) **Why this matters:** every contradiction candidate is a potential **open problem** — the tension between two mutually exclusive claims may reveal an unresolved question, a hidden variable, a boundary-condition difference, or a measurement-protocol divergence that the literature has not yet reconciled. Flag it even if you can't explain it; the Gaia formalization step will formulate the `new_question`. Save to **`contradictions.md`** in the run folder, one row per pair:
 
   ```
-  | pair (id_a / id_b) | topic | shared claim | source A | source B | lineage classification | note |
+  | pair (id_a / id_b) | side A claim (brief) | side B claim (brief) | why they can't both be true | potential open problem? |
+  ```
+
+- **Equivalence candidate** — two claims that **appear to assert the same or an equivalent proposition**. No lineage classification is required at this stage — just flag the pair and record a brief reason. **Why this matters:** when two claims from different sources converge on the same answer, they may represent **independent evidence** — different methods, different labs, different paradigms all pointing to the same underlying truth. Independence amplifies belief strength under proper Bayesian combination; conflating dependent restatements (e.g. arXiv vs published version of the same paper) as independent evidence silently inflates confidence. The Gaia formalization step (`$lkm-to-gaia`) will classify lineage, decide merge vs `equivalence(...)`, and assign the appropriate warrant prior. Save to **`equivalences.md`**:
+
+  ```
+  | pair (id_a / id_b) | shared claim (brief) | why they might be equivalent | potentially independent? |
   ```
 
 **Caps.** Cap each list at the **top 10 most-interesting pairs**. If more candidates exist, append a single trailing line `…and N more (see raw match JSON: <path>)`. "Most interesting" means: high-relevance candidates (top of the match score), pairs that disagree about a quantity central to the user's prompt, or pairs whose papers are widely cited.
@@ -115,7 +108,7 @@ If a check fails, return to the graph skill with the gap report.
 
 **Graph-only mode:** if the user requested graph-only, return the graph + audit table + cycle-check + relevant `data.papers` to the user here and **stop**. Skip step 6.
 
-**Gaia-package mode:** if the user requested a Gaia knowledge package (rule 3 of the routing decision tree), continue to step 6b instead of step 6 — `$lkm-to-gaia` replaces `$scholarly-synthesis` for this branch. The graph + audit table + run-folder are still required; they are the input contract for `$lkm-to-gaia`.
+**Gaia-package mode:** if the user requested a Gaia knowledge package (rule 3 of the routing decision tree), continue to step 6b instead of step 6 — `$lkm-to-gaia` replaces `$scholarly-synthesis` for this branch. The graph + audit table + raw evidence JSON + flag files are still required; they are the input for `$lkm-to-gaia`. No intermediate JSON schema is needed — the agent reads the raw LKM output directly.
 
 ### 6. `$scholarly-synthesis`
 
@@ -132,11 +125,11 @@ If LaTeX, compile to PDF and inspect the log for missing-glyph / overfull / unde
 
 ### 6b. `$lkm-to-gaia` (Gaia-package mode only — alternative to step 6)
 
-When the user requested a Gaia knowledge package, hand off `(run-folder path[s], desired package name, optional existing plan.gaia.py path for incremental mode)` to `$lkm-to-gaia`. Multi-root selection at step 3 is supported: the user may pick multiple chain-backed candidates, each gets its own run-folder via step 5, and all run-folders are passed together to `$lkm-to-gaia` in `--mode batch` so that cross-root operators (`equivalence`, `contradiction`, `induction-for-cross-validation`) can land in one `cross_paper.py` module.
+When the user requested a Gaia knowledge package, hand off `(raw LKM evidence JSON paths, match JSON path, contradictions.md path, equivalences.md path, candidates.md path, desired package name)` to `$lkm-to-gaia`. Multi-root selection at step 3 is supported: the user may pick multiple chain-backed candidates, each gets its own evidence JSON via step 4, and all are passed together to `$lkm-to-gaia` in `--mode batch` so that cross-root operators can land in one `cross_paper.py` module.
 
-`$lkm-to-gaia` produces a `<name>-gaia/` directory ready for `gaia compile`. The orchestrator does not run `gaia compile`, `gaia infer`, or `gaia render` — those are the user's next step (or a follow-up call to the `gaia-cli` / `review` / `publish` skills).
+`$lkm-to-gaia` produces a `<name>-gaia/` directory ready for `gaia compile`. The orchestrator does not run `gaia compile`, `gaia infer`, or `gaia render` — those are the user's next step.
 
-Run `$lkm-to-gaia`'s self-checks (lexical sanity + Python AST parse on each emitted module) before declaring this branch complete; per the skill's contract, these are non-optional.
+Run `$lkm-to-gaia`'s self-checks (lexical sanity + Python AST parse on each emitted module) before declaring this branch complete.
 
 ### 7. Final hand-off to the user
 
@@ -145,7 +138,7 @@ Report:
 - the user-chosen root (system + value + paper id + author–year);
 - artefact paths (`candidates.md`, graph source `.dot` / `.mmd`, **rendered graph raster** `.png` / `.pdf` / `.svg`, audit table, synthesis markdown / LaTeX, compiled PDF, `contradictions.md`, `equivalences.md`, `missing-material.md` if the synthesis skill produced one; **for Gaia-package mode** also: the `<name>-gaia/` package directory, `artifacts/lkm-discovery/merge_audit.md`, `artifacts/lkm-discovery/mapping_audit.md`, and the `merge_decisions.todo` file if `$lkm-to-gaia` surfaced ambiguous pairs);
 - the relevant `data.papers` metadata so the user can refer to the original sources for further detail;
-- a **discovery-flags summary**: a one-paragraph reminder that `contradictions.md` lists potential open questions surfaced during discovery and `equivalences.md` lists same-proposition pairs with lineage classification; encourage the user to skim both. Mention the count of pairs in each file. If a file is empty, say so explicitly rather than omitting the line;
+- a **discovery-flags summary**: a one-paragraph reminder that `contradictions.md` lists pairs that can't both be true (potential open problems) and `equivalences.md` lists pairs that may assert the same proposition (potential independent evidence). Both are raw candidate flag lists — deep classification happens at Gaia formalization time. Encourage the user to skim both. Mention the count of pairs in each file. If a file is empty, say so explicitly rather than omitting the line;
 - a **missing-material reminder**, sourced from `missing-material.md` (which `$scholarly-synthesis` writes when its best-effort figure/table reproduction needs to leave gaps): every place in the synthesis where the prose references a figure or data table from a source paper that the chain payload could not supply verbatim — listed by section, with the cited paper's DOI so the user can fetch it for camera-ready. If `missing-material.md` is empty or absent (e.g. graph-only mode or Gaia-package mode), say so explicitly rather than omitting the line;
 - **for Gaia-package mode:** a one-line "next step" pointer — `cd <name>-gaia/ && gaia compile . && gaia check --hole . && gaia infer .` — and a reminder that `priors.py` is initially empty / TODO-marked and the `merge_decisions.todo` file (if surfaced) needs the user's review before the package's BP results are trustworthy;
 - any unresolved gaps (chain-payload anchors that could not be located, candidate roots that almost matched, LKM endpoint anomalies, empty-content premises flagged for revisit).

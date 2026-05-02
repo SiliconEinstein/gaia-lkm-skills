@@ -1,4 +1,0 @@
-interface:
-  display_name: "LKM to Gaia"
-  short_description: "Convert $evidence-subgraph run-folders into a Gaia DSL knowledge package"
-  default_prompt: "Use $lkm-to-gaia to turn this run-folder into a Gaia knowledge package (mode batch) or to import LKM evidence into an existing plan.gaia.py (mode incremental)."

@@ -1,6 +1,6 @@
 ---
 name: lkm-to-gaia
-description: Convert one or more `$evidence-subgraph` run-folders directly into a Gaia DSL knowledge package. Two modes - `batch` (emit a fresh standalone `<name>-gaia/` package directory ready for `gaia compile`) and `incremental` (emit a Python source fragment to merge into an existing `plan.gaia.py`). Maps every LKM `gfac_*` factor to `deduction([premises], conclusion)` (the chain-backbone default, overriding `$gaia-lang`'s noisy_and→support deprecation), every `equivalences.json` pair (other than `same paper, different version`) to `equivalence(a, b, ...)`, every promoted `contradictions.json` pair to `contradiction(a, b, ...)`, and every promoted `cross_validation.json` pair with `polarity: confirm` to `support` + `support` + `induction(support_1, support_2, law)` (the one narrow exception to "always deduction"). Emitted source is `$gaia-lang`-clean: `claim(content, **metadata)` with no inline `prior` kwarg, leaf priors land in `priors.py` per `$gaia-cli` §6 as floats, strategy / operator warrant priors are floats Cromwell-bounded `[1e-3, 0.999]`, strategies are positional-first. Hand-off contract is the structured run-folder produced by `$evidence-subgraph` (`evidence-graph-run/2.0`); `data.papers` is the citation source. Domain-agnostic.
+description: Convert LKM evidence-chain payloads directly into a Gaia DSL knowledge package. Two modes — `batch` (emit a fresh standalone `<name>-gaia/` package directory ready for `gaia compile`) and `incremental` (emit a Python source fragment to merge into an existing `plan.gaia.py`). Agent reads raw LKM evidence JSON + the orchestrator's `contradictions.md` flag file, performs semantic analysis (shared-premise dedup, upstream support, contradiction promotion from both discovery flags and upstream search findings), and writes Gaia DSL source directly. No intermediate JSON format. Domain-agnostic.
 ---
 
 # LKM-to-Gaia
@@ -11,15 +11,14 @@ description: Convert one or more `$evidence-subgraph` run-folders directly into 
 > module organization rules) and the CLI reference (`pyproject.toml` shape,
 > `priors.py` shape, `gaia compile` / `gaia check` / `gaia infer` workflow).
 > Anything about *what Gaia DSL is* lives there. This skill documents only
-> what is unique to it: the LKM-artefact-to-DSL **mapping** and the
-> shared-premise extraction algorithm.
+> what is unique to it: how an agent reads LKM evidence and writes Gaia DSL.
 
 ## Role
 
-This is the fifth peer in the `gaia-lkm-skills` family. Where `$scholarly-synthesis` turns the audited evidence structure into prose, this skill turns the same input into **executable Gaia DSL** — a knowledge package that compiles via `gaia compile`, propagates beliefs via `gaia infer`, and carries the LKM provenance into `**metadata` kwargs of every claim and into the `priors.py` justifications.
+This is the fifth peer in the `gaia-lkm-skills` family. Where `$scholarly-synthesis` turns LKM evidence into prose, this skill turns the same input into **executable Gaia DSL** — a knowledge package that compiles via `gaia compile`, propagates beliefs via `gaia infer`, and carries LKM provenance into `**metadata` kwargs of every claim.
 
 ```
-discovery -> $evidence-subgraph (run-folder per evidence-graph-run/2.0)
+discovery -> $evidence-subgraph (raw LKM evidence JSON)
                                 |
                         +-------+-------+
                         v               v
@@ -27,17 +26,33 @@ discovery -> $evidence-subgraph (run-folder per evidence-graph-run/2.0)
                   (prose article)    (Gaia package)
 ```
 
-Routed via [`$evidence-graph-synthesis`](../evidence-graph-synthesis/SKILL.md) when the user asks for a "Gaia package", "Gaia DSL", "knowledge package", or "formalized into Gaia". Invokable standalone when the user already has a run-folder and just wants the package.
+Routed via [`$evidence-graph-synthesis`](../evidence-graph-synthesis/SKILL.md) when the user asks for a "Gaia package", "Gaia DSL", "knowledge package", or "formalized into Gaia".
+
+## Input (received from orchestrator)
+
+- **Raw LKM evidence JSON** (from `$lkm-api`) for each selected root claim — the `GET /claims/{id}/evidence` response, containing `data.claim`, `data.evidence_chains[].factors[]`, and `data.papers`.
+- **Raw LKM match JSON** (from `$lkm-api`) — the `POST /claims/match` response, providing the full candidate set (`data.variables`) and `data.papers` for all candidates.
+- **`contradictions.md`** (from the orchestrator's Step 2b) — flag list of contradiction candidates.
+- **`candidates.md`** (from the orchestrator's Step 3) — the user's root selection.
+
+These are loose files — **no formal schema, no run-folder contract, no `evidence-graph-run/2.0`**. The agent reads them directly.
 
 ## Two-mode contract
 
 ### Mode `batch`
 
-**Input:** one or more run-folders that satisfy the [run-folder output contract](../evidence-subgraph/references/run-folder-output-contract.md).
+**Input:** the files listed above, for one or more selected roots.
 
-**Output:** a fresh standalone `<name>-gaia/` directory whose layout matches the gaia-cli skill's expectations and whose internals are pure `$gaia-lang`. See [`references/package-skeleton.md`](references/package-skeleton.md) for the layout, templates, and naming conventions.
+**Output:** a fresh standalone `<name>-gaia/` directory ready for `gaia compile`. The agent creates:
+- `__init__.py` — re-exports all modules, declares `__all__`
+- `paper_<key>.py` — one module per paper, containing its claims + deductions
+- `cross_paper.py` — cross-paper operators (equivalence, contradiction, induction)
+- `priors.py` — `PRIORS = {leaf_claim: (float, "justification.")}` per `$gaia-cli` §6
+- `references.json` — CSL-JSON bibliography built from `data.papers`
+- `pyproject.toml` — per `$gaia-cli` §1
+- `artifacts/lkm-discovery/` — verbatim copy of input files (raw JSON + `.md` flag files) for provenance
 
-After emit, the agent (or user) runs the standard gaia-cli loop:
+After emit, the agent (or user) runs:
 
 ```bash
 cd <name>-gaia/
@@ -51,88 +66,140 @@ The skill does NOT run `gaia infer`; that is a follow-up step the caller decides
 
 ### Mode `incremental`
 
-**Input:** one or more run-folders + a path to an existing `plan.gaia.py` (or a directory with one) + an `existingAnchors` map from the host runtime (typically obtained via `gaia.inquiry.anchor.find_anchors`).
+**Input:** same as batch + a path to an existing `plan.gaia.py` + an `existingAnchors` map from the host runtime (typically obtained via `gaia.inquiry.anchor.find_anchors`).
 
-**Output:** a Python source fragment string + a side-channel `imports.json` describing what was added. The fragment is `$gaia-lang`-clean: it appends to `plan.gaia.py` without re-declaring imports and without breaking existing claim definitions.
+**Output:** a Python source fragment. The agent appends it to `plan.gaia.py` without re-declaring imports and without breaking existing claim definitions. Labels that match `existingAnchors` are reused. `priors.py` and `references.json` are updated by the host, not by this skill.
 
-This mode is built so a thin host wrapper (e.g. the future `gaia-discovery /lkm-evidence` slash skill) can post-process the imported claims to add a different convention if its own framework requires one — see [`references/incremental-mode-contract.md`](references/incremental-mode-contract.md).
+## Core mapping rules
 
-## Mapping rules
+The agent reads the LKM evidence JSON and writes Gaia DSL, applying these rules:
 
-The canonical mapping table lives in [`references/mapping-contract.md`](references/mapping-contract.md). One-paragraph summary:
+### 1. Claims
 
-- Every `gfac_*` factor → `deduction([premises], conclusion)` (positional-first per `$gaia-lang` §4). No warrant `reason` / `prior`. **This overrides `$gaia-lang`'s `noisy_and → support` deprecation guidance**: we treat the LKM-corpus vetting as a strict-correctness stamp and let the reviewer pass + `gaia infer` results catch any cases where this overstates certainty.
-- Every `equivalences.json` pair (other than lineage `same paper, different version`, which is auto-merged) → `equivalence(a, b, reason=..., prior=<float>)` with the warrant prior derived from lineage.
-- Every promoted `contradictions.json` pair → `contradiction(a, b, reason=..., prior=<float>)` with the warrant prior derived from `hypothesized_cause`.
-- Every promoted `cross_validation.json` pair with `polarity: confirm` → `support` + `support` + `induction(support_1, support_2, law, ...)` — the **one** narrow exception to "always deduction" (gaia-lang's canonical "two independent observations confirm one law" idiom is built on `support`, not `deduction`).
-- Every distinct `gcn_*` claim (post shared-premise extraction) → one `claim(content, **metadata)` call. **No inline `prior` kwarg** — leaf priors land in `priors.py` as floats (`PRIORS = {leaf_claim: (float, "justification.")}`) per `$gaia-cli` §6.
-- `data.papers` → CSL-JSON entries in `references.json`, key `<firstAuthor><year>` deduped by suffix letters.
+Every distinct `gcn_*` claim (post shared-premise extraction) → one `claim(...)` per `$gaia-lang` §2:
+
+```python
+<label> = claim("<content>", prior=<float or None>, lkm_id="gcn_xxx", source_paper="paper:xxx", provenance_source="lkm")
+```
+
+- If LKM returns a `score` on this claim (via match results), use it directly as the `prior` kwarg. If not, omit `prior` — leaf priors without LKM scores land in `priors.py`.
+- When two claims are merged into one: `lkm_ids=["gcn_a", "gcn_b"]`.
+- Empty content → placeholder string + `todo="revisit when LKM populates this premise"` in metadata.
+
+### 2. Factors → Deduction
+
+Every `gfac_*` factor → `deduction([premises], conclusion, reason="<steps text>")` (positional-first per `$gaia-lang` §4). The `reason` is the concatenated `steps[].reasoning` from the factor — this is the LKM's explanation of how the premises jointly support the conclusion. No warrant `prior` — the reasoning text is the evidence, and BP computes the belief strength.
+
+### 3. Upstream support for premises
+
+During formalization, the agent searches LKM for upstream conclusions relevant to each premise. A single premise may have **multiple** upstream conclusions — each gets its own `support(...)` call:
+
+```python
+support([U_1], P, reason="...", prior=<float>)
+support([U_2], P, reason="...", prior=<float>)
+# ... 等
+```
+
+`support([a], b, prior=p)` is directional: a 充分支撑 b。p close to 1 → a 几乎充分决定 b。
+
+Warrant prior reflects how strongly the upstream corroborates the premise:
+- Strong (same topic, directly implies) → 0.85–0.95
+- Moderate (related, partially overlaps) → 0.70–0.85
+- Weak/lateral → 0.50–0.65
+
+**No equivalence needed here.** Two upstream claims that both strongly support the same premise naturally converge in BP through their shared conclusion. The agent just writes separate `support()` edges.
+
+### 4. Contradiction
+
+Contradictions come from **two sources**:
+
+**Source A — Orchestrator flag files** (`contradictions.md` from discovery Step 2b). The agent reads each flagged pair and decides:
+
+| Situation | Action |
+|---|---|
+| Real tension (can't both be true; may be an open problem) | `contradiction(a, b, reason="... | new_question: ...", prior=<float>)` |
+| False alarm (boundary conditions differ, etc.) | Dismiss; no DSL emitted |
+
+**Source B — Upstream search.** While searching upstream for a premise P, the agent may find claims (conclusions or otherwise) that **contradict** P — i.e., they can't both be true. These should also be marked:
+
+```python
+contradiction(P, <conflicting_claim>, reason="found during upstream search for P: <why they can't both be true>", prior=<float>)
+```
+
+Prior reflects how strongly the contradiction holds:
+- Direct conflict on the same quantity → 0.90
+- Different boundary conditions may explain it → 0.50–0.60
+- Unclear → 0.50
+
+### 5. `data.papers` → `references.json`
+
+Every paper in the union of `data.papers` across all evidence + match files → one CSL-JSON record. Key: `<firstAuthorSurname><year>`, deduped by suffix letters (`An2001`, `An2001a`, …). Cite via `[@<key>]` in claim content or strategy reasons.
+
+### 7. Module placement
+
+- Claims go in the module of the **first paper** they appear in (paper id alphabetical tie-break).
+- `gfac_*` deductions go in the module of `factor.source_package`.
+- Cross-paper operators (`support`, `contradiction`, `induction`) go in `cross_paper.py`.
+- `__init__.py` re-exports via `from .paper_<key> import *` and `from .cross_paper import *`, then declares `__all__` (selected root claims only).
 
 ## Shared-premise extraction (avoiding double counting)
 
-Spelled out in [`references/share-extract-procedure.md`](references/share-extract-procedure.md). Hybrid policy:
+Runs before any operator emission. The agent reads all claim contents across all loaded evidence JSON files:
 
-1. **Auto-merge** premises with **identical content text** (normalized: trimmed, whitespace-collapsed). One Python variable, both `lkm_id`s in `**metadata` as a `lkm_ids` list.
-2. **Auto-merge** equivalence pairs whose lineage classifies as `same paper, different version`. No `equivalence(...)` operator emitted; treated as one claim.
-3. **Surface** ambiguous semantic-equivalent pairs into `merge_decisions.todo` for the user to resolve. Default until filled in: `KEEP` (safe).
-4. **Keep distinct + link via `equivalence(...)`** for `independent_experimental`, `independent_theoretical`, or `cross_paradigm` lineages. The operator's warrant prior gates how much BP combines them, so independent confirmations boost the underlying proposition correctly without over-counting.
+1. **Auto-merge** premises with **identical content text** (normalized: trimmed, whitespace-collapsed) → one claim, `lkm_ids=[...]` in `**metadata`.
+2. **Auto-merge** same paper, different version (arXiv ↔ published, detected by matching DOI/author/title) → one claim.
+3. **Keep distinct** for independent confirmations from different papers — multiple `support()` calls from different sources naturally converge under BP.
+4. **Surface** to `merge_decisions.todo` when the agent can't decide whether to merge — default: KEEP (safe).
+
+Output: `merge_audit.md` logs every decision for reproducibility.
 
 ## Workflow (batch mode)
 
-1. **Discovery gate.** If invoked with `--query` (no run-folders), bounce to `$evidence-graph-synthesis`. This skill does not perform LKM discovery; it consumes the audited run-folder.
-2. **Validate input.** Load every run-folder via [`scripts/lkm_io.mjs`](scripts/lkm_io.mjs) `loadRunFolder`. Every run-folder must satisfy the `evidence-graph-run/2.0` self-check; reject with a clear error otherwise.
-3. **Plan package shape.** Pick a package name (kebab-case `<topic>-gaia`); pick the import name (snake_case). Inventory all paper ids → module list (`paper_<key>.py` per paper). Inventory cross-paper relations (the four pair JSON files unioned across run-folders) → all land in `cross_paper.py`. See [`references/package-skeleton.md`](references/package-skeleton.md).
-4. **Shared-premise extraction.** Run the procedure in [`references/share-extract-procedure.md`](references/share-extract-procedure.md). Resolve every premise to a canonical label; emit `merge_audit.md`.
-5. **Emit DSL** using the primitives in [`scripts/`](scripts/):
-   - For each canonical claim: `dsl_emit.emitClaim({label, content, metadata})`. No prior on the claim call. Place in the module of the **first paper** it appears in.
-   - For each `gfac_*` factor: `dsl_emit.emitDeduction({premiseLabels, conclusionLabel})` — positional-first, no warrant. Place in the module of `factor.source_package`.
-   - For each cross-paper operator: place in `cross_paper.py`. Operator priors are **float**, derived from the Beta heuristic via `prior_heuristic.betaMean(...)`.
-   - For each cross-validation `confirm` pair: emit two `support`s + one `induction`. Also in `cross_paper.py`.
-6. **Build `priors.py`** via `dsl_emit.emitPriorsPyFile({importsByModule, entries})`. Entries are floats per `$gaia-cli` §6, one per **leaf** claim (any claim that is not the conclusion of a strategy in this package). The justification text carries the heuristic tag, the LKM context, and a `TODO:review` marker so `gaia check --hole` makes the reviewer pass through it.
-7. **Build `references.json`** from `lkm_io.collectPapers(...)`. Key format: `<firstAuthorSurname><year>` (Pascal-cased), deduped by suffix letters.
-8. **Write `pyproject.toml`** per the gaia-cli skill's pyproject contract (with a fresh UUID).
-9. **Copy run-folders verbatim** into `artifacts/lkm-discovery/<run-folder-name>/` so the LKM provenance stays reproducible.
-10. **Self-check.** Lexical sanity (balanced parens / brackets / braces; `from gaia.lang import` block present; every `claim(` has matching close; every `prior=` is a float between 0 and 1). If a Python interpreter is available, additionally `python3 -c "import ast; ast.parse(open('<file>').read())"` on each emitted module. Fail loudly if any check fails.
+1. **Read input.** Load all raw LKM evidence JSON files for the selected roots. Load `contradictions.md` from the orchestrator.
+2. **Inventory claims.** Walk `evidence_chains[].factors[]` across all loaded files. Collect every distinct `gcn_*` id — premises, conclusions, and the root claim itself. Record each with its `content`, `source_package`, and role in the chain.
+3. **Shared-premise extraction.** Run the procedure above. Resolve every premise to a canonical label. Write `merge_audit.md`.
+4. **Plan package shape.** Pick a package name (kebab-case `<topic>-gaia`). Create one `paper_<key>.py` per paper. Cross-paper relations → `cross_paper.py`.
+5. **Process contradictions.** Two sources:
+   - For each pair in `contradictions.md` from discovery, read both claims' contents. Decide promote vs dismiss.
+   - During upstream search for each premise, flag any claims found that can't both be true with the premise → `contradiction(...)`.
+6. **Emit DSL.** Write each module:
+   - `claim(...)` calls for every canonical claim per `$gaia-lang` §2.
+   - `deduction([premises], conclusion)` for every `gfac_*` factor.
+   - Cross-paper operators in `cross_paper.py`.
+   - `priors.py` for all leaf claims (floats, one per leaf, `TODO:review` marker on every justification).
+   - `references.json` from `data.papers`.
+   - `pyproject.toml` per `$gaia-cli` §1.
+   - Copy all input files into `artifacts/lkm-discovery/`.
+8. **Self-check.** Lexical sanity (balanced parens / brackets / braces, `from gaia.lang import` present, every `claim(` has matching close, every `prior=` is a float in `[1e-3, 0.999]`). Run `python3 -c "import ast; ast.parse(open('<file>').read())"` on each `.py` module. Fail loudly if any check fails.
 
 ## Workflow (incremental mode)
 
 Same as batch, except:
 
-- **Step 3 is the host's job**, not this skill's.
-- **Step 4** consults `existingAnchors` (passed in by the host) and treats every existing label as if it were already in the canonical-claim table. New premises whose content matches an existing label reuse the label.
-- **Steps 6, 7, 8, 9** are skipped (the host's plan directory already has them).
-- The skill emits a single Python source fragment to stdout (or a return value); the host appends it to `plan.gaia.py` so existing claim definitions are not perturbed.
-- The skill also emits an `imports.json` sidecar — see [`references/incremental-mode-contract.md`](references/incremental-mode-contract.md) — listing every label, its source LKM id, the float prior emitted, and the original Beta `[a, b]` from the heuristic so the host wrapper can re-inflate to its own convention if it needs to.
+- **Steps 4, 7** (package skeleton, `pyproject.toml`, `priors.py`, `references.json`) are the host's job.
+- Agent consults `existingAnchors` and reuses labels that match existing claims.
+- Agent emits a single Python source fragment + a side-channel `imports.json` listing every new label with its LKM id and prior. The host appends the fragment to `plan.gaia.py`.
 
 ## Authentication
 
-This skill makes **no network calls**. All retrieval was already done by `$lkm-api` upstream and is preserved in the run-folder's `raw/` directory. No `LKM_ACCESS_KEY` is needed.
+This skill makes **no network calls**. All retrieval was already done by `$lkm-api` upstream. No `LKM_ACCESS_KEY` is needed.
 
 ## Hand-off
 
-Batch mode hands the package directory back to the user, who runs `gaia compile .` and follows the standard gaia-cli workflow. The first thing the user should do after `gaia compile` succeeds: `gaia check --hole .` to surface the TODO-marked priors in `priors.py` for refinement.
+Batch mode hands the `<name>-gaia/` directory back to the user. Next step: `cd <name>-gaia/ && gaia compile .`
 
-Incremental mode hands the source fragment back to the host runtime, which appends to `plan.gaia.py`. The orchestrator's BP + `gaia.inquiry.run_review` loop picks up the new claims on the next iteration.
+Incremental mode hands the source fragment back to the host, which appends to `plan.gaia.py`.
 
 ## What this skill is NOT
 
-- **Not a discovery skill.** Discovery is `$evidence-graph-synthesis` + `$lkm-api`. This skill consumes the audited output.
-- **Not a renderer.** GitHub presentation, README, mermaid graphs are `gaia render` + the publish skill. This skill stops at `gaia compile`-ready source.
-- **Not a reviewer.** Setting reviewed priors, interpreting BP, identifying weak points are the review skill and `gaia.inquiry.run_review`. This skill emits TODO-marked auto-seeded floats in `priors.py` and stops there.
-- **Not a Gaia DSL teacher.** For *what* `claim` / `deduction` / `support` / `equivalence` mean and how to write them, read `$gaia-lang` directly. This skill only documents the LKM-artefact-to-DSL **mapping**.
-- **Not a wrapper for the gaia-discovery loop.** The `/lkm-evidence` slash skill that lives inside `gaia-discovery` is a separate, optional, downstream consumer of this skill's incremental mode.
+- **Not a discovery skill.** Discovery is `$evidence-graph-synthesis` + `$lkm-api`. This skill consumes raw evidence JSON + flag files.
+- **Not a renderer.** `gaia render` + the publish skill handle presentation. This skill stops at `gaia compile`-ready source.
+- **Not a reviewer.** Setting reviewed priors, interpreting BP, identifying weak points are the review skill and `gaia.inquiry.run_review`. This skill emits `TODO:review` markers and stops there.
+- **Not a Gaia DSL teacher.** For *what* `claim` / `deduction` / `support` / `equivalence` mean and how to write them, read `$gaia-lang` directly.
+- **Not a wrapper for the gaia-discovery loop.** The `/lkm-evidence` slash skill is a separate downstream consumer.
 
 ## Reference files
 
-- [`references/mapping-contract.md`](references/mapping-contract.md) — canonical LKM artefact → DSL output table (mapping policy only; defers to `$gaia-lang` for grammar)
-- [`references/share-extract-procedure.md`](references/share-extract-procedure.md) — shared-premise extraction algorithm + `merge_decisions.todo` schema
+- [`references/mapping-contract.md`](references/mapping-contract.md) — detailed mapping rules and module placement conventions
 - [`references/package-skeleton.md`](references/package-skeleton.md) — batch-mode output layout + templates (defers to `$gaia-cli` for `pyproject.toml` and `priors.py` shape)
 - [`references/incremental-mode-contract.md`](references/incremental-mode-contract.md) — incremental-mode invariants + `imports.json` schema
-
-## Helpers
-
-- [`scripts/lkm_io.mjs`](scripts/lkm_io.mjs) — load + validate + iterate run-folder
-- [`scripts/dsl_emit.mjs`](scripts/dsl_emit.mjs) — emit `$gaia-lang`-conformant Python source (no Beta in any emitted Python; floats only)
-- [`scripts/prior_heuristic.mjs`](scripts/prior_heuristic.mjs) — content + score → Beta `[a, b]` internally + `betaMean()` collapse to float for emission
-- [`scripts/test_lkm_to_gaia.mjs`](scripts/test_lkm_to_gaia.mjs) — `node --test` suite (no deps)
-- [`scripts/_smoke_emit.mjs`](scripts/_smoke_emit.mjs) — dev script that builds a Python source from the fixture run-folder; useful as a worked example
