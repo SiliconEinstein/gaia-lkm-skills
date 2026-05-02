@@ -168,33 +168,33 @@ Output: `merge_audit.md` logs every decision for reproducibility.
 
 ## Workflow (batch mode)
 
-1. **Read input.** Load all raw LKM evidence JSON files for the selected roots. Load `contradictions.md` from the orchestrator.
-2. **Inventory claims.** Walk `evidence_chains[].factors[]` across all loaded files. Collect every distinct `gcn_*` id — premises, conclusions, and the root claim itself. Record each with its `content`, `source_package`, and role in the chain.
-3. **Shared-premise extraction.** Run the procedure above. Resolve every premise to a canonical label. Write `merge_audit.md`.
-4. **Plan package shape.** Pick a package name (kebab-case `<topic>-gaia`). Create one `paper_<key>.py` per paper. Cross-paper relations → `cross_paper.py`.
-5. **Process contradictions.** Two sources:
-   - For each pair in `contradictions.md` from discovery, read both claims' contents. Decide promote vs dismiss.
-   - During upstream search for each premise, flag any claims found that can't both be true with the premise → `contradiction(...)`.
-6. **Emit DSL.** Write each module:
+1. **Read evidence.** Load raw LKM evidence JSON for each selected root. Read `contradictions.md` from the orchestrator. Scan all 20 match candidates for potential contradictions. Search LKM upstream for each premise to find supporting conclusions.
+2. **Dedup.** Merge claims with identical content text, and arXiv↔published pairs (match DOI/author/title). Surface ambiguous merges to `merge_decisions.todo` (default: KEEP).
+3. **Emit DSL.** Write each module:
    - `claim(...)` calls for every canonical claim per `$gaia-lang` §2.
    - `deduction([premises], conclusion)` for every `gfac_*` factor.
    - Cross-paper operators in `cross_paper.py`.
-   - Empty `priors.py` (`PRIORS = {}`) — priors are filled in step 8.
+   - Empty `priors.py` (`PRIORS = {}`).
    - `references.json` from `data.papers`.
    - `pyproject.toml` per `$gaia-cli` §1.
    - Copy all input files into `artifacts/lkm-discovery/`.
-7. **Self-check.** Lexical sanity + `python3 -c "import ast; ast.parse(...)"` on each `.py` module. Fail loudly if any check fails.
-8. **Compile, infer, review.**
-   ```bash
-   gaia compile . && gaia infer .
-   ```
-9. **Fill priors.** Run `gaia check --hole .` — for each hole, judge "what is the probability this claim is correct?" and fill `priors.py`. Cap at 0.9. Re-compile and re-infer.
-10. **Inquiry review.** Run `gaia inquiry review .`. Inspect belief report, unreviewed warrants, structural holes. For each suspicious claim or reasoning chain, add an obligation:
-    ```bash
-    gaia inquiry obligation add <claim_qid> -c "<what needs verification>"
-    gaia inquiry obligation add <strategy_qid> -c "<why the reasoning is suspect>"
-    ```
-    Obligations form the refinement checklist for the next exploration iteration.
+4. **Refinement loop.** Repeat until exit conditions are met:
+
+   a. **Compile, infer.** `gaia compile . && gaia infer .`
+   b. **Fill priors.** `gaia check --hole .` — for each hole, judge "what is the probability this claim is correct?" Fill `priors.py`. Cap at 0.9.
+   c. **Inquiry review.** `gaia inquiry review .` — inspect beliefs, unreviewed warrants, holes.
+   d. **Add obligations.** For each suspicious claim or reasoning chain:
+      ```bash
+      gaia inquiry obligation add <qid> -c "<what needs verification>"
+      ```
+   e. **Resolve obligations.** For each open obligation: search LKM, refine DSL, adjust priors, or dismiss.
+   f. **Accept warrants.** Run review pass on unreviewed warrants — `gaia inquiry obligation add <strategy_qid> -c "review and accept/reject"`.
+
+   **Exit conditions (all must be true):**
+   - `gaia check --hole` returns 0 holes
+   - `gaia inquiry review` shows 0 unreviewed warrants
+   - `gaia inquiry obligation list` shows no open obligations
+   - Agent confirms the graph is complete (no missing upstream support, no ignored contradiction)
 
 ## Workflow (incremental mode)
 
