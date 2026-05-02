@@ -11,7 +11,6 @@ Every distinct `gcn_*` id (post shared-premise extraction) becomes one `claim(..
 ```python
 <label> = claim(
     "<content>",                         # or placeholder if empty
-    prior=<float or None>,               # from LKM score if available
     lkm_id="gcn_xxx",                    # **metadata
     source_paper="paper:xxx",
     provenance_source="lkm",
@@ -20,14 +19,13 @@ Every distinct `gcn_*` id (post shared-premise extraction) becomes one `claim(..
 
 Rules:
 - `<label>` is mint from the `gcn_*` id and the claim's semantic content.
-- If LKM returns a `score` on this claim (from match results), use it as `prior`. If not, omit — the leaf prior will land in `priors.py`.
+- **No `prior` kwarg on claims.** LKM's `score` is match relevance, not a Bayesian prior. After `gaia compile`, run `gaia check --hole` to surface leaf claims that need priors, then fill them in `priors.py`.
 - When premises are merged, the kwarg becomes `lkm_ids=["gcn_a", "gcn_b"]` (plural).
 - Empty-content premises get a placeholder string + `todo="revisit when LKM corpus populates this premise"` in metadata. Do not invent content.
-- Prior values are floats in `[1e-3, 0.999]` (Cromwell-bounded).
 
 ### 1a. Leaf priors → `priors.py`
 
-Claims without an LKM score that are **leaves** (not the conclusion of any strategy) get entries in `priors.py` per `$gaia-cli` §6:
+Claims that are **leaves** (not the conclusion of any strategy) and were surfaced by `gaia check --hole` get entries in `priors.py` per `$gaia-cli` §6:
 
 ```python
 PRIORS = {
@@ -36,17 +34,7 @@ PRIORS = {
 }
 ```
 
-The float is a Cromwell-bounded `[1e-3, 0.999]` prior assigned by the agent based on the claim's nature:
-
-| Heuristic bucket | Mean ~ | Trigger |
-|---|---|---|
-| `experimental_observation` | 0.90 | Content describes a measurement, observation, or experimental result |
-| `computational_result` | 0.80 | Content describes a simulation, first-principles calculation, or numerical result |
-| `assumed_or_proposed` | 0.70 | Content uses words like "assume", "propose", "hypothesize" |
-| default | 0.50 | Nothing else matched |
-| empty content | 0.50 | Content unavailable in corpus |
-
-The LKM `score` (from match results) can nudge the prior by ±0.05. Every justification text ends with `TODO:review` so `gaia check --hole` surfaces it.
+The float is the agent's direct judgment: **what is the probability this claim is correct?** Capped at 0.9 — no claim is absolutely certain, no matter how well-established. Lower bound: 0.001 (Cromwell). No heuristic buckets — just read the claim and estimate how likely it is to be true. Every justification text ends with `TODO:review`.
 
 ## 2. Upstream support for premises
 
@@ -80,8 +68,8 @@ deduction(
 )
 ```
 
-- `reason` is the concatenated `steps[].reasoning` — the LKM's explanation of how the premises jointly support the conclusion.
-- No warrant `prior` — the reasoning text is the evidence; BP computes the belief strength.
+- `reason` is the LKM evidence formatted as numbered markdown: one numbered item per `steps[].reasoning`, preserving the step order from the LKM factor. Each step preserves figure/table references from the original.
+- `prior=0.95` — for backward compatibility (Gaia #494 makes deduction rigid with default 0.999; remove once widely adopted).
 - **Always `deduction`**, regardless of LKM `subtype`.
 - Multiple `deduction(...)` calls may share the same conclusion label.
 

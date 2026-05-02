@@ -79,16 +79,29 @@ The agent reads the LKM evidence JSON and writes Gaia DSL, applying these rules:
 Every distinct `gcn_*` claim (post shared-premise extraction) → one `claim(...)` per `$gaia-lang` §2:
 
 ```python
-<label> = claim("<content>", prior=<float or None>, lkm_id="gcn_xxx", source_paper="paper:xxx", provenance_source="lkm")
+<label> = claim("<content>", lkm_id="gcn_xxx", source_paper="paper:xxx", provenance_source="lkm")
 ```
 
-- If LKM returns a `score` on this claim (via match results), use it directly as the `prior` kwarg. If not, omit `prior` — leaf priors without LKM scores land in `priors.py`.
+- **No `prior` kwarg on claims.** After `gaia compile`, run `gaia check --hole` to surface which leaf claims need priors, then assign them in `priors.py`. LKM's `score` field is match relevance, not a prior — do not use it as one.
 - When two claims are merged into one: `lkm_ids=["gcn_a", "gcn_b"]`.
 - Empty content → placeholder string + `todo="revisit when LKM populates this premise"` in metadata.
 
 ### 2. Factors → Deduction
 
-Every `gfac_*` factor → `deduction([premises], conclusion, reason="<steps text>")` (positional-first per `$gaia-lang` §4). The `reason` is the concatenated `steps[].reasoning` from the factor — this is the LKM's explanation of how the premises jointly support the conclusion. No warrant `prior` — the reasoning text is the evidence, and BP computes the belief strength.
+Every `gfac_*` factor → `deduction([premises], conclusion, reason="<markdown>", prior=0.95)` (positional-first). The `reason` is the full LKM evidence, formatted as a **numbered markdown list** — one numbered item per `factors[].steps[]` entry from the LKM JSON, preserving the step order:
+
+```
+1. State the realistic Hamiltonian considered for experimental relevance:
+   H = H_coulomb^intra + H_coulomb^inter + U_0^inter V_0^inter + U_1^inter V_1^inter,
+   with U_0^inter=-0.4, U_1^inter=0.6 (Fig. 2).
+2. Report the numerical stabilizability: ED of this Hamiltonian produces a robust
+   6-fold GSD phase with a sizable many-body gap (Fig. 2(a)-(b)).
+3. Define the dimensionless ratios: g_1 ≡ V_1^inter/V_1^intra,
+   g_2 ≡ V_1^inter/V_0^inter.
+...
+```
+
+`prior=0.95` is included for backward compatibility with Gaia versions that still enforce reason↔prior pairing; once Gaia #494 lands the default is 0.999.
 
 ### 3. Upstream support for premises
 
