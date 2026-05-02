@@ -147,39 +147,45 @@ Warrant prior reflects how strongly the upstream corroborates the premise:
 
 **No equivalence needed here.** Two upstream claims that both strongly support the same premise naturally converge in BP through their shared conclusion. The agent just writes separate `support()` edges.
 
-### 4. Contradiction — prioritize open problems
+### 4. Contradiction
 
-**Finding contradictions is more important than finding supports.** An unresolved contradiction is a potential open problem — the most valuable output of exploration. The agent must actively search for conflicting claims, especially across different paradigms.
+**Definition:** Two claims A and B form a contradiction when they **logically cannot both be true** — accepting A forces rejection of B, and vice versa. This is not about different boundary conditions, sample quality, or measurement protocols. It is a logical incompatibility: the truth of A excludes the truth of B. Every such contradiction hints at an **open problem** in the knowledge system — either one claim is wrong, or the framework that makes them appear incompatible is incomplete.
 
-**Highest priority: experiment vs theory conflict.** When one claim comes from an experimental measurement and the other from a theoretical prediction, a contradiction between them signals either new physics or a flaw in the theory — either way, it's a first-class open problem.
+**Finding contradictions is more important than finding supports.** A resolved support makes the graph slightly more confident. A discovered contradiction reveals where knowledge is broken.
 
-**Avoid echo chambers.** When BP resolves a contradiction strongly in one direction (one side belief > 0.95, other < 0.1), the graph may be overconfident. The agent MUST then search for evidence supporting the **weak side** of the contradiction — not just reinforce the strong side. A belief of 0.011 on a contradicted experimental claim means the graph thinks the experiment is wrong; that demands aggressive search for additional experimental evidence before accepting the resolution.
+**Signal:** the agent MUST flag a contradiction when:
+- Two claims assert mutually exclusive values for the same quantity (e.g. "gap = 2.5 eV" vs "gap = 4.0 eV" for the same material under the same conditions)
+- Two claims assert opposite signs or directions for the same effect
+- A theoretical prediction and an experimental observation for the same system disagree beyond experimental error bars
+- Two theoretical methods (e.g. PBE vs GW) predict qualitatively different outcomes for the same system
 
-Contradictions come from **two sources**:
+**Not a contradiction:**
+- Different results explained by different boundary conditions (temperature, pressure, doping, sample quality) — these can both be true under their respective conditions
+- Different measurement techniques giving slightly different values within error bars
 
-**Source A — Orchestrator flag files** (`contradictions.md` from discovery Step 2b). The agent reads each flagged pair and decides:
+**Two sources:**
 
-| Situation | Action |
-|---|---|
-| Real tension (can't both be true; may be an open problem) | `contradiction(a, b, reason="... \| new_question: ...", prior=<float>)` |
-| False alarm (boundary conditions differ, etc.) | Dismiss; no DSL emitted |
+**Source A — Orchestrator flag files** (`contradictions.md` from discovery Step 2b).
 
-**Source B — Upstream search.** While searching upstream for a premise P, the agent must also look for claims that **contradict** P. Pay special attention to claims from different paradigms (experiment vs theory, different materials, different methods):
+**Source B — Upstream search (step 5b).** Check each pair of claims in `new_conclusions` against each other and against existing claims in the graph.
 
+For each contradiction:
 ```python
-contradiction(P, <conflicting_claim>, reason="found during upstream search for P: <why they can't both be true>", prior=<float>)
+contradiction(A, B, prior=<float>,
+    reason="<why A and B cannot both be true> | new_question: <what open problem does this reveal?>")
 ```
-
-Every contradiction should also be marked as an obligation:
+Plus:
 ```bash
 gaia inquiry obligation add <qid> -c "resolve contradiction: <new_question>"
 ```
 
-Prior reflects the strength of the contradiction:
-- Experiment vs theory on the same quantity → 0.90–0.95 (highest priority)
+Prior:
+- Experiment vs theory on the same quantity → 0.90–0.95
 - Direct conflict on the same quantity (same paradigm) → 0.85–0.90
-- Different boundary conditions may explain it → 0.50–0.60
+- Different boundary conditions may explain it → 0.50–0.60 (likely false alarm)
 - Unclear → 0.50
+
+**Avoid echo chambers.** When BP resolves a contradiction strongly in one direction (one side belief > 0.95, other < 0.1), the graph may be overconfident. Search for evidence supporting the **weak side** before accepting the resolution.
 
 ### 5. `data.papers` → `references.json`
 
