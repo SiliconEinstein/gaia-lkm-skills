@@ -1,0 +1,15 @@
+{
+  "schema_version": "evidence-graph-run/2.0",
+  "pairs": [
+    {
+      "id": "eq_root_ab",
+      "claims": [
+        {"claim_id": "gcn_root_a", "file": "evidence_gcn_root_a.json", "pointer": "/data/claim"},
+        {"claim_id": "gcn_root_b", "file": "evidence_gcn_root_b.json", "pointer": "/data/claim"}
+      ],
+      "drawn_in_graph": true,
+      "graph_pair_edge_id": "pr_eq_1",
+      "rationale": "Both claims report Tc of MgB2 within 0.5 K agreement; lineage=independent_experimental (different labs, different protocols)."
+    }
+  ]
+}

@@ -1,0 +1,17 @@
+{
+  "schema_version": "evidence-graph-run/2.0",
+  "pairs": [
+    {
+      "id": "dp_dummy",
+      "claims": [
+        {"claim_id": "gcn_root_a", "file": "evidence_gcn_root_a.json", "pointer": "/data/claim"},
+        {"claim_id": "gcn_root_b", "file": "evidence_gcn_root_b.json", "pointer": "/data/claim"}
+      ],
+      "drawn_in_graph": false,
+      "graph_pair_edge_id": null,
+      "origin": "contradiction",
+      "verdict": "confirmed_equivalence",
+      "rationale": "Initially considered as a contradiction candidate (different reported uncertainties), but the pair is captured under equivalences.json with lineage=independent_experimental and the values agree within 0.5 K; no real tension."
+    }
+  ]
+}

@@ -1,0 +1,19 @@
+{
+  "schema_version": "evidence-graph-run/2.0",
+  "pairs": [
+    {
+      "id": "cv_root_ab",
+      "claims": [
+        {"claim_id": "gcn_root_a", "file": "evidence_gcn_root_a.json", "pointer": "/data/claim"},
+        {"claim_id": "gcn_root_b", "file": "evidence_gcn_root_b.json", "pointer": "/data/claim"}
+      ],
+      "drawn_in_graph": true,
+      "graph_pair_edge_id": "pr_cv_1",
+      "verdict": "promoted",
+      "polarity": "confirm",
+      "independence_basis": "Different sample preparations, different transport protocols (four-probe resistivity vs XRD-coupled), different labs.",
+      "scientific_weight": "Independent confirmation tightens the Tc estimate to within 0.5 K and rules out instrument-specific systematic bias on the ambient-pressure dome.",
+      "rationale": "Both arrive at Tc ~ 39 K via experimentally independent pathways; treating as cross-validation rather than equivalence preserves the independence axis for downstream weighting."
+    }
+  ]
+}

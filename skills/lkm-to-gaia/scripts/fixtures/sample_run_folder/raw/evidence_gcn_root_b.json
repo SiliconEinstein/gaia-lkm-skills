@@ -1,0 +1,50 @@
+{
+  "code": 0,
+  "data": {
+    "claim": {
+      "id": "gcn_root_b",
+      "content": "Independent XRD-coupled measurement: Tc of MgB2 is 39.2 +/- 0.3 K."
+    },
+    "total_chains": 1,
+    "evidence_chains": [
+      {
+        "source_package": "paper:p_xrd2003",
+        "factors": [
+          {
+            "id": "gfac_b1",
+            "factor_type": "strategy",
+            "subtype": "noisy_and",
+            "premises": [
+              {
+                "id": "gcn_xrd_protocol",
+                "content": "Sample held at ambient pressure; XRD-coupled four-probe resistivity measurement."
+              },
+              {
+                "id": "gcn_unexpanded_premise",
+                "content": ""
+              }
+            ],
+            "conclusion": {
+              "id": "gcn_root_b",
+              "content": "Independent XRD-coupled measurement: Tc of MgB2 is 39.2 +/- 0.3 K."
+            }
+          }
+        ]
+      }
+    ],
+    "papers": {
+      "paper:p_xrd2003": {
+        "id": "p_xrd2003",
+        "doi": "10.1088/0953-2048/16/2/319",
+        "publication_id": "300",
+        "publication_name": "Superconductor Science and Technology",
+        "en_title": "Bulk superconductivity in MgB2 confirmed by XRD-coupled transport (fixture)",
+        "authors": "Doe J. | Roe R.",
+        "publication_date": "2003-2-1",
+        "available_online": "2003-1-15",
+        "cover_date_start": "2003-02-01"
+      }
+    }
+  },
+  "trace_id": "trace_fixture_root_b"
+}
