@@ -9,7 +9,8 @@ The repository is organized so the same skill bodies can be used by Codex, Claud
 - `lkm-api`: query LKM search/evidence APIs, preserve raw retrieval artifacts, and run **premise-driven search bundles** to find **prior papers’ conclusion-type claims** that may support each premise **on content** (not verbatim).
 - `evidence-subgraph`: build graphs **rooted on a chain-backed user conclusion** (`evidence` → `total_chains>0`); treat **native** premises as a **worklist item** (including **empty-text** premises anchored on **`steps`**); classify every edge into exactly **three semantic classes** — *chain support*, *background*, *verification support* (locale-rendered); render Graphviz/Mermaid with **locale-aware human labels**, **publication-style (premium) colors**, and chain-payload-anchored audit tables (see `references/source-ground-truth.md`, `references/graph-output.md`).
 - `scholarly-synthesis`: write standalone academic syntheses from audited evidence structures, including **prior-result → premise → conclusion** narration when applicable.
-- `evidence-graph-synthesis`: orchestrator for the default pipeline: **chain-backed conclusion (`total_chains>0`) → native premises → per-premise upstream retrieval → audited graph → synthesis** (chain-less synthetic mode only with explicit waiver).
+- `lkm-to-gaia`: convert LKM evidence-chain payloads directly into a Gaia DSL knowledge package. Agent reads raw LKM evidence JSON + discovery flag files, performs semantic analysis (shared-premise dedup, equivalence vs merge decisions, contradiction promotion, warrant-prior assignment), and writes Gaia DSL source. No intermediate JSON format. Two modes: `batch` (fresh `<name>-gaia/` package) and `incremental` (Python source fragment to merge into an existing `plan.gaia.py`).
+- `evidence-graph-synthesis`: orchestrator for the default pipeline: **chain-backed conclusion (`total_chains>0`) → native premises → per-premise upstream retrieval → audited graph → {synthesis | Gaia knowledge package}** (chain-less synthetic mode only with explicit waiver).
 
 ## Plugin Manifests
 
@@ -37,9 +38,9 @@ git clone https://github.com/SiliconEinstein/gaia-lkm-skills.git
 - `references/` (optional) — supporting reference files the SKILL.md links to; load them on demand.
 - `agents/` (optional) — runtime-specific manifests (e.g. `openai.yaml`); read only if your runtime consumes them.
 
-The four skills are: `lkm-api`, `evidence-subgraph`, `scholarly-synthesis`, `evidence-graph-synthesis`.
+The five skills are: `lkm-api`, `evidence-subgraph`, `scholarly-synthesis`, `lkm-to-gaia`, `evidence-graph-synthesis`. Note: `lkm-to-gaia` has no scripts or `agents/` directory — the agent writes Gaia DSL directly.
 
-**Step 3 — read each `SKILL.md`** so the agent understands the skill's purpose, its inputs, and how it hands off to the others. Start with `evidence-graph-synthesis` (the orchestrator entry point) and follow its `$lkm-api`, `$evidence-subgraph`, `$scholarly-synthesis` references.
+**Step 3 — read each `SKILL.md`** so the agent understands the skill's purpose, its inputs, and how it hands off to the others. Start with `evidence-graph-synthesis` (the orchestrator entry point) and follow its `$lkm-api`, `$evidence-subgraph`, `$scholarly-synthesis`, `$lkm-to-gaia` references.
 
 **Step 4 — register the skill directories verbatim into the host runtime's skill location.** Do not modify the skill contents. The registration mechanism is runtime-specific:
 
