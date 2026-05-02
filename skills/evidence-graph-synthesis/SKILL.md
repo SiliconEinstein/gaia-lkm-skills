@@ -1,6 +1,6 @@
 ---
 name: evidence-graph-synthesis
-description: Universal entry point for any LKM-driven evidence-and-synthesis task. Inspects the user's intent and routes to the right downstream skill(s) — `$lkm-api` directly for raw API access, narrowed search for explicit-topic asks, or the full e2e `$lkm-api → $evidence-subgraph → $scholarly-synthesis` pipeline for "graph + synthesis on a topic" requests. Includes a mandatory user-selection checkpoint between discovery and the build, and supports a graph-only mode (skip the synthesis). Domain-agnostic: works for physics, chemistry, materials, biology, ML, climate, astrophysics, etc. Any agent handling an LKM-related user prompt should route through this skill first.
+description: Universal entry point for any LKM-driven evidence-and-synthesis task. Inspects the user's intent and routes to the right downstream skill(s) — `$lkm-api` directly for raw API access, narrowed search for explicit-topic asks, the full e2e `$lkm-api → $evidence-subgraph → $scholarly-synthesis` pipeline for "graph + synthesis on a topic" requests, or `$lkm-api → $evidence-subgraph → $lkm-to-gaia` for "graph + Gaia knowledge package on a topic" requests. Includes a mandatory user-selection checkpoint between discovery and the build, and supports a graph-only mode (skip both synthesis and Gaia-package generation). Domain-agnostic: works for physics, chemistry, materials, biology, ML, climate, astrophysics, etc. Any agent handling an LKM-related user prompt should route through this skill first.
 ---
 
 # Evidence Graph Synthesis (LKM Universal Entry Point)
@@ -11,8 +11,9 @@ This is the **single front door** for every LKM-driven request. The orchestrator
 
 - **Raw API access** (e.g. "match claims in LKM for X", "fetch evidence for `gcn_…`", "look up paper metadata Y") → delegate to **`$lkm-api`** directly. No graph, no synthesis.
 - **Topical evidence graph + synthesis** (e.g. broad topic, family of materials/systems, specific phenomenon) → run the full pipeline `$lkm-api` discovery → user-selection checkpoint → `$evidence-subgraph` → `$scholarly-synthesis`.
-- **Graph-only on a topic** ("just build the evidence graph, no synthesis") → run the pipeline through `$evidence-subgraph` and stop; do not invoke `$scholarly-synthesis`.
-- **Already-narrowed input** (user names a specific system AND a specific quantity / paper / claim id) → skip the broad-discovery step; go straight to graph (+ synthesis unless graph-only).
+- **Topical evidence graph + Gaia knowledge package** (e.g. "build me a Gaia package on this topic", "formalize this into Gaia DSL", "I want a `<name>-gaia/` directory I can `gaia compile`") → run the pipeline through `$evidence-subgraph` and then route to **`$lkm-to-gaia`** instead of `$scholarly-synthesis`. Multi-root selection at the user-selection checkpoint is allowed; the run-folder per chosen root is fed to `$lkm-to-gaia` in `--mode batch`.
+- **Graph-only on a topic** ("just build the evidence graph, no synthesis") → run the pipeline through `$evidence-subgraph` and stop; do not invoke `$scholarly-synthesis` or `$lkm-to-gaia`.
+- **Already-narrowed input** (user names a specific system AND a specific quantity / paper / claim id) → skip the broad-discovery step; go straight to graph (+ synthesis or Gaia package, unless graph-only).
 
 The orchestrator does **not** retrieve, draw, or write itself. It sequences the downstream skills, gates the user-selection checkpoint, and hands artifacts forward.
 
@@ -21,10 +22,11 @@ The orchestrator does **not** retrieve, draw, or write itself. It sequences the 
 Apply each rule until one matches; that determines the path.
 
 1. **User supplies a claim id or paper id directly and asks only for raw data** → route to `$lkm-api`. Return the raw JSON to the user. Stop.
-2. **User asks for graph only** (explicitly: "no synthesis", "just the graph", "evidence subgraph only") → run discovery + checkpoint + `$evidence-subgraph`. Stop after handing the graph + audit table back. Do not invoke `$scholarly-synthesis`.
-3. **User supplies a specific narrow target** (system + quantity, or a specific paper) and wants the e2e build → skip discovery; verify the chain-backed gate; graph; synthesis.
-4. **User supplies a broad / topical prompt** (no specific system + value yet) and wants the e2e build (graph + synthesis) → run discovery → user-selection checkpoint → continue with chosen root → graph → synthesis.
-5. **Ambiguous** → ask the user one short clarifying question: "do you want raw API access, the evidence graph alone, or the full graph + synthesis?" Default if the user does not answer: full e2e (option 4).
+2. **User asks for graph only** (explicitly: "no synthesis", "no gaia package", "just the graph", "evidence subgraph only") → run discovery + checkpoint + `$evidence-subgraph`. Stop after handing the graph + audit table back. Do not invoke `$scholarly-synthesis` or `$lkm-to-gaia`.
+3. **User asks for a Gaia package** (explicitly: "build me a Gaia package", "formalize as Gaia", "into gaia DSL", "gaia knowledge package", "I want to `gaia compile` this") → run discovery → user-selection checkpoint (multi-select allowed) → `$evidence-subgraph` per selected root → hand the run-folder(s) to **`$lkm-to-gaia`** in `--mode batch`. Stop after `$lkm-to-gaia` returns the package directory.
+4. **User supplies a specific narrow target** (system + quantity, or a specific paper) and wants the e2e build → skip discovery; verify the chain-backed gate; graph; then synthesis (default) or Gaia package (if rule 3's keywords are present).
+5. **User supplies a broad / topical prompt** (no specific system + value yet) and wants the e2e build (graph + synthesis) → run discovery → user-selection checkpoint → continue with chosen root → graph → synthesis.
+6. **Ambiguous** → ask the user one short clarifying question: "do you want raw API access, the evidence graph alone, the full graph + synthesis (article), or the full graph + Gaia knowledge package?" Default if the user does not answer: full e2e (option 5, synthesis).
 
 ## End-to-End Workflow (full pipeline path)
 
@@ -38,33 +40,36 @@ Convert the user's prompt to one or more free-text queries in the language(s) mo
 
 For each distinct candidate (deduplicated by claim id), call `GET /claims/{id}/evidence` with `sort_by=comprehensive`. Retain candidates with `total_chains > 0`. Drop the rest from root consideration.
 
-### 2b. Discovery flag pass — contradictions, equivalences, cross-validation, dismissals
+### 2b. Discovery flag pass — contradictions and equivalences
 
-Run a best-effort scan over the **full** match response from step 1 (both chain-backed and chain-less candidates — open questions whose conflicting side has no chain are still valuable). The discovery flow itself (chain-backed filter, user-selection checkpoint) is unaffected by this pass; the saved files are consumed downstream by `$evidence-subgraph` (for equivalence-pair dedup decisions and chain-internal pair edges) and `$scholarly-synthesis` (for §5 cross-method narrative and §6 open-problems narrative).
-
-This step writes four structured JSON files into the run folder: `contradictions.json`, `equivalences.json`, `cross_validation.json`, and `dismissed_pairs.json`. The schema and source-pointer rules are fixed by `$evidence-subgraph`'s `references/run-folder-output-contract.md` — read it for the envelope and per-record fields. Pairs whose two claims are both chain-internal (i.e. both endpoints will become nodes in `evidence_graph.json`) are also rendered as graph pair edges by `$evidence-subgraph`; pairs with one or both endpoints out of the chosen chain stay in the JSON files only (`drawn_in_graph: false`).
-
-**Contradiction and cross-validation pairs go through a promotion gate.** The judgement criteria — operational definition, promotion gate, structured fields, dismissal verdicts, and decision procedure — are specified canonically in `$evidence-subgraph`'s `references/pair-classification.md`. Read that file before classifying any pair. The summary below is non-normative.
+Run a best-effort scan over the **full** match response from step 1 (both chain-backed and chain-less candidates — open questions whose conflicting side has no chain are still valuable). The discovery flow itself (chain-backed filter, user-selection checkpoint) is unaffected by this pass; the saved files are consumed downstream by `$evidence-subgraph` (for equivalence-pair dedup decisions) and `$scholarly-synthesis` (for §5 cross-method narrative and §6 open-problems narrative).
 
 For each candidate-vs-candidate comparison, the agent uses semantic judgement on `content` fields plus paper metadata in `data.papers`:
 
-- **Contradiction candidate** — two claims that, on the same observable in comparable conditions, assert numerically or qualitatively conflicting values, signs, scaling regimes, or directional outcomes. The candidate is **promoted** to `contradictions.json` only when (i) the tension cannot be dissolved by an obvious difference in conditions, and (ii) the agent can articulate a checkable new question generated by the tension, naming at least one mechanism class from the closed `hypothesized_cause` enum (`hidden_variable`, `boundary_condition`, `measurement_protocol`, `model_assumption`, `evidence_reliability`). Promoted records carry `verdict: "promoted"`, `new_question`, `hypothesized_cause` (multi-select array, no `other`), and `rationale`. Candidates that fail the gate are written to `dismissed_pairs.json` with `origin: "contradiction"` and verdict `confirmed_equivalence` / `resolved_moderator` / `non_generative` per `pair-classification.md` §6 and §12. Candidates lacking locatable provenance on either side are dropped at this discovery stage and never become pair records.
-- **Equivalence pair** — two claims that assert the same proposition on the same topic. For each pair, classify the lineage using `data.papers` and store the classification in the record's `rationale` (or in an additional implementation-defined field):
+- **Contradiction pair** — two claims that, on the same topic with the same system / setting, assert numerically or qualitatively conflicting values, signs, scaling regimes, or directional outcomes. (e.g. one says μ\* = 0.13, another μ\* = 0.21 for the same compound; one says effect-X is positive, another says it is negative.) Save to **`contradictions.md`** in the run folder, one row per pair:
+
+  ```
+  | pair (id_a / id_b) | topic | side A claim | side B claim | source A (paper, role) | source B (paper, role) | why contradictory |
+  ```
+
+- **Equivalence pair** — two claims that assert the same proposition on the same topic. For each pair, classify the lineage using `data.papers`:
   - **same paper, different version** — both `source_packages` resolve to the same paper, OR one is an arXiv preprint and the other is the published journal version of the same work. Detect via DOI prefix `10.48550/arxiv.` and `area: "arXiv-…"` on one entry plus a matching non-arXiv DOI / journal entry; matching titles or author lists make this near-certain.
   - **independent experimental** — different papers, both observational / experimental in method.
   - **independent theoretical / computational** — different papers, both derive the result by theory / computation / simulation.
   - **cross-paradigm confirmation** — different papers, one experimental and one theoretical / computational.
   - **unclassified** — lineage cannot be confidently assigned from `data.papers` alone; flag for user inspection.
-  Append to `equivalences.json`. Equivalence classification is unaffected by the promotion gate above; this file does not participate in the promoted/dismissed split.
-- **Cross-validation candidate** — two claims that confirm or partially confirm/disconfirm each other on the same observable through pathways the agent judges sufficiently independent. The candidate is **promoted** to `cross_validation.json` only when the agent can articulate (i) `independence_basis` — what specifically makes the two pathways independent, and (ii) `scientific_weight` — what the agreement (or partial disagreement) actually buys for confidence in the target or for a meaningful open question. Promoted records carry `verdict: "promoted"`, `polarity` (`confirm` / `partial_confirm` / `partial_disconfirm`, semantics unchanged), `independence_basis`, `scientific_weight`, and `rationale`. Candidates that fail the gate are written to `dismissed_pairs.json` with `origin: "cross_validation"` and verdict `confirmed_equivalence` / `trivially_dependent` / `non_generative` per `pair-classification.md` §10 and §12. Candidates lacking locatable provenance on either side are dropped at this discovery stage and never become pair records.
 
-**Dismissed pairs.** `dismissed_pairs.json` is the audit log of every contradiction or cross-validation candidate that did not pass the promotion gate. Each record carries `origin` (`contradiction` or `cross_validation`), `verdict` (one of the values allowed for that origin per `pair-classification.md` §11), `claims[]` with locatable provenance, and `rationale` explaining why the dismissal applies. Dismissed records do **not** carry `new_question`, `hypothesized_cause`, `independence_basis`, `scientific_weight`, or `polarity`. They are never rendered as graph pair edges.
+  Save to **`equivalences.md`** in the run folder:
 
-**Caps.** Cap `contradictions.json` and `cross_validation.json` each at the **top 10 most-interesting promoted pairs**. "Most interesting" means: high-relevance candidates (top of the match score), pairs that disagree about a quantity central to the user's prompt, or pairs whose papers are widely cited. The cap is per-file and counts promoted records only; dismissals do not consume cap quota. `equivalences.json` retains its existing top-10 cap per pre-promotion semantics. `dismissed_pairs.json` has no cap — every candidate the agent considered and rejected is recorded for audit. If more promoted pairs exist beyond the cap, the run folder's `raw/match_*.json` retains the full match response for any deeper post-hoc analysis.
+  ```
+  | pair (id_a / id_b) | topic | shared claim | source A | source B | lineage classification | note |
+  ```
 
-**Empty case.** If no pairs are found (or no candidates passed any gate), still write each file with `pairs: []` (with the contract envelope) so downstream skills can detect the empty case unambiguously. All four files must always exist per `run-folder-output-contract.md` §6.
+**Caps.** Cap each list at the **top 10 most-interesting pairs**. If more candidates exist, append a single trailing line `…and N more (see raw match JSON: <path>)`. "Most interesting" means: high-relevance candidates (top of the match score), pairs that disagree about a quantity central to the user's prompt, or pairs whose papers are widely cited.
 
-**Narrow-target case (discovery skipped).** When the user supplies a narrow target and step 1 is skipped, the orchestrator still must produce all four pair JSON files (with `pairs: []`), and `evidence_graph.json` must carry `discovery_performed: false` so downstream consumers know there is no broad match response to scan. Do **not** invent pairs from the chain payload alone; the discovery scan needs the broader candidate set to be meaningful.
+**Empty case.** If no pairs are found, still write the file with a single line `(no pairs detected in this run)` so downstream skills can detect the empty case unambiguously.
+
+**Narrow-target case (discovery skipped).** When the user supplies a narrow target and step 1 is skipped, the orchestrator still must produce both files for the downstream skills, even though there is no broad match response to scan. Write both files with a single line `(discovery skipped — narrow target supplied; no pairs scanned)` and proceed to step 4. Do **not** invent pairs from the chain payload alone; the discovery scan needs the broader candidate set to be meaningful.
 
 ### 3. **User-selection checkpoint (mandatory unless narrow target supplied)**
 
@@ -78,7 +83,7 @@ Then **stop and ask the user to pick one** (or to ask for more candidates, or to
 
 If you are running in an autonomous-test harness where the user cannot be reached interactively, stop after writing the candidate list to a file and return — do not autonomously pick a root. The harness operator is responsible for handing the chosen claim id back into a follow-up invocation.
 
-The candidate list itself is a **first-class deliverable**: write it to a `candidates.md` companion file in the run folder so the choice is reproducible and auditable. (Note: `candidates.md` is a convenience companion and is not part of the structured output contract — the authoritative record of which claims were considered lives in `raw/match_*.json`.)
+The candidate list itself is a **first-class deliverable**: write it to `candidates.md` in the run folder so the choice is reproducible and auditable.
 
 ### 4. `$lkm-api` — pin the root and persist `data.papers`
 
@@ -90,13 +95,14 @@ Once the user has selected a candidate (claim id supplied) — or the user alrea
 
 ### 5. `$evidence-subgraph`
 
-Hand off `(root evidence JSON, data.papers subset, run-folder path)`. The four pair JSON files (`contradictions.json`, `equivalences.json`, `cross_validation.json`, `dismissed_pairs.json`) live inside the run folder per `run-folder-output-contract.md` and the graph skill reads them from there as needed. The graph skill produces the run-folder artifacts mandated by `$evidence-subgraph`'s `references/run-folder-output-contract.md` — namely:
+Hand off `(root evidence JSON, data.papers subset, equivalences.md path, save-folder path)`. The graph skill produces:
 
-- `evidence_graph.json` — structured graph (nodes, edges, pair_relations) with RFC 6901 source pointers into `raw/`;
-- `evidence_graph.dot` — re-renderable canonical Graphviz source (`neato` / `sfdp` layouts; Mermaid `flowchart` `.mmd` may also be written as a non-contractual companion, but Mermaid `mindmap` is forbidden);
-- `evidence_graph.png` — human-readable raster, CJK-safe (no `□` tofu), embeddable by `$scholarly-synthesis` as Figure 1 of the body.
+- a **graph source** in **DOT (Graphviz `neato` / `sfdp`)** as the canonical format, optionally with a **Mermaid `flowchart`** secondary using `linkStyle` for per-edge classes. Mermaid `mindmap` is **not** acceptable. Defer to `$evidence-subgraph` §5 for the authoritative renderer rules.
+- a **rendered raster** of the graph (PNG, PDF, or SVG) — required, not optional. `$scholarly-synthesis` embeds this raster as Figure 1 of the body, so it must render with the right fonts (no `□` CJK tofu) before this step is considered complete.
+- an audit table with one row per non-trivial edge, anchored to the chain payload (premise / factor / step references);
+- a cycle-check report.
 
-The graph skill also runs the contract's §8 self-check (every `source` pointer resolves; pair-edge cross-references are consistent; etc.) and consults `equivalences.json` when deciding whether to merge or keep separate two claims that assert the same proposition (see `$evidence-subgraph` §2's no-duplicate-nodes rule).
+The graph skill consults `equivalences.md` when deciding whether to merge or keep separate two claims that assert the same proposition (see `$evidence-subgraph` §2's no-duplicate-nodes rule).
 
 Verify that:
 
@@ -109,11 +115,13 @@ If a check fails, return to the graph skill with the gap report.
 
 **Graph-only mode:** if the user requested graph-only, return the graph + audit table + cycle-check + relevant `data.papers` to the user here and **stop**. Skip step 6.
 
+**Gaia-package mode:** if the user requested a Gaia knowledge package (rule 3 of the routing decision tree), continue to step 6b instead of step 6 — `$lkm-to-gaia` replaces `$scholarly-synthesis` for this branch. The graph + audit table + run-folder are still required; they are the input contract for `$lkm-to-gaia`.
+
 ### 6. `$scholarly-synthesis`
 
-Hand off `(run-folder path, data.papers subset)`. The synthesis skill reads the contract artifacts directly from the run folder (`evidence_graph.json` / `evidence_graph.png` / the four pair JSON files / `raw/`) and produces a Markdown or LaTeX article following the closure-chain structure. The **rendered graph is Figure 1 of the body**, placed immediately after the abstract — see `$scholarly-synthesis` for the figure-placement rules. Run the verification suite the synthesis skill specifies:
+Hand off `(graph artifact, audit table, data.papers subset, contradictions.md path, equivalences.md path, save-folder path)`. The synthesis skill produces a Markdown or LaTeX article following the closure-chain structure. The **rendered graph is Figure 1 of the body**, placed immediately after the abstract — see `$scholarly-synthesis` for the figure-placement rules. Run the verification suite the synthesis skill specifies:
 
-- mandatory-inputs check (run-folder conforms to `run-folder-output-contract.md`: `evidence_graph.{json,dot,png}` present; `contradictions.json`, `equivalences.json`, `cross_validation.json`, `dismissed_pairs.json` all present even if `pairs: []`; `raw/` carries the verbatim LKM responses; `data.papers` reachable via the evidence file);
+- mandatory-inputs check (graph + audit table + `data.papers` all present; `contradictions.md` and `equivalences.md` present even if empty);
 - Figure 1 presence at the front of the body, with a domain-language caption that satisfies the banned-phrase rule;
 - banned-phrase grep with English + locale-mirror lists (zero hits in main narrative or references);
 - best-effort numerical-anchor check (each number located in the chain payload where possible; rows where it cannot be located are noted, not deleted);
@@ -122,15 +130,24 @@ Hand off `(run-folder path, data.papers subset)`. The synthesis skill reads the 
 
 If LaTeX, compile to PDF and inspect the log for missing-glyph / overfull / undefined-reference warnings before declaring done.
 
+### 6b. `$lkm-to-gaia` (Gaia-package mode only — alternative to step 6)
+
+When the user requested a Gaia knowledge package, hand off `(run-folder path[s], desired package name, optional existing plan.gaia.py path for incremental mode)` to `$lkm-to-gaia`. Multi-root selection at step 3 is supported: the user may pick multiple chain-backed candidates, each gets its own run-folder via step 5, and all run-folders are passed together to `$lkm-to-gaia` in `--mode batch` so that cross-root operators (`equivalence`, `contradiction`, `induction-for-cross-validation`) can land in one `cross_paper.py` module.
+
+`$lkm-to-gaia` produces a `<name>-gaia/` directory ready for `gaia compile`. The orchestrator does not run `gaia compile`, `gaia infer`, or `gaia render` — those are the user's next step (or a follow-up call to the `gaia-cli` / `review` / `publish` skills).
+
+Run `$lkm-to-gaia`'s self-checks (lexical sanity + Python AST parse on each emitted module) before declaring this branch complete; per the skill's contract, these are non-optional.
+
 ### 7. Final hand-off to the user
 
 Report:
 
 - the user-chosen root (system + value + paper id + author–year);
-- artefact paths — the run-folder layout (`evidence_graph.{json,dot,png}`, `contradictions.json`, `equivalences.json`, `cross_validation.json`, `dismissed_pairs.json`, `raw/`) per `run-folder-output-contract.md`, plus any companion files (`candidates.md`, synthesis markdown / LaTeX, compiled PDF, `missing-material.md` if the synthesis skill produced one);
+- artefact paths (`candidates.md`, graph source `.dot` / `.mmd`, **rendered graph raster** `.png` / `.pdf` / `.svg`, audit table, synthesis markdown / LaTeX, compiled PDF, `contradictions.md`, `equivalences.md`, `missing-material.md` if the synthesis skill produced one; **for Gaia-package mode** also: the `<name>-gaia/` package directory, `artifacts/lkm-discovery/merge_audit.md`, `artifacts/lkm-discovery/mapping_audit.md`, and the `merge_decisions.todo` file if `$lkm-to-gaia` surfaced ambiguous pairs);
 - the relevant `data.papers` metadata so the user can refer to the original sources for further detail;
-- a **discovery-flags summary**: a one-paragraph reminder that `contradictions.json` lists promoted contradictions (each with a checkable `new_question` and one or more `hypothesized_cause` values), `equivalences.json` lists same-proposition pairs with lineage classification, `cross_validation.json` lists promoted cross-validations (each with `independence_basis` and `scientific_weight`), and `dismissed_pairs.json` is the audit log of contradiction or cross-validation candidates that failed the promotion gate. Encourage the user to skim all four. Mention the count of pairs in each file. If a file's `pairs` array is empty, say so explicitly rather than omitting the line;
-- a **missing-material reminder**, sourced from `missing-material.md` (which `$scholarly-synthesis` writes when its best-effort figure/table reproduction needs to leave gaps): every place in the synthesis where the prose references a figure or data table from a source paper that the chain payload could not supply verbatim — listed by section, with the cited paper's DOI so the user can fetch it for camera-ready. If `missing-material.md` is empty or absent (e.g. graph-only mode), say so explicitly rather than omitting the line;
+- a **discovery-flags summary**: a one-paragraph reminder that `contradictions.md` lists potential open questions surfaced during discovery and `equivalences.md` lists same-proposition pairs with lineage classification; encourage the user to skim both. Mention the count of pairs in each file. If a file is empty, say so explicitly rather than omitting the line;
+- a **missing-material reminder**, sourced from `missing-material.md` (which `$scholarly-synthesis` writes when its best-effort figure/table reproduction needs to leave gaps): every place in the synthesis where the prose references a figure or data table from a source paper that the chain payload could not supply verbatim — listed by section, with the cited paper's DOI so the user can fetch it for camera-ready. If `missing-material.md` is empty or absent (e.g. graph-only mode or Gaia-package mode), say so explicitly rather than omitting the line;
+- **for Gaia-package mode:** a one-line "next step" pointer — `cd <name>-gaia/ && gaia compile . && gaia check --hole . && gaia infer .` — and a reminder that `priors.py` is initially empty / TODO-marked and the `merge_decisions.todo` file (if surfaced) needs the user's review before the package's BP results are trustworthy;
 - any unresolved gaps (chain-payload anchors that could not be located, candidate roots that almost matched, LKM endpoint anomalies, empty-content premises flagged for revisit).
 
 ## Reproducibility contract

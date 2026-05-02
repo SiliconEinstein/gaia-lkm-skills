@@ -2,7 +2,7 @@
 
 Use the skill files in `skills/` as the source of truth.
 
-When a task involves LKM API calls, evidence-chain retrieval, claim dependency graphs, Graphviz evidence diagrams, or academic syntheses based on claim graphs:
+When a task involves LKM API calls, evidence-chain retrieval, claim dependency graphs, Graphviz evidence diagrams, academic syntheses based on claim graphs, or **conversion of evidence subgraphs into Gaia DSL knowledge packages**:
 
 1. Read the relevant `skills/<name>/SKILL.md`.
 2. Load referenced files under that skill's `references/` directory only when needed.
@@ -15,5 +15,6 @@ When a task involves LKM API calls, evidence-chain retrieval, claim dependency g
 9. **Figures:** every graph node needs a **short natural-language label** in the user's locale; use the **real `gcn_*` id as the Graphviz node name** for the root, not opaque names like `ROOT`; set **CJK-capable fonts** for Chinese labels—see `skills/evidence-subgraph/references/graph-output.md`.
 10. **Figure aesthetics:** use the **premium Graphviz palette** (light canvas, white cluster panels, **dark slate root**, sky premises, indigo upstreams, emerald second tier, slate-mist context, ink/indigo/slate edges)—do not ship default rainbow fills unless the user opts out.
 11. **Depth:** when an upstream node has **`total_chains > 0`**, optionally **unpack another tier** (same per-premise discipline) until chains dry up or the user stops scope creep.
+12. **Gaia DSL emission:** when the user asks for a "Gaia package", "Gaia DSL", "knowledge package", or "formalize this into Gaia", route through `evidence-graph-synthesis` rule 3 → `lkm-to-gaia`. The fixed mapping is: every `gfac_*` factor → `deduction(premises=[...], conclusion=...)` (no `reason`/`prior` per the gaia-discovery v0.x default); every promoted `equivalences.json` pair (other than `same paper, different version`) → `equivalence(a, b, reason=..., prior=...)`; every promoted `contradictions.json` pair → `contradiction(a, b, ...)`; every promoted `cross_validation.json` confirm pair → `support` + `support` + `induction(support_1, support_2, law)` (the **one** narrow exception to "always deduction"). Shared-premise extraction is run before any operator emission to prevent BP double-counting; see `skills/lkm-to-gaia/references/share-extract-procedure.md`.
 
 Do not specialize these skills to one scientific field. Domain knowledge may guide judgment, but the workflow must remain reusable across disciplines.
