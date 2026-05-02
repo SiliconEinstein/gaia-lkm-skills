@@ -1,18 +1,24 @@
-// dsl_emit.mjs — emit Python source strings for Gaia DSL nodes (v0.x conformant).
+// dsl_emit.mjs — emit Python source strings for $gaia-lang DSL nodes.
 //
-// Mechanics only. Knows nothing about LKM run-folders. Conventions enforced:
-//   * label grammar [a-z_][a-z0-9_]* (matches the QID rule used by gaia-discovery)
-//   * `claim(...)` carries `prior=[a, b]` (Beta) and metadata.prior_justification
-//   * strategies use kwargs: deduction(premises=[...], conclusion=...)
-//   * operators use positional args: contradiction(a, b), equivalence(a, b), ...
-//   * `reason` and `prior` MUST be paired (both or neither) on strategy / operator
-//   * Beta prior bounded by Cromwell (delegated to prior_heuristic.validateBetaPrior)
+// PREREQUISITE: read $gaia-lang first (~/.codex/skills/gaia-lang/SKILL.md or the
+// installed equivalent). This file encodes only the *mechanical correctness*
+// of $gaia-lang syntax; semantics, signatures, and conventions are governed by
+// the language reference. Discrepancies between this file and $gaia-lang are
+// bugs in this file -- fix here so they agree.
 //
-// Each emit_* helper returns a Python source fragment as a string. The caller
-// concatenates them. There is no magic: the agent / batch driver / incremental
-// driver decides ordering, headers, module placement.
+// Mechanics enforced:
+//   * label grammar [a-z_][a-z0-9_]* with Python + DSL reserved-word avoidance
+//   * claim(content, **metadata) -- NO `prior` kwarg ($gaia-lang signature)
+//     leaf priors live in priors.py per $gaia-cli §6
+//   * strategies are positional-first: deduction([p1,p2], conclusion, reason=, prior=)
+//     `reason` and `prior` must be paired (both or neither)
+//   * operators are positional: contradiction(a, b, reason=, prior=), prior is float
+//   * priors.py: PRIORS = {leaf_claim: (float, "justification."), ...}
+//
+// Beta priors do NOT appear in any emitted Python -- internal Beta heuristics
+// are collapsed to floats via betaMean() before they reach this module.
 
-import { validateBetaPrior } from "./prior_heuristic.mjs";
+import { validateFloatPrior, betaMean } from "./prior_heuristic.mjs";
 
 const LABEL_RE = /^[a-z_][a-z0-9_]*$/;
 
@@ -34,12 +40,11 @@ export function validateReasonPriorPairing(reason, prior) {
   const hasPrior = prior !== undefined && prior !== null;
   if (hasReason !== hasPrior) {
     throw new Error(
-      `'reason' and 'prior' must be paired (both or neither). Got reason=${JSON.stringify(
-        reason
-      )}, prior=${JSON.stringify(prior)}`
+      `'reason' and 'prior' must be paired (both or neither) per $gaia-lang. ` +
+        `Got reason=${JSON.stringify(reason)}, prior=${JSON.stringify(prior)}`
     );
   }
-  if (hasPrior) validateBetaPrior(prior);
+  if (hasPrior) validateFloatPrior(prior);
   return true;
 }
 
@@ -58,8 +63,8 @@ const RESERVED = new Set([
   "contradiction", "equivalence", "complement", "disjunction",
 ]);
 
-// Convert a free-form id (e.g. gcn_xxx or arbitrary content keywords) into a
-// valid label. Caller is responsible for uniqueness; mintLabel just sanitises.
+// Convert a free-form id (e.g. gcn_xxx) into a valid label. Caller is
+// responsible for cross-source uniqueness; mintLabel just sanitises.
 export function mintLabel(rawId, { prefix = "" } = {}) {
   let s = String(rawId || "").toLowerCase().trim();
   s = s.replace(/[^a-z0-9_]+/g, "_").replace(/^_+|_+$/g, "");
@@ -79,114 +84,129 @@ export function mintLabel(rawId, { prefix = "" } = {}) {
 
 export function pythonString(s) {
   if (typeof s !== "string") s = String(s);
-  // Use a triple-quoted raw-ish string when content has newlines or quotes.
   if (s.includes("\n") || s.includes('"""')) {
-    // Escape the closing triple-quote by inserting zero-width split if needed.
     const safe = s.replaceAll('"""', '\\"\\"\\"');
     return `"""${safe}"""`;
   }
-  // Standard double-quoted: escape backslash and double-quote.
   const escaped = s.replaceAll("\\", "\\\\").replaceAll('"', '\\"');
   return `"${escaped}"`;
 }
 
-export function formatBetaPrior(prior) {
-  validateBetaPrior(prior);
-  return `[${prior[0]}, ${prior[1]}]`;
+// Format a float prior in (0, 1) for emission. Up to 4 decimal places, trailing
+// zeros stripped, but at least one decimal preserved (so it parses as a float
+// and not an int literal).
+export function formatFloatPrior(p) {
+  validateFloatPrior(p);
+  let s = p.toFixed(4);
+  s = s.replace(/0+$/, "").replace(/\.$/, ".0");
+  return s;
 }
 
-function indentBlock(text, n = 4) {
-  const pad = " ".repeat(n);
-  return text
-    .split("\n")
-    .map((line) => (line ? pad + line : line))
-    .join("\n");
+function formatPyValue(v, indent = 0) {
+  if (v === null) return "None";
+  if (typeof v === "boolean") return v ? "True" : "False";
+  if (typeof v === "number") return JSON.stringify(v);
+  if (typeof v === "string") return pythonString(v);
+  if (Array.isArray(v)) {
+    if (v.length === 0) return "[]";
+    const items = v.map((x) => formatPyValue(x, indent + 4));
+    return `[${items.join(", ")}]`;
+  }
+  if (typeof v === "object") return formatPyDict(v, indent);
+  return pythonString(String(v));
 }
 
-function formatMetadataDict(metadata, indent = 4) {
-  const keys = Object.keys(metadata);
+function formatPyDict(obj, indent = 0) {
+  const keys = Object.keys(obj);
   if (keys.length === 0) return "{}";
-  const lines = keys.map((k) => {
-    const v = metadata[k];
-    let valStr;
-    if (typeof v === "number" || typeof v === "boolean" || v === null) {
-      valStr = JSON.stringify(v);
-    } else if (Array.isArray(v)) {
-      valStr = `[${v.map((x) => pythonString(String(x))).join(", ")}]`;
-    } else if (typeof v === "object") {
-      valStr = formatMetadataDict(v, indent + 4);
-    } else {
-      valStr = pythonString(String(v));
-    }
-    return `${" ".repeat(indent)}${pythonString(k)}: ${valStr},`;
-  });
-  return `{\n${lines.join("\n")}\n${" ".repeat(indent - 4)}}`;
+  const pad = " ".repeat(indent + 4);
+  const close = " ".repeat(indent);
+  const lines = keys.map((k) => `${pad}${pythonString(k)}: ${formatPyValue(obj[k], indent + 4)},`);
+  return `{\n${lines.join("\n")}\n${close}}`;
 }
 
 // --------------------------------------------------------------------------- //
-// canonical imports header                                                     //
+// canonical $gaia-lang imports header                                          //
 // --------------------------------------------------------------------------- //
 
+// Single source of truth: $gaia-lang §1. If gaia-lang adds new primitives,
+// regenerate this constant from the language reference.
 export const IMPORTS_BLOCK = `from gaia.lang import (
     claim, setting, question,
-    support, deduction, abduction, induction, mathematical_induction,
-    analogy, case_analysis, extrapolation, compare, elimination,
-    composite, fills, infer,
     contradiction, equivalence, complement, disjunction,
+    support, compare, deduction, abduction, induction,
+    analogy, extrapolation, elimination, case_analysis,
+    mathematical_induction, composite, infer, fills,
 )
 `;
 
 // --------------------------------------------------------------------------- //
-// claim                                                                        //
+// claim -- $gaia-lang signature: claim(content, *, title, background,
+//          parameters, provenance, **metadata)
 // --------------------------------------------------------------------------- //
 
 export function emitClaim({
   label,
   content,
-  prior,
-  prior_justification,
+  title = null,
+  background = null,
+  parameters = null,
+  provenance = null,
   metadata = {},
-  title,
 }) {
   validateLabel(label);
-  validateBetaPrior(prior);
   if (!content || typeof content !== "string") {
     throw new Error(`emitClaim: content must be a non-empty string (label=${label})`);
   }
-  if (!prior_justification || typeof prior_justification !== "string") {
-    throw new Error(`emitClaim: prior_justification must be a non-empty string (label=${label})`);
+  if (background !== null && (!Array.isArray(background) || background.length === 0)) {
+    throw new Error(`emitClaim: background must be a non-empty list of labels or null (label=${label})`);
   }
-  const metaWithJustification = { prior_justification, ...metadata };
+  if (background) background.forEach(validateLabel);
 
-  const titleClause = title ? `\n    title=${pythonString(title)},` : "";
-  return [
-    `${label} = claim(`,
-    `    ${pythonString(content)},`,
-    `    prior=${formatBetaPrior(prior)},${titleClause}`,
-    `    metadata=${formatMetadataDict(metaWithJustification, 8)},`,
-    `)`,
-  ].join("\n");
+  const lines = [`${label} = claim(`, `    ${pythonString(content)},`];
+  if (title) lines.push(`    title=${pythonString(title)},`);
+  if (background) lines.push(`    background=[${background.join(", ")}],`);
+  if (parameters !== null) lines.push(`    parameters=${formatPyValue(parameters, 4)},`);
+  if (provenance !== null) lines.push(`    provenance=${formatPyValue(provenance, 4)},`);
+  for (const [k, v] of Object.entries(metadata || {})) {
+    if (RESERVED.has(k) || k === "prior") {
+      throw new Error(`emitClaim: metadata key ${JSON.stringify(k)} is reserved or shadows a kwarg`);
+    }
+    lines.push(`    ${k}=${formatPyValue(v, 4)},`);
+  }
+  lines.push(")");
+  return lines.join("\n");
 }
 
 // --------------------------------------------------------------------------- //
-// strategies (kwargs style)                                                    //
+// strategies -- positional-first per $gaia-lang §4                             //
 // --------------------------------------------------------------------------- //
 
-function emitStrategy(kind, { resultLabel, kwargs, reason, prior }) {
+function emitStrategy(kind, { positional, kwargs, reason, prior, resultLabel = null }) {
   validateReasonPriorPairing(reason, prior);
+
   const lines = [];
-  for (const [k, v] of Object.entries(kwargs)) {
+  for (const arg of positional) {
+    if (Array.isArray(arg.value)) {
+      arg.value.forEach(validateLabel);
+      lines.push(`    [${arg.value.join(", ")}],`);
+    } else {
+      validateLabel(arg.value);
+      lines.push(`    ${arg.value},`);
+    }
+  }
+  for (const [k, v] of Object.entries(kwargs || {})) {
     if (Array.isArray(v)) {
       v.forEach(validateLabel);
       lines.push(`    ${k}=[${v.join(", ")}],`);
-    } else {
+    } else if (v !== null && v !== undefined) {
       validateLabel(v);
       lines.push(`    ${k}=${v},`);
     }
   }
   if (reason !== undefined && reason !== null && reason !== "") {
     lines.push(`    reason=${pythonString(reason)},`);
-    lines.push(`    prior=${formatBetaPrior(prior)},`);
+    lines.push(`    prior=${formatFloatPrior(prior)},`);
   }
   const head = resultLabel ? `${resultLabel} = ${kind}(` : `${kind}(`;
   return `${head}\n${lines.join("\n")}\n)`;
@@ -203,10 +223,10 @@ export function emitDeduction({
     throw new Error("emitDeduction: premiseLabels must be a non-empty list");
   }
   return emitStrategy("deduction", {
-    resultLabel,
-    kwargs: { premises: premiseLabels, conclusion: conclusionLabel },
+    positional: [{ value: premiseLabels }, { value: conclusionLabel }],
     reason,
     prior,
+    resultLabel,
   });
 }
 
@@ -221,10 +241,10 @@ export function emitSupport({
     throw new Error("emitSupport: premiseLabels must be a non-empty list");
   }
   return emitStrategy("support", {
-    resultLabel,
-    kwargs: { premises: premiseLabels, conclusion: conclusionLabel },
+    positional: [{ value: premiseLabels }, { value: conclusionLabel }],
     reason,
     prior,
+    resultLabel,
   });
 }
 
@@ -236,34 +256,35 @@ export function emitInduction({
   prior = null,
   resultLabel = null,
 }) {
+  // $gaia-lang §4: induction(support_1, support_2, law, *, ...) -- positional.
+  // Note: support_1 and support_2 are *Strategy* objects (results of support(...)),
+  // i.e. variable names of strategy assignments, e.g. `s_a = support(...)`.
   return emitStrategy("induction", {
-    resultLabel,
-    kwargs: { support_1: support1Label, support_2: support2Label, law: lawLabel },
+    positional: [
+      { value: support1Label },
+      { value: support2Label },
+      { value: lawLabel },
+    ],
     reason,
     prior,
+    resultLabel,
   });
 }
 
 // --------------------------------------------------------------------------- //
-// operators (positional style; reason/prior still allowed but paired)
+// operators -- positional, paired reason+prior(float)                          //
 // --------------------------------------------------------------------------- //
 
 function emitOperator(kind, { positional, reason, prior, resultLabel = null }) {
   validateReasonPriorPairing(reason, prior);
   positional.forEach(validateLabel);
-  const args = positional.slice();
-  let body;
+  const args = positional.map((a) => `    ${a},`);
   if (reason !== undefined && reason !== null && reason !== "") {
-    body = [
-      ...args.map((a) => `    ${a},`),
-      `    reason=${pythonString(reason)},`,
-      `    prior=${formatBetaPrior(prior)},`,
-    ].join("\n");
-  } else {
-    body = args.map((a) => `    ${a},`).join("\n");
+    args.push(`    reason=${pythonString(reason)},`);
+    args.push(`    prior=${formatFloatPrior(prior)},`);
   }
   const head = resultLabel ? `${resultLabel} = ${kind}(` : `${kind}(`;
-  return `${head}\n${body}\n)`;
+  return `${head}\n${args.join("\n")}\n)`;
 }
 
 export function emitContradiction({ a, b, reason = null, prior = null, resultLabel = null }) {
@@ -286,10 +307,59 @@ export function emitDisjunction({ members, reason = null, prior = null, resultLa
 }
 
 // --------------------------------------------------------------------------- //
-// __all__ helper                                                               //
+// priors.py emitter ($gaia-cli §6)                                             //
+// --------------------------------------------------------------------------- //
+
+// One row in the PRIORS dict: <labelRef>: (<float>, "<justification>"),
+export function emitPriorsPyEntry({ labelRef, prior, justification }) {
+  validateLabel(labelRef);
+  validateFloatPrior(prior);
+  if (!justification || typeof justification !== "string") {
+    throw new Error("emitPriorsPyEntry: justification must be a non-empty string");
+  }
+  return `    ${labelRef}: (${formatFloatPrior(prior)}, ${pythonString(justification)}),`;
+}
+
+// Full priors.py file content.
+//   importsByModule: { "<relative_module>": ["<label1>", "<label2>", ...] }
+//   entries: [{ labelRef, prior, justification }, ...]
+//
+// Ordering: imports grouped by module (alphabetical); entries in the order
+// supplied by the caller (typically insertion order of leaves in the package).
+export function emitPriorsPyFile({ importsByModule = {}, entries = [], header = null }) {
+  const modules = Object.keys(importsByModule).sort();
+  const importLines = [];
+  for (const m of modules) {
+    const labels = importsByModule[m];
+    if (!Array.isArray(labels) || labels.length === 0) continue;
+    labels.forEach(validateLabel);
+    importLines.push(`from .${m} import ${labels.join(", ")}`);
+  }
+  const out = [];
+  out.push(header || "\"\"\"priors.py — leaf-claim priors for this package.\n\nGenerated by lkm-to-gaia. Floats per $gaia-cli §6 (PRIORS shape).\n\"\"\"");
+  out.push("");
+  if (importLines.length) {
+    out.push(importLines.join("\n"));
+    out.push("");
+  }
+  if (entries.length === 0) {
+    out.push("PRIORS = {}");
+  } else {
+    out.push("PRIORS = {");
+    for (const e of entries) out.push(emitPriorsPyEntry(e));
+    out.push("}");
+  }
+  out.push("");
+  return out.join("\n");
+}
+
+// --------------------------------------------------------------------------- //
+// __all__ helper -- only for use in __init__.py per $gaia-lang §5 warning      //
 // --------------------------------------------------------------------------- //
 
 export function emitAllExport(labels) {
+  // $gaia-lang §5: "Do NOT define __all__ in submodules." Caller is expected
+  // to use this only for __init__.py.
   labels.forEach(validateLabel);
   if (labels.length === 0) return `__all__ = []\n`;
   const items = labels.map((l) => `    ${pythonString(l)},`).join("\n");
@@ -298,4 +368,4 @@ export function emitAllExport(labels) {
 
 // --------------------------------------------------------------------------- //
 
-export const _internals = { LABEL_RE, RESERVED, indentBlock, formatMetadataDict };
+export const _internals = { LABEL_RE, RESERVED, formatPyDict, formatPyValue, betaMean };

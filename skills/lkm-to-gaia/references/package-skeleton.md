@@ -1,22 +1,27 @@
 # Batch-mode package skeleton
 
-What `lkm-to-gaia --mode batch` writes to disk. Cited by [`SKILL.md`](../SKILL.md) §"Mode `batch`".
+> **Prerequisite — read [`$gaia-cli`](../../../README.md) first** for the
+> canonical `pyproject.toml`, `priors.py`, `__init__.py`, `gaia compile`
+> workflow, and module-layout rules. This document covers only what
+> `lkm-to-gaia --mode batch` adds on top: the LKM-discovery artefact directory
+> and the per-paper module convention. Where this document and `$gaia-cli`
+> conflict, `$gaia-cli` wins.
 
 ## Layout
 
 ```
 <name>-gaia/
-  pyproject.toml              # [tool.gaia] type=knowledge-package + uuid + [build-system]
-  references.json             # CSL-JSON, union of `data.papers` across all loaded run-folders
+  pyproject.toml              # standard $gaia-cli pyproject; [tool.gaia] type=knowledge-package
+  references.json             # CSL-JSON, union of data.papers across all loaded run-folders
   src/<import_name>/
-    __init__.py               # imports + `__all__` (exported root conclusions only)
-    paper_<key>.py            # one module per source paper (claims + deductions for chains in that paper)
-    cross_paper.py            # cross-paper operators (equivalence, contradiction, induction-for-cross-validation)
-    priors.py                 # empty by default (LKM-imported leaves carry inline priors); reviewer adds overrides here
+    __init__.py               # re-exports + `__all__` (exported root conclusions only)
+    paper_<key>.py            # one module per source paper (claims + deductions for chains)
+    cross_paper.py            # cross-paper operators (equivalence, contradiction, induction)
+    priors.py                 # leaf-claim priors, FLOATS per $gaia-cli §6
   artifacts/
     lkm-discovery/
-      merge_audit.md          # cross-run-folder dedup decisions (one file at the top)
-      mapping_audit.md        # gfac_* -> deduction, pair-files -> operators, dismissed_pairs audit
+      merge_audit.md          # cross-run-folder dedup decisions
+      mapping_audit.md        # gfac_* -> deduction, pair-files -> operators, dismissed audit
       <run-folder-name>/      # verbatim copy of every input run-folder
         evidence_graph.json
         contradictions.json
@@ -24,7 +29,7 @@ What `lkm-to-gaia --mode batch` writes to disk. Cited by [`SKILL.md`](../SKILL.m
         cross_validation.json
         dismissed_pairs.json
         raw/...
-        dismissed/            # verbatim records moved out of dismissed_pairs.json for cold storage
+        dismissed/            # verbatim records from dismissed_pairs.json (cold storage)
 ```
 
 ## Naming conventions
@@ -40,6 +45,9 @@ What `lkm-to-gaia --mode batch` writes to disk. Cited by [`SKILL.md`](../SKILL.m
 | `support` strategy result label (cross-validation only) | `s_<lawId>_<a|b>` | `s_gcn_root_a_a` |
 
 ## `pyproject.toml` template
+
+The standard `$gaia-cli` pyproject (see `$gaia-cli` §1) plus a small
+non-standard `[tool.gaia]` block recording how the package was generated:
 
 ```toml
 [project]
@@ -65,8 +73,6 @@ build-backend = "hatchling.build"
 packages = ["src/<import_name>"]
 ```
 
-Note the `[tool.gaia].generated_*` keys are **non-standard** (not part of gaia-cli's own pyproject contract) — they are kept here for the skill's own audit / re-run support.
-
 ## `__init__.py` template
 
 ```python
@@ -89,6 +95,8 @@ __all__ = [
 ]
 ```
 
+Per `$gaia-lang` §5: `__all__` lives **only** here, never in submodules.
+
 ## Per-paper module template
 
 ```python
@@ -101,17 +109,19 @@ Reference key (CSL): <key>
 """
 from gaia.lang import (
     claim, setting, question,
-    support, deduction, abduction, induction, mathematical_induction,
-    analogy, case_analysis, extrapolation, compare, elimination,
-    composite, fills, infer,
     contradiction, equivalence, complement, disjunction,
+    support, compare, deduction, abduction, induction,
+    analogy, extrapolation, elimination, case_analysis,
+    mathematical_induction, composite, infer, fills,
 )
 
 # Claims first appearing in this paper -- other modules import by label.
+# Per $gaia-lang §2: claim() takes no `prior` kwarg; leaf priors live in priors.py.
 
 <one emitClaim per canonical premise/conclusion whose first paper is this one>
 
 # Chain backbone: one deduction per gfac_* whose source_package is this paper.
+# Per $gaia-lang §4: strategies are positional-first.
 
 <one emitDeduction per factor>
 ```
@@ -123,7 +133,8 @@ from gaia.lang import (
 
 These come from the run-folder discovery-flag pass:
   - contradictions.json (promoted)
-  - equivalences.json
+  - equivalences.json (other than same-paper-different-version, which are
+    auto-merged into one claim)
   - cross_validation.json (promoted, polarity=confirm -> support+support+induction)
 """
 from gaia.lang import (
@@ -140,6 +151,8 @@ from .paper_xrd2003 import gcn_root_b
 ```
 
 ## `references.json` template
+
+Standard CSL-JSON consumed by the `$gaia-lang` §7 `[@key]` rule:
 
 ```json
 {
@@ -159,36 +172,44 @@ from .paper_xrd2003 import gcn_root_b
 
 ## `priors.py` template (initial)
 
+Floats per `$gaia-cli` §6. The skill auto-seeds entries for every leaf (any
+claim that is not the conclusion of a strategy in this package). Conclusions
+of `deduction(...)` strategies do NOT get entries — their belief comes from BP.
+
 ```python
-"""priors.py -- reviewer-set leaf priors (in addition to inline priors on LKM-imported claims).
+"""priors.py — leaf-claim priors for this package.
 
-Empty by default. Add overrides here when:
-  - You disagree with an auto-seeded Beta on an inline claim().
-  - You add a new claim() outside the LKM-imported set and need to set its prior.
-  - You need to refine after running `gaia infer .` and inspecting BP results.
-
-Format (see gaia-cli skill §6):
-
-    from . import some_claim, another_claim
-    PRIORS = {
-        some_claim: ([a, b], "Justification."),
-        another_claim: ([a, b], "Justification."),
-    }
+Generated by lkm-to-gaia. Floats per $gaia-cli §6.
+Every entry is auto-seeded from a heuristic and TODO-marked. Run
+`gaia check --hole .` to surface them all and refine.
 """
+from .paper_an2001 import gcn_phonon_pairing, gcn_two_band
+from .paper_choi2002 import gcn_eliashberg_fit
+from .paper_xrd2003 import gcn_xrd_protocol, gcn_unexpanded_premise
 
-PRIORS = {}
+PRIORS = {
+    gcn_phonon_pairing: (0.5, "default neutral prior; reviewer must refine; TODO:review"),
+    gcn_two_band: (0.5, "default neutral prior; reviewer must refine; TODO:review"),
+    gcn_eliashberg_fit: (0.8, "computational / theoretical result (lkm chain premise); TODO:review"),
+    gcn_xrd_protocol: (0.9, "experimental observation (lkm chain premise); TODO:review"),
+    gcn_unexpanded_premise: (0.5, "Cromwell-safe default; LKM premise content unavailable; TODO:review"),
+}
 ```
+
+Reviewer adds overrides by editing the file directly; the skill's auto-seed run
+is the starting point, not the final state.
 
 ## What ships in `artifacts/lkm-discovery/<run-folder-name>/`
 
 A **verbatim copy** of every file in the source run-folder, preserving:
 
-- `evidence_graph.{json}` — graph structure
+- `evidence_graph.json` — graph structure
 - The four pair JSON files
 - `raw/evidence_*.json` and `raw/match_*.json`
 - Any companion files the original `$evidence-subgraph` run wrote (e.g. `evidence_graph.dot`, `evidence_graph.png`, `audit.md`, `candidates.md`)
 
-The copy preserves directory structure exactly. Do not strip, reformat, or annotate in place — that would break the `evidence-graph-run/2.0` self-check on the embedded copy.
+Do not strip, reformat, or annotate in place — that would break the
+`evidence-graph-run/2.0` self-check on the embedded copy.
 
 ## What ships in `artifacts/lkm-discovery/mapping_audit.md`
 
@@ -202,8 +223,7 @@ A flat decision log of every artefact-to-DSL transformation:
 | factor_id | source_package | premises | conclusion | dsl_kind |
 |---|---|---|---|---|
 | gfac_a1 | paper:p_an2001 | gcn_phonon_pairing, gcn_two_band | gcn_root_a | deduction |
-| gfac_a2 | paper:p_choi2002 | gcn_phonon_pairing, gcn_eliashberg_fit | gcn_root_a | deduction |
-| ... | ... | ... | ... | ... |
+| ... |
 
 ## equivalences.json (3 pairs)
 
@@ -214,9 +234,9 @@ A flat decision log of every artefact-to-DSL transformation:
 
 ## contradictions.json (1 promoted)
 
-| pair_id | a | b | hypothesized_cause | dsl_action |
-|---|---|---|---|---|
-| ct_pressure_ambient | gcn_root_a | gcn_alt_high_pressure | [boundary_condition, model_assumption] | contradiction(...) emitted in cross_paper.py |
+| pair_id | a | b | hypothesized_cause | warrant_prior | dsl_action |
+|---|---|---|---|---|---|
+| ct_pressure_ambient | gcn_root_a | gcn_alt_high_pressure | [boundary_condition, model_assumption] | 0.83 | contradiction(...) emitted in cross_paper.py |
 
 ## cross_validation.json (1 promoted, polarity=confirm)
 

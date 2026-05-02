@@ -1,8 +1,10 @@
 # `lkm-to-gaia` skill — design note
 
-Status: design v0 (2026-05-02). This note is the prose record of the decisions that
-shape `skills/lkm-to-gaia/`. The canonical machine-checkable contracts live in the
-`SKILL.md` and the four reference files under `skills/lkm-to-gaia/references/`.
+Status: design v1 (2026-05-02). v0 had a boundary error between `$gaia-lang` and
+`gaia-discovery v0.x`; v1 corrects it. This note is the prose record of the
+decisions that shape `skills/lkm-to-gaia/`. The canonical machine-checkable
+contracts live in the `SKILL.md` and the four reference files under
+`skills/lkm-to-gaia/references/`.
 
 ## Purpose
 
@@ -11,66 +13,103 @@ Convert the artefacts produced by `$evidence-subgraph` (the run-folder per the
 contract) directly into Gaia DSL — either:
 
 - a fresh, standalone Gaia knowledge package (mode `batch`), or
-- a fragment that merges into an existing `plan.gaia.py` (mode `incremental`,
-  intended for use from inside a `gaia-discovery` `gd explore` loop).
+- a fragment that merges into an existing `plan.gaia.py` (mode `incremental`).
 
-The skill sits in the same repo as the existing four LKM skills and is routed
-via the orchestrator (`$evidence-graph-synthesis`) — it is the fifth peer of
-`$lkm-api`, `$evidence-subgraph`, `$scholarly-synthesis`,
-`$evidence-graph-synthesis`. From the orchestrator's standpoint it is parallel
-to `$scholarly-synthesis`: same input contract (a run-folder), different output
-register (Gaia DSL Python instead of Markdown / LaTeX prose).
+Both modes emit **`$gaia-lang`-conformant source** — the language consumed by
+`gaia compile`. This is the single voice. `gaia-discovery v0.x` is a downstream
+exploration framework; if its `plan.gaia.py` consumer wants to add the discovery-
+specific Beta `[a, b]` priors and `metadata.prior_justification` annotations to
+imported claims, that bridge lives in the `gaia-discovery` `/lkm-evidence`
+wrapper, not here.
 
-## Design decisions
+## The `$gaia-lang` vs `gaia-discovery` boundary
+
+This is where v0 of the design got it wrong, so it's worth being explicit. The
+two surfaces look similar but have **different signatures** for the same
+construct:
+
+| Construct | `$gaia-lang` (what `gaia compile` consumes) | `gaia-discovery v0.x` (the exploration framework's `claim()` hard constraint) |
+|---|---|---|
+| `claim()` signature | `claim(content, *, title=None, background=None, parameters=None, provenance=None, **metadata)` — **no `prior` kwarg** | `claim(content, prior=[a, b], metadata={"prior_justification": "..."}, ...)` — Beta priors inline, justification mandatory |
+| Leaf priors | `priors.py`: `PRIORS = {leaf_claim: (0.9, "Justification.")}` — **float, not Beta** | inline on every `claim(...)` call as Beta `[a, b]` |
+| Strategy / operator warrant prior | `prior: float`, e.g. `support([...], conclusion, reason="...", prior=0.85)`, Cromwell `[1e-3, 0.999]` | (gaia-discovery follows gaia-lang here) |
+| Strategy call style | positional-first: `deduction([p1, p2], conclusion, reason="...", prior=0.85)` | (gaia-discovery follows gaia-lang here) |
+| Submodule `__all__` | "**Do NOT define `__all__` in submodules**"; only in `__init__.py` | (gaia-discovery follows gaia-lang here) |
+| `noisy_and` | deprecated; canonical replacement is `support()` | (lkm-to-gaia overrides — see Decision 1 below) |
+
+This skill chooses **gaia-lang as the single source of truth.** Both modes emit
+gaia-lang shape. The `gaia-discovery` wrapper, when it ships, can post-process
+the emitted fragment to add Beta-on-claim annotations if it wants to satisfy the
+discovery framework's claim hard constraint — but the skill does not bake them
+in.
+
+## Where Beta `[a, b]` lives in this skill
+
+Beta is still the internal currency of `prior_heuristic.mjs` — the "20 mass
+units" intuition is useful for the auto-seeding heuristic (an experimental
+observation is `[18, 2]` not `0.90` because `[18, 2]` also encodes evidence
+weight). When the heuristic output flows to `dsl_emit.mjs`, it is collapsed to
+the float mean `a / (a + b)` for emission. The Beta survives in:
+
+- `imports.json` (incremental mode sidecar) — the original Beta + justification
+  are written out so the gaia-discovery wrapper can re-inflate.
+- `merge_audit.md` and `mapping_audit.md` — auditing logs preserve the original
+  shape for reviewer reading.
+- `priors.py` justification text — the heuristic tag and TODO marker carry the
+  Beta shape mention so the reviewer can spot it.
+
+## Design decisions (corrected)
 
 | # | Decision | Choice | Rationale |
 |---|---|---|---|
-| 1 | Strategy default for every `gfac_*` factor | `deduction(premises=[...], conclusion=...)` with no warrant prior | User pick; consistent with `gaia-discovery` v0.x default of "都不给 reason / prior" on strategies, pushes uncertainty to leaf priors |
-| 2 | Scope per invocation | multi-root single package | Lets cross-root `equivalence` / `contradiction` / `induction` operators live inside one factor graph |
-| 3 | First deliverable | SKILL.md + 3 small primitive scripts (option C) | Mapping rules stay in markdown; mechanical correctness (DSL syntax, Beta priors, label uniqueness, `_validate_reason_prior` pairing) lives in tested primitives |
-| 4 | Output of `batch` mode | a `<name>-gaia/` directory ready for `gaia compile` | Mirrors `gaia init` output |
-| 5 | Output of `incremental` mode | a Python source fragment (not a diff) the agent appends after `find_anchors_for`-driven dedup | Keeps the wrapper that lives in `gaia-discovery` simple |
-| 6 | Shared-premise extraction | hybrid: auto-merge exact text + lineage `same paper, different version`; surface ambiguous semantic-equivalents as `merge_decisions.todo`; keep independent confirmations distinct + linked via `equivalence(...)` | Avoids double-counting (user's stated concern) without erasing independent-confirmation information |
-| 7 | Cross-validation `confirm` polarity | narrow exception to "always deduction" → `support` + `support` + `induction(support_1=, support_2=, law=)` | gaia's `induction` is the canonical idiom for "multiple independent observations confirm one law" and is structurally built on `support`, not `deduction` |
-| 8 | Cross-validation `partial_disconfirm` polarity | `contradiction(a, b, ...)` + `# TODO:HUMAN-REVIEW` comment + emit a `SyntheticObligation` placeholder in incremental mode | Genuinely ambiguous; surface for judgement |
-| 9 | Priors | Beta `[a, b]` per gaia-discovery `claim()` hard constraint; auto-seeded from premise-content keywords + `data.variables[].score` | Required form; heuristic seeds are TODO-marked for reviewer refinement |
-| 10 | References | auto-built CSL-JSON from `data.papers`, key `<firstAuthor><year>` deduped by suffix letters | Single source of truth (LKM's `data.papers` block); avoids reaching for external bibliographic services |
+| 1 | Strategy default for every `gfac_*` factor | `deduction([p1, p2, ...], conclusion)` with no warrant prior | Explicit user choice. Overrides `$gaia-lang`'s `noisy_and → support` deprecation guidance: we treat the LKM-corpus vetting as a strict-correctness stamp, even though the gaia-lang "key test" (premises true ⇒ conclusion necessarily true?) would mark most empirical chains as `support`. The reviewer pass + `gaia infer` results catch any cases where this overstates certainty. |
+| 2 | Scope per invocation | multi-root single package | Cross-root `equivalence` / `contradiction` / `induction` operators land in one `cross_paper.py`. |
+| 3 | First deliverable | SKILL.md + 3 small primitive scripts | Mapping rules stay in markdown; mechanical correctness lives in tested primitives. |
+| 4 | Output of `batch` mode | a `<name>-gaia/` directory ready for `gaia compile` | Mirrors `gaia init` output. |
+| 5 | Output of `incremental` mode | a `$gaia-lang`-clean Python source fragment + `imports.json` sidecar | The host wrapper (gaia-discovery `/lkm-evidence`, when shipped) is responsible for any Beta-on-claim re-inflation it needs. |
+| 6 | Shared-premise extraction | hybrid: auto-merge exact text + lineage `same paper, different version`; surface ambiguous semantic-equivalents as `merge_decisions.todo`; keep independent confirmations distinct + linked via `equivalence(...)` | Avoids BP double-counting (the user's stated concern) without erasing independent-confirmation information. |
+| 7 | Cross-validation `confirm` polarity | narrow exception to "always deduction" → `support` + `support` + `induction(support_1, support_2, law)` | gaia-lang's canonical "two independent observations confirm one law" idiom. Built on `support`, not `deduction`. |
+| 8 | Cross-validation `partial_disconfirm` polarity | `contradiction(a, b, ...)` + `# TODO:HUMAN-REVIEW` comment | Genuinely ambiguous; surface for judgement. |
+| 9 | **Priors are floats in emitted source** (revised from v0) | `priors.py` carries `(float, justification)` per `$gaia-cli` §6; strategy / operator priors are `float` in `(1e-3, 0.999)`; `claim()` carries no `prior` kwarg | Aligns with `$gaia-lang` strict signature. v0 erroneously emitted Beta `[a, b]` inline on `claim()` (a gaia-discovery convention) and on warrants (no convention; just wrong). |
+| 10 | References | auto-built CSL-JSON from `data.papers`, key `<firstAuthor><year>` deduped by suffix letters | Single source of truth. |
+| 11 | DSL grammar documentation | **defer to `$gaia-lang`** — do not restate primitives, signatures, kwargs/positional rules, label grammar, Cromwell bounds, or import block here | Avoids silent drift when `$gaia-lang` evolves. The skill documents only what is unique to it: the LKM-artefact-to-DSL mapping policy and the share-extract algorithm. |
 
 ## Two-mode contract (one-line summary)
 
 - `batch`: read run-folders → emit a complete `<name>-gaia/` directory.
 - `incremental`: read run-folders + an existing `plan.gaia.py` path → emit a
-  Python source fragment to append, plus a side-channel `imports.json`
-  describing what was added (consumed by `gaia-discovery`'s `/lkm-evidence`
-  wrapper if/when that ships).
+  Python source fragment to append, plus `imports.json` describing what was
+  added (and the original Beta priors so the host can re-inflate).
 
 Both modes share the same primitives in `scripts/`. The mode flag changes only
 the sink; everything upstream (load, dedup, emit) is identical.
 
 ## Out of scope (this delivery)
 
-- The `gaia-discovery` `/lkm-evidence` slash-skill wrapper. Deferred —
-  `incremental` mode is built so the wrapper can be a thin shell-out, but the
-  wrapper itself ships in a separate repo.
+- The `gaia-discovery` `/lkm-evidence` slash-skill wrapper. Deferred. With the
+  v1 boundary call (gaia-lang only on emit), the wrapper grows a Beta-inflation
+  pass that reads `imports.json` and rewrites the imported `claim(...)` calls in
+  `plan.gaia.py` to add `prior=[a, b]` and `metadata.prior_justification`. That
+  pass is the wrapper's responsibility.
 - A `--auto-dispatch` / `--no-dispatch` flag for marking imported deductions
-  with `metadata.action`. That decision is wrapper-level and only matters
-  inside `gd explore`; the skill itself emits no `metadata.action` unless the
-  caller explicitly asks for it.
-- Re-running `gaia infer` or interpreting BP results. The skill's job ends
-  when the package is on disk and `gaia compile .` succeeds; belief / weakness
-  / publish-blocker analysis is the user's next step (or the wrapper's).
+  with `metadata.action`. Wrapper-level.
+- Re-running `gaia infer` or interpreting BP results.
+- Cosine / Jaccard similarity branch of the share-extract procedure (still on
+  the doc; not yet wired in code).
 
 ## Why these decisions are not encoded as code in this delivery
 
-The mapping rules (decisions 1–2, 6–8) are policy that we expect to refine as
+The mapping rules (decisions 1, 6, 7, 8) are policy that we expect to refine as
 real packages emerge. They live in markdown — `SKILL.md` and
 `references/mapping-contract.md` — exactly where the existing four skills put
 their policy. The primitives encode only the mechanics that are easy to get
 subtly wrong by hand:
 
-- DSL syntax (kwargs vs positional split, `_validate_reason_prior` pairing)
-- Beta-prior shape (Cromwell-bounded, integer-friendly)
-- Label uniqueness (the QID grammar `[a-z_][a-z0-9_]*`)
+- `$gaia-lang` syntax (positional-first strategies, kwargs-only operators with
+  paired `reason` + `prior: float`)
+- Cromwell-bounded float priors
+- Label uniqueness (the QID grammar `[a-z_][a-z0-9_]*`, with Python + DSL
+  reserved-word avoidance)
 - Schema validation against `evidence-graph-run/2.0`
 - RFC 6901 pointer resolution
 

@@ -24,6 +24,8 @@ import {
   betaForEquivalence,
   betaForContradiction,
   validateBetaPrior,
+  validateFloatPrior,
+  betaMean,
 } from "./prior_heuristic.mjs";
 
 import {
@@ -31,7 +33,7 @@ import {
   validateReasonPriorPairing,
   mintLabel,
   pythonString,
-  formatBetaPrior,
+  formatFloatPrior,
   emitClaim,
   emitDeduction,
   emitSupport,
@@ -40,6 +42,8 @@ import {
   emitEquivalence,
   emitDisjunction,
   emitAllExport,
+  emitPriorsPyEntry,
+  emitPriorsPyFile,
   IMPORTS_BLOCK,
 } from "./dsl_emit.mjs";
 
@@ -116,7 +120,6 @@ test("iterateAllFactors: yields all factors across all roots", async () => {
 test("collectPremises: dedupes shared premise across chains", async () => {
   const rf = await loadRunFolder(FIXTURE);
   const premises = collectPremises(rf);
-  // gcn_phonon_pairing appears in both gfac_a1 and gfac_a2
   const phonon = premises.get("gcn_phonon_pairing");
   assert.ok(phonon);
   const phononFactorIds = phonon.occurrences
@@ -124,7 +127,6 @@ test("collectPremises: dedupes shared premise across chains", async () => {
     .map((o) => o.factorId)
     .sort();
   assert.deepEqual(phononFactorIds, ["gfac_a1", "gfac_a2"]);
-  // gcn_unexpanded_premise has empty content
   const unexpanded = premises.get("gcn_unexpanded_premise");
   assert.ok(unexpanded);
   assert.equal(unexpanded.content, "");
@@ -133,11 +135,6 @@ test("collectPremises: dedupes shared premise across chains", async () => {
 test("collectPapers: merges across evidence + match files", async () => {
   const rf = await loadRunFolder(FIXTURE);
   const papers = collectPapers(rf);
-  // Four unique papers across the fixture:
-  //   paper:p_an2001     (evidence_a + match)
-  //   paper:p_choi2002   (evidence_a only)
-  //   paper:p_xrd2003    (evidence_b + match)
-  //   paper:p_pressure2004 (match only)
   assert.equal(papers.size, 4);
   assert.ok(papers.has("paper:p_an2001"));
   assert.ok(papers.has("paper:p_choi2002"));
@@ -192,6 +189,25 @@ test("validateBetaPrior: enforces Cromwell bounds", () => {
   assert.throws(() => validateBetaPrior([1000, 0.0001]), /Cromwell/);
 });
 
+test("validateFloatPrior: accepts in-range floats", () => {
+  assert.equal(validateFloatPrior(0.5), true);
+  assert.equal(validateFloatPrior(0.001 + 1e-9), true);
+  assert.equal(validateFloatPrior(0.999 - 1e-9), true);
+});
+
+test("validateFloatPrior: rejects shape and bound errors", () => {
+  assert.throws(() => validateFloatPrior("0.5"), /finite number/);
+  assert.throws(() => validateFloatPrior(NaN), /finite number/);
+  assert.throws(() => validateFloatPrior(0.0001), /Cromwell/);
+  assert.throws(() => validateFloatPrior(1.0), /Cromwell/);
+});
+
+test("betaMean: correct for canonical Betas", () => {
+  assert.equal(betaMean([18, 2]), 0.9);
+  assert.equal(betaMean([1, 1]), 0.5);
+  assert.ok(Math.abs(betaMean([19, 1]) - 0.95) < 1e-9);
+});
+
 test("betaForPremise: empty content -> [1,1] + Cromwell-safe", () => {
   const r = betaForPremise({ content: "" });
   assert.deepEqual(r.prior, [1, 1]);
@@ -216,7 +232,6 @@ test("betaForPremise: lkmScore tightens experimental prior", () => {
     content: "Direct measurement of resistivity",
     lkmScore: 0.95,
   });
-  // base [18, 2] -> [19, 1]
   assert.deepEqual(r.prior, [19, 1]);
 });
 
@@ -225,7 +240,6 @@ test("betaForPremise: lkmScore loosens marginal prior", () => {
     content: "Direct measurement of resistivity",
     lkmScore: 0.40,
   });
-  // base [18, 2] -> [17, 3]
   assert.deepEqual(r.prior, [17, 3]);
 });
 
@@ -239,7 +253,6 @@ test("betaForEquivalence: lineage tag mapping", () => {
 
 test("betaForContradiction: weighted by hypothesized causes", () => {
   const r = betaForContradiction({ hypothesizedCauses: ["evidence_reliability", "measurement_protocol"] });
-  // mean weight = (0.95 + 0.92)/2 = 0.935 -> a/(a+b) ~ 0.935 over total 20
   validateBetaPrior(r.prior);
   const mean = r.prior[0] / (r.prior[0] + r.prior[1]);
   assert.ok(mean > 0.85 && mean < 0.99);
@@ -268,11 +281,15 @@ test("validateLabel: rejects uppercase / spaces / punctuation", () => {
   assert.throws(() => validateLabel(""), /Invalid Gaia DSL label/);
 });
 
-test("validateReasonPriorPairing: both or neither", () => {
+test("validateReasonPriorPairing: both or neither (float prior)", () => {
   assert.equal(validateReasonPriorPairing(null, null), true);
-  assert.equal(validateReasonPriorPairing("because", [9, 1]), true);
+  assert.equal(validateReasonPriorPairing("because", 0.85), true);
   assert.throws(() => validateReasonPriorPairing("because", null), /must be paired/);
-  assert.throws(() => validateReasonPriorPairing(null, [9, 1]), /must be paired/);
+  assert.throws(() => validateReasonPriorPairing(null, 0.85), /must be paired/);
+});
+
+test("validateReasonPriorPairing: rejects Beta in DSL emit (must be float)", () => {
+  assert.throws(() => validateReasonPriorPairing("because", [9, 1]), /finite number/);
 });
 
 test("mintLabel: sanitises raw ids", () => {
@@ -294,72 +311,101 @@ test("pythonString: escapes backslash and double-quote", () => {
 });
 
 test("pythonString: switches to triple-quoted on newline", () => {
-  const s = "line1\nline2";
-  const out = pythonString(s);
+  const out = pythonString("line1\nline2");
   assert.ok(out.startsWith('"""'));
   assert.ok(out.endsWith('"""'));
 });
 
-test("formatBetaPrior: returns Python list literal", () => {
-  assert.equal(formatBetaPrior([18, 2]), "[18, 2]");
+test("formatFloatPrior: emits short Python float literal", () => {
+  assert.equal(formatFloatPrior(0.85), "0.85");
+  assert.equal(formatFloatPrior(0.5), "0.5");
+  assert.equal(formatFloatPrior(0.95), "0.95");
+  assert.equal(formatFloatPrior(0.9), "0.9");
+});
+
+test("formatFloatPrior: rejects out-of-range", () => {
+  assert.throws(() => formatFloatPrior(0.0001), /Cromwell/);
+  assert.throws(() => formatFloatPrior(1.0), /Cromwell/);
 });
 
 // --------------------------------------------------------------------------- //
-// dsl_emit: emitters                                                           //
+// dsl_emit: emitClaim ($gaia-lang signature)                                   //
 // --------------------------------------------------------------------------- //
 
-test("emitClaim: includes content, prior, prior_justification, label", () => {
+test("emitClaim: minimal -- content only", () => {
   const out = emitClaim({
     label: "phonon_pairing",
     content: "Phonon-mediated pairing dominates in MgB2.",
-    prior: [16, 4],
-    prior_justification: "computational result; source=paper:p_an2001",
   });
   assert.match(out, /^phonon_pairing = claim\(/);
   assert.match(out, /"Phonon-mediated pairing dominates in MgB2."/);
-  assert.match(out, /prior=\[16, 4\]/);
-  assert.match(out, /"prior_justification"/);
+  assert.doesNotMatch(out, /prior=/);
+  assert.doesNotMatch(out, /metadata=/);
 });
 
-test("emitClaim: rejects missing prior_justification", () => {
+test("emitClaim: with title + background + metadata kwargs", () => {
+  const out = emitClaim({
+    label: "result",
+    content: "The ball reaches the ground in 1.4s.",
+    title: "Drop time",
+    background: ["experimental_setup", "newtonian_gravity"],
+    metadata: { lkm_id: "gcn_drop", source_paper: "paper:newton1687" },
+  });
+  assert.match(out, /title="Drop time",/);
+  assert.match(out, /background=\[experimental_setup, newtonian_gravity\],/);
+  assert.match(out, /lkm_id="gcn_drop",/);
+  assert.match(out, /source_paper="paper:newton1687",/);
+});
+
+test("emitClaim: rejects metadata key 'prior' (not a $gaia-lang kwarg on claim)", () => {
   assert.throws(
-    () =>
-      emitClaim({
-        label: "x",
-        content: "y",
-        prior: [1, 1],
-      }),
-    /prior_justification must be a non-empty string/
+    () => emitClaim({ label: "x", content: "y", metadata: { prior: 0.9 } }),
+    /reserved or shadows a kwarg/
   );
 });
 
-test("emitDeduction: kwargs-style with no warrant prior", () => {
+test("emitClaim: rejects empty content", () => {
+  assert.throws(
+    () => emitClaim({ label: "x", content: "" }),
+    /content must be a non-empty string/
+  );
+});
+
+// --------------------------------------------------------------------------- //
+// dsl_emit: strategies (positional-first per $gaia-lang)                       //
+// --------------------------------------------------------------------------- //
+
+test("emitDeduction: positional, no warrant by default", () => {
   const out = emitDeduction({
     premiseLabels: ["a", "b"],
     conclusionLabel: "t",
   });
-  assert.match(out, /^deduction\(/);
-  assert.match(out, /premises=\[a, b\]/);
-  assert.match(out, /conclusion=t/);
-  assert.doesNotMatch(out, /reason=/);
-  assert.doesNotMatch(out, /prior=/);
+  assert.match(out, /^deduction\(\n {4}\[a, b\],\n {4}t,\n\)/);
+  assert.doesNotMatch(out, /reason=|prior=/);
 });
 
-test("emitDeduction: with reason+prior pair", () => {
+test("emitDeduction: with paired reason+float prior", () => {
   const out = emitDeduction({
     premiseLabels: ["a"],
     conclusionLabel: "t",
     reason: "by axiom",
-    prior: [9, 1],
+    prior: 0.99,
   });
-  assert.match(out, /reason="by axiom"/);
-  assert.match(out, /prior=\[9, 1\]/);
+  assert.match(out, /reason="by axiom",/);
+  assert.match(out, /prior=0\.99,/);
 });
 
 test("emitDeduction: reject reason without prior", () => {
   assert.throws(
     () => emitDeduction({ premiseLabels: ["a"], conclusionLabel: "t", reason: "x" }),
     /must be paired/
+  );
+});
+
+test("emitDeduction: reject Beta prior", () => {
+  assert.throws(
+    () => emitDeduction({ premiseLabels: ["a"], conclusionLabel: "t", reason: "x", prior: [9, 1] }),
+    /finite number/
   );
 });
 
@@ -370,14 +416,12 @@ test("emitDeduction: reject empty premise list", () => {
   );
 });
 
-test("emitSupport: kwargs-style", () => {
+test("emitSupport: positional ([premises], conclusion)", () => {
   const out = emitSupport({ premiseLabels: ["law"], conclusionLabel: "obs" });
-  assert.match(out, /^support\(/);
-  assert.match(out, /premises=\[law\]/);
-  assert.match(out, /conclusion=obs/);
+  assert.match(out, /^support\(\n {4}\[law\],\n {4}obs,\n\)/);
 });
 
-test("emitInduction: support_1 / support_2 / law kwargs + result label", () => {
+test("emitInduction: 3 positional + result label", () => {
   const out = emitInduction({
     support1Label: "s_a",
     support2Label: "s_b",
@@ -385,41 +429,38 @@ test("emitInduction: support_1 / support_2 / law kwargs + result label", () => {
     resultLabel: "ind_law",
   });
   assert.match(out, /^ind_law = induction\(/);
-  assert.match(out, /support_1=s_a/);
-  assert.match(out, /support_2=s_b/);
-  assert.match(out, /law=law/);
+  assert.match(out, /\n {4}s_a,\n {4}s_b,\n {4}law,/);
 });
 
-test("emitContradiction: positional, no premises/conclusion kwargs", () => {
+// --------------------------------------------------------------------------- //
+// dsl_emit: operators                                                          //
+// --------------------------------------------------------------------------- //
+
+test("emitContradiction: positional, no kwargs by default", () => {
   const out = emitContradiction({ a: "x", b: "y" });
-  assert.match(out, /^contradiction\(/);
-  assert.doesNotMatch(out, /premises=/);
-  assert.doesNotMatch(out, /conclusion=/);
+  assert.match(out, /^contradiction\(\n {4}x,\n {4}y,\n\)/);
 });
 
-test("emitEquivalence: with reason+prior pair", () => {
+test("emitEquivalence: with reason+float prior", () => {
   const out = emitEquivalence({
     a: "x",
     b: "y",
     reason: "independent confirmation",
-    prior: [19, 1],
+    prior: 0.95,
   });
   assert.match(out, /^equivalence\(/);
-  assert.match(out, /reason="independent confirmation"/);
-  assert.match(out, /prior=\[19, 1\]/);
+  assert.match(out, /reason="independent confirmation",/);
+  assert.match(out, /prior=0\.95,/);
 });
 
 test("emitDisjunction: needs >= 2 members", () => {
-  assert.throws(
-    () => emitDisjunction({ members: ["x"] }),
-    />= 2 labels/
-  );
+  assert.throws(() => emitDisjunction({ members: ["x"] }), />= 2 labels/);
   const out = emitDisjunction({ members: ["x", "y", "z"] });
   assert.match(out, /^disjunction\(/);
-  assert.match(out, /\s+x,\s+y,\s+z,/s);
+  assert.match(out, /\n {4}x,\n {4}y,\n {4}z,/);
 });
 
-test("emitAllExport: __all__ list of labels", () => {
+test("emitAllExport: __all__ list of labels (intended for __init__.py only)", () => {
   const out = emitAllExport(["a", "b"]);
   assert.match(out, /^__all__ = \[/);
   assert.match(out, /"a",/);
@@ -427,30 +468,78 @@ test("emitAllExport: __all__ list of labels", () => {
 });
 
 // --------------------------------------------------------------------------- //
-// integration: build a small Python source from the fixture
+// dsl_emit: priors.py                                                          //
 // --------------------------------------------------------------------------- //
 
-test("integration: fixture -> well-formed Python source (lexical sanity)", async () => {
+test("emitPriorsPyEntry: <label>: (<float>, <justification>),", () => {
+  const out = emitPriorsPyEntry({
+    labelRef: "gcn_phonon_pairing",
+    prior: 0.85,
+    justification: "computational result",
+  });
+  assert.equal(out.trim(), `gcn_phonon_pairing: (0.85, "computational result"),`);
+});
+
+test("emitPriorsPyEntry: rejects out-of-range float", () => {
+  assert.throws(
+    () => emitPriorsPyEntry({ labelRef: "x", prior: 1.5, justification: "j" }),
+    /Cromwell/
+  );
+});
+
+test("emitPriorsPyFile: with imports + entries", () => {
+  const out = emitPriorsPyFile({
+    importsByModule: {
+      paper_an2001: ["gcn_phonon_pairing", "gcn_two_band"],
+      paper_xrd2003: ["gcn_xrd_protocol"],
+    },
+    entries: [
+      { labelRef: "gcn_phonon_pairing", prior: 0.5, justification: "default" },
+      { labelRef: "gcn_two_band", prior: 0.5, justification: "default" },
+      { labelRef: "gcn_xrd_protocol", prior: 0.9, justification: "experimental" },
+    ],
+  });
+  assert.match(out, /from \.paper_an2001 import gcn_phonon_pairing, gcn_two_band/);
+  assert.match(out, /from \.paper_xrd2003 import gcn_xrd_protocol/);
+  assert.match(out, /PRIORS = \{/);
+  assert.match(out, /gcn_phonon_pairing: \(0\.5, "default"\),/);
+  assert.match(out, /gcn_xrd_protocol: \(0\.9, "experimental"\),/);
+});
+
+test("emitPriorsPyFile: empty entries -> PRIORS = {}", () => {
+  const out = emitPriorsPyFile({});
+  assert.match(out, /PRIORS = \{\}/);
+});
+
+// --------------------------------------------------------------------------- //
+// integration: build a small Python source from the fixture                    //
+// --------------------------------------------------------------------------- //
+
+test("integration: fixture -> well-formed $gaia-lang Python source (lexical sanity)", async () => {
   const rf = await loadRunFolder(FIXTURE);
   const premises = collectPremises(rf);
 
-  // Mint stable labels for every collected gcn_*.
   const labelById = new Map();
   for (const id of premises.keys()) labelById.set(id, mintLabel(id));
 
   const fragments = [IMPORTS_BLOCK, ""];
+  const priorsEntries = [];
 
   for (const [id, p] of premises) {
-    const ph = betaForPremise({ content: p.content });
+    const label = labelById.get(id);
     fragments.push(
       emitClaim({
-        label: labelById.get(id),
+        label,
         content: p.content || `(LKM premise ${id}; content unavailable in corpus)`,
-        prior: ph.prior,
-        prior_justification: ph.justification,
-        metadata: { provenance: "lkm", lkm_id: id },
+        metadata: { lkm_id: id },
       })
     );
+    const ph = betaForPremise({ content: p.content });
+    priorsEntries.push({
+      labelRef: label,
+      prior: betaMean(ph.prior),
+      justification: ph.justification,
+    });
   }
 
   for (const fac of iterateAllFactors(rf)) {
@@ -462,19 +551,23 @@ test("integration: fixture -> well-formed Python source (lexical sanity)", async
     );
   }
 
+  fragments.push(emitPriorsPyFile({ entries: priorsEntries }));
+
   const source = fragments.join("\n\n");
 
-  // Lexical sanity: balanced parens and brackets.
   const counts = (s, ch) => (s.match(new RegExp(`\\${ch}`, "g")) || []).length;
   assert.equal(counts(source, "("), counts(source, ")"));
   assert.equal(counts(source, "["), counts(source, "]"));
   assert.equal(counts(source, "{"), counts(source, "}"));
 
-  // Spot-check structural fragments.
   assert.match(source, /from gaia\.lang import/);
   assert.match(source, /gcn_phonon_pairing = claim\(/);
-  assert.match(source, /deduction\(\n\s+premises=\[gcn_phonon_pairing, gcn_two_band\],\n\s+conclusion=gcn_root_a,\n\)/);
-  assert.match(source, /deduction\(\n\s+premises=\[gcn_phonon_pairing, gcn_eliashberg_fit\],\n\s+conclusion=gcn_root_a,\n\)/);
-  // Empty-content premise produces a placeholder claim.
-  assert.match(source, /gcn_unexpanded_premise = claim\(\n\s+"\(LKM premise gcn_unexpanded_premise; content unavailable in corpus\)"/);
+  // strategies are positional-first per $gaia-lang
+  assert.match(source, /deduction\(\n\s+\[gcn_phonon_pairing, gcn_two_band\],\n\s+gcn_root_a,\n\)/);
+  assert.match(source, /deduction\(\n\s+\[gcn_phonon_pairing, gcn_eliashberg_fit\],\n\s+gcn_root_a,\n\)/);
+  // claim() must NOT carry a prior kwarg (it's a $gaia-lang violation)
+  assert.doesNotMatch(source, /claim\([^)]*prior=/s);
+  // priors.py block uses floats
+  assert.match(source, /PRIORS = \{/);
+  assert.match(source, /gcn_phonon_pairing: \(0\.5, /);
 });

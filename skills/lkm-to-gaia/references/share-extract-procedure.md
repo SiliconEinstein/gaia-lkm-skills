@@ -1,5 +1,8 @@
 # Shared-premise extraction procedure
 
+> **Prerequisite — read [`$gaia-lang`](../../../README.md) first** for `claim`,
+> `equivalence`, and the `**metadata` kwargs convention.
+
 Spelled-out algorithm for the dedup pass that runs after `lkm_io.collectPremises` and before `dsl_emit.emitClaim`. Cited by [`SKILL.md`](../SKILL.md) §"Shared-premise extraction".
 
 ## Why this exists
@@ -15,7 +18,7 @@ For every pair of premises (`p_i`, `p_j`) collected across all loaded run-folder
 | condition | action |
 |---|---|
 | `p_i.id == p_j.id` (same `gcn_*`) | **auto-merge** — already one entry in `collectPremises`'s map; nothing to do |
-| `normalize(p_i.content) == normalize(p_j.content)` AND content is non-empty | **auto-merge** — string-equal post-normalization; one canonical claim, both `lkm_id`s in `metadata.lkm_ids` |
+| `normalize(p_i.content) == normalize(p_j.content)` AND content is non-empty | **auto-merge** — string-equal post-normalization; one canonical claim with `lkm_ids=[...]` kwarg listing all merged ids (per `$gaia-lang` §2 `**metadata`) |
 | Pair is in `equivalences.json` with lineage tag `same_paper_different_version` | **auto-merge** — the lineage is a strong signal it's one proposition restated |
 | Pair is in `equivalences.json` with lineage tag `independent_experimental`, `independent_theoretical`, or `cross_paradigm` | **keep distinct + emit `equivalence(...)` operator** — the independence is informative; the operator's warrant prior gates the BP boost so it stays correct |
 | Pair is in `equivalences.json` with lineage tag `unclassified` | **surface to user** via `merge_decisions.todo` (default action: KEEP) |
@@ -54,7 +57,7 @@ A `merge_decisions.todo` file is written to `artifacts/lkm-discovery/<run-folder
 When the user fills in `MERGE`:
 
 - The two premises collapse into one canonical claim (the longer-content one wins, or alphabetical tie-break).
-- Both `lkm_id`s land in `metadata.lkm_ids`.
+- Both `lkm_id`s land in the `lkm_ids=[...]` kwarg on the merged `claim(...)` call.
 - If the pair was in `equivalences.json`, no `equivalence(...)` operator is emitted.
 
 When the user fills in `KEEP` (the default):
@@ -88,7 +91,7 @@ Read this file when investigating "why are the BP beliefs lower / higher than I 
 
 When multiple run-folders are loaded together (multi-root mode):
 
-- Premise dedup is **global across run-folders**, not per-folder. A premise that appears in run-folder A and run-folder B (same `gcn_*`) collapses to one canonical claim with `metadata.run_folders = [<A_name>, <B_name>]`.
+- Premise dedup is **global across run-folders**, not per-folder. A premise that appears in run-folder A and run-folder B (same `gcn_*`) collapses to one canonical claim with a `run_folders=[<A_name>, <B_name>]` metadata kwarg.
 - `equivalences.json` pairs are unioned across all run-folders. Conflicting lineage classifications across run-folders for the same pair are surfaced to `merge_decisions.todo` for human resolution.
 - `contradictions.json` and `cross_validation.json` pairs are unioned similarly. Cap stays at top 10 per file (per the run-folder contract); when union exceeds the cap, the skill keeps the union as-is and emits a warning to `mapping_audit.md` (no automatic re-capping).
 

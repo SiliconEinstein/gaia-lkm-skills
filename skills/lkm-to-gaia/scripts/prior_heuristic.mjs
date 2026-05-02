@@ -1,8 +1,19 @@
 // prior_heuristic.mjs — content + score -> Beta(a, b) + justification text.
 //
-// The output shape matches the gaia-discovery v0.x `claim()` hard constraint:
-// every claim must carry `prior=[a, b]` (Beta) and `metadata.prior_justification`.
-// Cromwell-bounded so the implied mean lives in (0.001, 0.999).
+// Beta is the *internal* currency of this module — the "20 mass units" intuition
+// is useful for tuning ("an experimental observation is [18, 2], not 0.90,
+// because [18, 2] also encodes evidence weight"). Callers convert to a float
+// for emission via `betaMean([a, b])`, since `$gaia-lang` priors are float
+// (Cromwell-bounded `[1e-3, 0.999]`) -- see docs/lkm-to-gaia-design.md §"The
+// $gaia-lang vs gaia-discovery boundary".
+//
+// Public surface:
+//   betaForPremise({content, lkmScore, sourcePackage}) -> {prior:[a,b], ...}
+//   betaForEquivalence({lineageTag})                   -> {prior:[a,b], ...}
+//   betaForContradiction({hypothesizedCauses})         -> {prior:[a,b], ...}
+//   betaMean([a, b])                                   -> float in (0, 1)
+//   validateBetaPrior([a, b])                          -> true | throws
+//   validateFloatPrior(p)                              -> true | throws
 //
 // All heuristics are deliberately weak; every output carries a TODO marker so
 // the human reviewer is forced through `gaia check --hole` before publishing.
@@ -58,7 +69,7 @@ const DEFAULT_PRIOR = [10, 10]; // mean 0.50, neutral
 const DEFAULT_JUSTIFICATION = "default neutral prior; reviewer must refine";
 
 const EMPTY_PRIOR = [1, 1]; // Cromwell-safe; mean 0.50 with low confidence
-const EMPTY_JUSTIFICATION = "Cromwell-safe default; LKM premise content unavailable (corpus not yet populated)";
+const EMPTY_JUSTIFICATION = `Cromwell-safe default; LKM premise content unavailable (corpus not yet populated); ${TODO}`;
 
 // --------------------------------------------------------------------------- //
 // validation                                                                   //
@@ -82,6 +93,27 @@ export function validateBetaPrior(prior) {
     );
   }
   return true;
+}
+
+// Cromwell-bounded [1e-3, 0.999], per $gaia-lang §3.
+export function validateFloatPrior(p) {
+  if (typeof p !== "number" || !Number.isFinite(p)) {
+    throw new Error(`Float prior must be a finite number (got ${JSON.stringify(p)})`);
+  }
+  if (p <= CROMWELL_LO || p >= CROMWELL_HI) {
+    throw new Error(
+      `Float prior ${p} outside Cromwell bounds (${CROMWELL_LO}, ${CROMWELL_HI})`
+    );
+  }
+  return true;
+}
+
+// Mean of a Beta(a, b) -- the canonical Beta -> float collapse used when
+// emitting $gaia-lang source.
+export function betaMean(prior) {
+  validateBetaPrior(prior);
+  const [a, b] = prior;
+  return a / (a + b);
 }
 
 // --------------------------------------------------------------------------- //

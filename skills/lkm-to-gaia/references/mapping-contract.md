@@ -1,94 +1,106 @@
-# Mapping contract — LKM artefact -> Gaia DSL output
+# Mapping contract — LKM artefact → Gaia DSL output
 
-Canonical reference for what every LKM artefact in an `evidence-graph-run/2.0` run-folder becomes in the emitted Gaia DSL. Cited by [`SKILL.md`](../SKILL.md). Discrepancies between this document and what [`scripts/dsl_emit.mjs`](../scripts/dsl_emit.mjs) actually emits are bugs in the skill — fix the script (or this doc) so they agree.
+> **Prerequisite — read [`$gaia-lang`](../../../README.md) and [`$gaia-cli`](../../../README.md) first.**
+> This document covers only the *mapping policy* — what each LKM artefact in
+> an `evidence-graph-run/2.0` run-folder becomes in the emitted DSL. The
+> *grammar* (kwargs vs positional, label rule, Cromwell bounds, citation rule,
+> `__all__` placement) is governed by `$gaia-lang`. Discrepancies between this
+> document and what [`scripts/dsl_emit.mjs`](../scripts/dsl_emit.mjs) actually
+> emits are bugs in the skill — fix the script (or this doc) so they agree.
 
 ## 1. Premises and conclusions (LKM `claim` blocks and `factors[].premises[]`)
 
-Every distinct `gcn_*` id (post-dedup, see [`share-extract-procedure.md`](share-extract-procedure.md)) becomes one `claim(...)` call:
+Every distinct `gcn_*` id (post-dedup, see [`share-extract-procedure.md`](share-extract-procedure.md)) becomes one `claim(...)` call per `$gaia-lang` §2:
 
 ```python
 <label> = claim(
     "<premise.content or 'placeholder' if empty>",
-    prior=[a, b],                             # Beta, mean = a/(a+b), Cromwell-bounded
-    metadata={
-        "prior_justification": "<heuristic tag + lkm_score + TODO:review>",
-        "provenance": "lkm",
-        "lkm_id": "gcn_xxx",                  # original id; multi-id list if merged
-        "source_paper": "paper:xxx",          # primary source package
-    },
+    lkm_id="gcn_xxx",                 # **metadata; multi-id list as lkm_ids on merge
+    source_paper="paper:xxx",         # primary source package
+    provenance_source="lkm",
 )
 ```
 
 Rules:
 
-- `<label>` is mint via `dsl_emit.mintLabel(<gcn_id>)` (lowercase, snake_case, sanitised against Python + DSL reserved words).
-- `prior` is Beta `[a, b]` per the gaia-discovery `claim()` hard constraint. Auto-seeded by `prior_heuristic.betaForPremise({content, lkmScore, sourcePackage})`. Buckets:
-  - `experimental_observation` (keywords: measured, observed, experimental, XRD, ARPES, ...) -> `[18, 2]` (mean 0.90)
-  - `computational_result` (keywords: computed, simulated, DFT, first-principles, Eliashberg, ...) -> `[16, 4]` (mean 0.80)
-  - `assumed_or_proposed` (keywords: assume, propose, hypothesize, conjecture, ...) -> `[14, 6]` (mean 0.70)
-  - default -> `[10, 10]` (mean 0.50, neutral)
-  - empty content -> `[1, 1]` (Cromwell-safe; mean 0.50 with very low confidence)
-- `data.variables[].score` (when present in match results) nudges by ±1 unit of mass: `score >= 0.85` tightens; `score <= 0.50` loosens.
-- `prior_justification` is non-empty and ends with `TODO:review` so `gaia check --hole` makes the reviewer pass through it.
-- `metadata.lkm_id` is a string when un-merged; when two premises are merged via the share-extract procedure, becomes `metadata.lkm_ids` (plural) listing all merged ids.
+- `<label>` is mint via `dsl_emit.mintLabel(<gcn_id>)` (label grammar per `$gaia-lang` §6).
+- **No `prior` kwarg on `claim(...)`** — `$gaia-lang`'s `claim` signature does not accept one. Leaf priors land in `priors.py` (see §1b).
+- LKM-specific provenance lives in `**metadata` kwargs (`lkm_id`, `source_paper`, `provenance_source`, etc.). The first-class `provenance` kwarg on `claim` is reserved for cross-Gaia-package attribution; LKM is a corpus, not a Gaia package, so we don't use it here.
+- When two premises are merged via shared-premise extraction, the kwarg becomes `lkm_ids=["gcn_a", "gcn_b"]` (plural).
 
-### Empty-content premise
+### 1a. Empty-content premise
 
-When `premise.content == ""` (the temporary corpus state documented in [`lkm-api/SKILL.md` §Known temporary](../../lkm-api/SKILL.md)):
+When `premise.content == ""`:
 
 ```python
 <label> = claim(
     "(LKM premise gcn_xxx; content unavailable in corpus)",
-    prior=[1, 1],
-    metadata={
-        "prior_justification": "Cromwell-safe default; LKM premise content unavailable (corpus not yet populated); TODO:review",
-        "provenance": "lkm",
-        "lkm_id": "gcn_xxx",
-        "source_paper": "paper:xxx",
-        "todo": "revisit when LKM corpus populates this premise",
-    },
+    lkm_id="gcn_xxx",
+    source_paper="paper:xxx",
+    provenance_source="lkm",
+    todo="revisit when LKM corpus populates this premise",
 )
 ```
 
-Do not invent content; preserve the placeholder so a future skill run can spot the unfilled premise.
+The placeholder string is preserved — do not invent content.
+
+### 1b. Leaf priors → `priors.py`
+
+A claim is a **leaf** if it is not the conclusion of any strategy in the package. For each leaf, emit one entry in `priors.py` per `$gaia-cli` §6:
+
+```python
+PRIORS = {
+    <label>: (<float>, "<heuristic tag + lkm context + TODO:review>"),
+    ...
+}
+```
+
+The float is `prior_heuristic.betaMean(<beta>)` over the heuristic's internal Beta. Buckets (mean shown):
+
+| heuristic bucket | mean | trigger |
+|---|---|---|
+| `experimental_observation` | 0.90 | content keywords: measured, observed, experimental, XRD, ARPES, four-probe, ... |
+| `computational_result` | 0.80 | content keywords: computed, simulated, DFT, first-principles, Eliashberg, ab initio, ... |
+| `assumed_or_proposed` | 0.70 | content keywords: assume, propose, hypothesize, conjecture, ... |
+| default | 0.50 | nothing else matched |
+| empty content | 0.50 | `[1, 1]` Beta — Cromwell-safe; mean 0.50 with very low confidence |
+
+`data.variables[].score` (when present in match results) nudges by ±0.05 unit on the mean: `score >= 0.85` tightens; `score <= 0.50` loosens.
+
+The justification text is non-empty and ends with `TODO:review` so `gaia check --hole` surfaces every leaf for the reviewer.
 
 ## 2. Factors (`gfac_*`)
 
-Every factor in `evidence_chains[].factors[]` becomes one `deduction(...)` call:
+Every factor in `evidence_chains[].factors[]` becomes one `deduction(...)` call per `$gaia-lang` §4 (positional-first):
 
 ```python
 deduction(
-    premises=[<premise_label_1>, <premise_label_2>, ...],
-    conclusion=<conclusion_label>,
+    [<premise_label_1>, <premise_label_2>, ...],
+    <conclusion_label>,
 )
 ```
 
 Rules:
 
-- **Always `deduction`**, regardless of LKM `subtype` (`noisy_and`, `noisy_or`, etc.). Per `gaia-discovery v0.x` deprecation note: `noisy_and` is deprecated in the gaia DSL; the canonical strict-implication strategy is `deduction`.
-- **No `reason` / `prior`** by default. The gaia-discovery `_validate_reason_prior` rule requires both or neither; "都不给" is the recommended default. Uncertainty lives at leaf premises, not at the warrant.
-- **kwargs style** (`premises=[...], conclusion=...`). Strategies are kwargs-only; do not write `deduction(p1, p2, t)` — the IR rejects positional args on strategies.
-- A factor that points to a conclusion you already wrote in another `deduction(...)` is fine — Gaia's BP combines multiple strategies on the same conclusion correctly. Do not collapse them into one.
+- **Always `deduction`**, regardless of LKM `subtype` (`noisy_and`, `noisy_or`, etc.). This is a **deliberate override** of `$gaia-lang`'s `noisy_and → support` deprecation guidance: we treat the LKM-corpus vetting as a strict-correctness stamp. If `gaia infer` later shows that imported chains overstate certainty, the reviewer can flip them to `support` + warrant prior on a case-by-case basis. See `docs/lkm-to-gaia-design.md` decision 1 for the rationale.
+- **No warrant `reason` / `prior`** by default. Per `$gaia-lang` §4, both must be paired or both omitted; we omit both.
+- Multiple `deduction(...)` calls may share the same conclusion label (e.g. one factor per source paper, all converging on the same root). `gaia compile` combines them correctly under BP.
 
 The single exception to "always `deduction`" is `cross_validation.json` polarity `confirm` — see §5.
 
 ## 3. `equivalences.json` pairs
 
-Every pair gets a lineage classification (via `lkm_io.classifyEquivalenceLineage`) that determines how it lands:
+Every pair gets a lineage classification (via `lkm_io.classifyEquivalenceLineage`) that determines how it lands. Operator priors are **floats** per `$gaia-lang` §3.
 
 | lineage tag | DSL output |
 |---|---|
 | `same_paper_different_version` | merged: one `claim(...)` with both `lkm_id`s in metadata; **no `equivalence(...)` operator emitted** |
-| `independent_experimental` | `equivalence(<a>, <b>, reason="<rationale> (lineage=independent_experimental)", prior=[19, 1])` |
-| `independent_theoretical` | `equivalence(<a>, <b>, reason="<rationale> (lineage=independent_theoretical)", prior=[16, 4])` |
-| `cross_paradigm` | `equivalence(<a>, <b>, reason="<rationale> (lineage=cross_paradigm)", prior=[19, 1])` |
-| `unclassified` | `equivalence(<a>, <b>, reason="<rationale> (lineage=unclassified)", prior=[10, 10])` plus a `# TODO:CLASSIFY lineage` comment on the line above |
+| `independent_experimental` | `equivalence(<a>, <b>, reason="<rationale> (lineage=independent_experimental)", prior=0.95)` |
+| `independent_theoretical` | `equivalence(<a>, <b>, reason="<rationale> (lineage=independent_theoretical)", prior=0.80)` |
+| `cross_paradigm` | `equivalence(<a>, <b>, reason="<rationale> (lineage=cross_paradigm)", prior=0.95)` |
+| `unclassified` | `equivalence(<a>, <b>, reason="<rationale> (lineage=unclassified)", prior=0.50)` plus a `# TODO:CLASSIFY lineage` comment on the line above |
 
-Rules:
-
-- Operators are **positional**: `equivalence(a, b)`, never `equivalence(claim_a=a, claim_b=b)`. The IR rejects kwargs on operators.
-- The `reason` always includes the lineage tag in parentheses so the reviewer can spot the policy decision without reopening the JSON.
-- The `prior` is the warrant prior on the `equivalence` gate — `gaia.bp` interprets it as "how strongly does this equivalence couple A and B's beliefs". Higher means tighter coupling.
+The float priors come from `prior_heuristic.betaForEquivalence({lineageTag})` collapsed via `betaMean`.
 
 ## 4. `contradictions.json` pairs (promoted only)
 
@@ -98,51 +110,54 @@ Every promoted contradiction (`verdict == "promoted"`) becomes:
 contradiction(
     <a>, <b>,
     reason="<rationale> | new_question: <new_question>",
-    prior=[a, b],
+    prior=<float>,
 )
 ```
 
-Rules:
+The float is `prior_heuristic.betaForContradiction({hypothesizedCauses})` collapsed via `betaMean`. Cause weights:
 
-- Positional args, paired `reason` + `prior`.
-- `prior` is derived from the `hypothesized_cause` array via `prior_heuristic.betaForContradiction`:
-  - `evidence_reliability` -> 0.95
-  - `measurement_protocol` -> 0.92
-  - `hidden_variable` -> 0.88
-  - `model_assumption` -> 0.85
-  - `boundary_condition` -> 0.80
-  - average across the array -> mean of Beta over total mass 20.
-- The `new_question` from the pair record is appended to the `reason` so it survives in the source. The reason is the only place where `new_question` lives in the DSL — review tools that surface "open questions" should grep for `new_question:` in strategy reasons.
-- An empty `hypothesized_cause` array is impossible per the run-folder contract §6.1 (`hypothesized_cause` is non-empty); this skill rejects loudly if it sees one.
+| `hypothesized_cause` value | weight |
+|---|---|
+| `evidence_reliability` | 0.95 |
+| `measurement_protocol` | 0.92 |
+| `hidden_variable` | 0.88 |
+| `model_assumption` | 0.85 |
+| `boundary_condition` | 0.80 |
+
+The mean weight across the array is the emitted `prior` (Cromwell-clipped). The `new_question` is appended to `reason` so it survives in source — review tools that surface "open questions" should grep for `new_question:` in strategy reasons.
 
 ## 5. `cross_validation.json` pairs (promoted only) — the `induction` exception
 
-For `polarity: confirm`, emit two `support` strategies and one `induction`:
+For `polarity: confirm`, emit two `support` strategies and one `induction` per `$gaia-lang` §4:
 
 ```python
 s_<lawId>_a = support(
-    premises=[<lawLabel>],
-    conclusion=<obsALabel>,
+    [<lawLabel>],
+    <obsALabel>,
+    reason="cross-validation observation A | basis: <independence_basis>",
+    prior=0.9,
 )
 s_<lawId>_b = support(
-    premises=[<lawLabel>],
-    conclusion=<obsBLabel>,
+    [<lawLabel>],
+    <obsBLabel>,
+    reason="cross-validation observation B | weight: <scientific_weight>",
+    prior=0.9,
 )
 induction(
-    support_1=s_<lawId>_a,
-    support_2=s_<lawId>_b,
-    law=<lawLabel>,
-    reason="cross-validation: <independence_basis> | weight: <scientific_weight>",
-    prior=[19, 1],
+    s_<lawId>_a,
+    s_<lawId>_b,
+    <lawLabel>,
+    reason="cross-validation: <independence_basis> | <scientific_weight>",
+    prior=0.95,
 )
 ```
 
 Rules:
 
-- This is the **only** place the skill emits `support` or `induction`. Everything else in the chain backbone is `deduction`. The exception exists because gaia's `induction(support_1, support_2, law)` is the canonical "multiple independent observations confirm one law" idiom and is structurally built on `support`.
-- The two confirmed-observation labels become the conclusions of the support strategies; the law label is what the induction is for. Direction matters: `support([law], obs)` is correct (law predicts obs); the reverse is rejected by the gaia compiler.
-- `prior` `[19, 1]` is fixed for `confirm` polarity; `partial_confirm` and `partial_disconfirm` are handled differently below.
-- Result-label naming: `s_<lawId>_a` / `s_<lawId>_b` keeps the support strategies addressable by `priors.py` for reviewer overrides if needed.
+- This is the **only** place the skill emits `support` or `induction`. Everything else in the chain backbone is `deduction`. The exception exists because `$gaia-lang` §4's `induction(support_1, support_2, law)` is the canonical idiom for "multiple independent observations confirm one law" and is structurally built on `support`.
+- Direction matters: `support([law], obs)` is correct (law predicts obs); the reverse is rejected by the gaia compiler.
+- `induction` takes Strategy objects (not claim labels) for `support_1` and `support_2` per `$gaia-lang` §4 — that's why the supports are assigned to result labels (`s_<lawId>_a`).
+- Result-label naming: `s_<lawId>_a` / `s_<lawId>_b` keeps the support strategies addressable by name in `gaia check --brief` per `$gaia-lang` §6.
 
 For `polarity: partial_disconfirm`:
 
@@ -151,43 +166,29 @@ For `polarity: partial_disconfirm`:
 contradiction(
     <a>, <b>,
     reason="<rationale> (cross-validation polarity=partial_disconfirm)",
-    prior=[10, 10],
+    prior=0.50,
 )
 ```
 
-For `polarity: partial_confirm`: same as `confirm` but `prior=[16, 4]` instead of `[19, 1]`.
+For `polarity: partial_confirm`: same as `confirm` but the `induction` warrant `prior=0.80` instead of `0.95`.
 
 ## 6. `dismissed_pairs.json`
 
-**Not emitted as DSL.** The pairs are dropped into `artifacts/lkm-discovery/<run-folder-name>/dismissed/` as a verbatim copy of the JSON file plus a one-line audit entry in `mapping_audit.md`. The `verdict` (one of `confirmed_equivalence`, `resolved_moderator`, `trivially_dependent`, `non_generative`) tells the reviewer why each was dismissed.
+**Not emitted as DSL.** The pairs are dropped into `artifacts/lkm-discovery/<run-folder-name>/dismissed/` as a verbatim copy of the JSON file plus a one-line audit entry in `mapping_audit.md`.
 
-## 7. `data.papers` -> `references.json`
+## 7. `data.papers` → `references.json`
 
-Every entry in the union of `data.papers` across all loaded evidence + match files becomes one CSL-JSON record:
+Every entry in the union of `data.papers` across all loaded evidence + match files becomes one CSL-JSON record per the `$gaia-lang` §7 `[@key]` rule. Format and key construction:
 
-```json
-{
-  "<key>": {
-    "type": "article-journal",
-    "title": "<en_title>",
-    "DOI": "<doi>",
-    "container-title": "<publication_name>",
-    "issued": {"date-parts": [[<year>]]},
-    "author": [{"family": "<surname>", "given": "<given>"}, ...]
-  }
-}
-```
+- `<key>` is `<firstAuthorSurnamePascalCase><year>`, e.g. `An2001`. Suffix letters on collision: `An2001`, `An2001a`, `An2001b`.
+- `authors` field in LKM is pipe-separated `Surname Given | ...`. Best-effort parse; on parse failure, fall back to `{"literal": "<as-is>"}`.
+- `issued`: parse `publication_date` `YYYY-M-D` → `[[YYYY]]`. If only year is recoverable, omit month/day.
 
-Rules:
-
-- `<key>` is `<firstAuthorSurnamePascalCase><year>`, e.g. `An2001`. On collision, suffix letters: `An2001`, `An2001a`, `An2001b`.
-- `authors` field in LKM is pipe-separated `Surname Given | Surname Given | ...`. Parser is best-effort; if a name doesn't split cleanly, fall back to `{"literal": "<as-is>"}`.
-- `issued` parses `publication_date` `YYYY-M-D` -> `[[YYYY]]`. If only year is recoverable, omit month/day.
-- Cite via `[@<key>]` in claim content or strategy reasons; gaia compile validates these strictly per the gaia-lang `[@key]` rule.
+Cite via `[@<key>]` in claim content or strategy reasons. `gaia compile` validates citations strictly — see `$gaia-lang` §7 for the homogeneous-group rule and escape syntax.
 
 ## 8. `__all__` and exported labels
 
-The exported public API of the package is the set of **selected root claims** across all loaded run-folders, deduped:
+Per `$gaia-lang` §5 — "Do NOT define `__all__` in submodules." Single `__all__` lives in `__init__.py`. The exported public API is the set of **selected root claims** across all loaded run-folders, deduped:
 
 ```python
 __all__ = [
@@ -197,9 +198,11 @@ __all__ = [
 ]
 ```
 
-Roots are determined by `evidence_graph.json.selected_root_id` per run-folder. Premises and intermediate conclusions are NOT exported (they remain package-public but not in `__all__` per the gaia-lang export rule).
+Roots are determined by `evidence_graph.json.selected_root_id` per run-folder. Premises and intermediate conclusions remain package-public (no `_` prefix per `$gaia-lang` §6) but are not in `__all__`.
 
 ## 9. Module placement
+
+Per `$gaia-lang` §5 module-organization conventions:
 
 - Each canonical claim goes in the module of the **first paper** it appears in (deterministic ordering: paper id alphabetical for tie-breaking). Other modules import by label via `from .paper_<key> import <label>`.
 - Each `gfac_*` factor goes in the module of `factor.source_package`.
@@ -208,6 +211,8 @@ Roots are determined by `evidence_graph.json.selected_root_id` per run-folder. P
 
 ## 10. What this contract does NOT cover
 
-- The shape of `priors.py` — see [`gaia-cli` skill §6](../../../README.md) and the `review` skill. For LKM-imported leaves, this skill writes the prior inline on the `claim(...)` call, so `priors.py` stays empty (or carries reviewer-added overrides).
-- BP interpretation, weakness analysis, publish-blocker resolution — see the `review` skill and `gaia.inquiry.run_review`.
-- Render-time choices (mermaid layout, README sections) — see `gaia render` and the `publish` skill.
+- The full `priors.py` shape — see `$gaia-cli` §6.
+- The shape of `pyproject.toml` — see `$gaia-cli` §1.
+- BP interpretation, weakness analysis, publish-blocker resolution — see the review skill and `gaia.inquiry.run_review`.
+- Render-time choices — see `gaia render` and the publish skill.
+- The Gaia DSL grammar — see `$gaia-lang`.
