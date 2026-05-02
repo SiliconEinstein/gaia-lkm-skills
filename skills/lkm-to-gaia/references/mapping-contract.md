@@ -18,7 +18,7 @@ Every distinct `gcn_*` id (post shared-premise extraction) becomes one `claim(..
 ```
 
 Rules:
-- `<label>` is mint from the `gcn_*` id and the claim's semantic content.
+- `<label>` is mint from the `gcn_*` id and the claim's semantic content. **Must be valid Gaia QID label: `[a-z_][a-z0-9_]*`** — lowercase letters, digits, underscores only. No uppercase, no hyphens, no dots.
 - **No `prior` kwarg on claims.** LKM's `score` is match relevance, not a Bayesian prior. After `gaia compile`, run `gaia check --hole` to surface leaf claims that need priors, then fill them in `priors.py`.
 - When premises are merged, the kwarg becomes `lkm_ids=["gcn_a", "gcn_b"]` (plural).
 - Empty-content premises get a placeholder string + `todo="revisit when LKM corpus populates this premise"` in metadata. Do not invent content.
@@ -45,14 +45,17 @@ support([U_1], P, reason="<what U_1 says and why it supports P>", prior=<float>)
 support([U_2], P, reason="<what U_2 says and why it supports P>", prior=<float>)
 ```
 
-`support([a], b, prior=p)` is directional: a 充分支撑 b。p close to 1 → a 几乎充分决定 b。
+`support([a], b, prior=p)` is directional: a → b。**Two sides** must be assessed for each upstream match:
 
-Multiple upstream supports converging on the same premise naturally reinforce each other under BP. **No `equivalence()` operator is needed** — the shared conclusion node is the convergence point.
+| Direction | DSL | 
+|---|---|
+| **Sufficiency** | `support([U], P, prior=p_s, reason="U → P: ...")` |
+| **Necessity** | `support([P], U, prior=p_n, reason="P → U: ...")` |
 
-Warrant prior for each support:
-- Strong (same topic, directly implies) → 0.85–0.95
-- Moderate (related, partially overlaps) → 0.70–0.85
-- Weak/lateral → 0.50–0.65
+Each direction gets its own `reason` and `prior`. When both priors ≈1, U and P are nearly equivalent — BP handles this via mutual support, no `equivalence()` needed.
+
+Sufficiency prior (U → P): strong 0.85–0.95, moderate 0.70–0.85, weak 0.50–0.65.
+Necessity prior (P → U): typically lower, unless P is the only plausible basis for U.
 
 If no relevant upstream conclusions are found, skip. Do not invent.
 

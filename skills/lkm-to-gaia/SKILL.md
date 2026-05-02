@@ -113,14 +113,21 @@ support([U_2], P, reason="...", prior=<float>)
 # ... 等
 ```
 
-`support([a], b, prior=p)` is directional: a 充分支撑 b。p close to 1 → a 几乎充分决定 b。
+`support([a], b, prior=p)` is directional: a → b。`support` has **two sides** that should both be assessed:
 
-Warrant prior reflects how strongly the upstream corroborates the premise:
-- Strong (same topic, directly implies) → 0.85–0.95
+| Direction | DSL | Meaning | 
+|---|---|---|
+| **Sufficiency** (充分性) | `support([U], P, prior=p_s, reason="...")` | If U is true, how strongly does P follow? |
+| **Necessity** (必要性) | `support([P], U, prior=p_n, reason="...")` | If P is true, how strongly does U follow? |
+
+Each direction needs its own `reason` and `prior`. When both priors are close to 1, U and P are nearly equivalent — BP handles this naturally through the two mutual supports.
+
+Warrant prior for sufficiency (U → P):
+- Strong corroboration (same topic, directly implies) → 0.85–0.95
 - Moderate (related, partially overlaps) → 0.70–0.85
 - Weak/lateral → 0.50–0.65
 
-**No equivalence needed here.** Two upstream claims that both strongly support the same premise naturally converge in BP through their shared conclusion. The agent just writes separate `support()` edges.
+Warrant prior for necessity (P → U): typically lower than sufficiency unless the premise is the **only** plausible basis for the upstream conclusion.
 
 ### 4. Contradiction
 
