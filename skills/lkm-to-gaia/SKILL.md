@@ -252,11 +252,11 @@ The exploration is **obligation-driven**: each iteration identifies gaps via `ga
  │      → contradiction(P, X, prior=...)                       │
  │      → gaia inquiry obligation add <qid> -c "..."           │
  │                                                             │
- │  6. Back to step 2 — repeat until:                          │
- │     • User-specified goal met (e.g. ≥ N nodes,              │
- │       belief ≥ threshold, depth ≥ K layers),                │
- │       OR review shows no clear next target                  │
- │     • AND 0 holes, 0 unreviewed warrants, 0 open obligations│
+ │  6. Back to step 2 — inspect new claims, mark suspicions,    │
+ │     then compile, review, search. Repeat until:              │
+ │     • obligation list is empty                               │
+ │     • 0 holes, 0 unreviewed warrants                         │
+ │     • (or user-specified goal met)                           │
  │                                                             │
  └─────────────────────────────────────────────────────────────┘
 ```
@@ -291,7 +291,7 @@ Then run `gaia inquiry obligation list` to see all unresolved obligations. **Pic
 
 **Two searches every iteration. 5a finds the evidence; 5b checks if the evidence is internally consistent.**
 
-**6. Repeat.** Back to step 3 (compile & infer). Exit when all holes filled, all warrants reviewed, and `gaia inquiry obligation list` is empty.
+**6. Repeat.** Back to step 2 — inspect the newly added claims for suspicious reasoning, then compile, review, and continue. Exit when all holes filled, all warrants reviewed, and `gaia inquiry obligation list` is empty.
 
 ## Workflow (incremental mode)
 
