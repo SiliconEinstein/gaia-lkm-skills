@@ -240,11 +240,10 @@ The exploration is **review-driven**: each iteration compiles, infers, and uses 
  │                                                             │
  │  3. gaia compile . && gaia infer .                          │
  │                                                             │
- │  4. gaia inquiry review .                                   │
- │     └─ **Lowest belief = highest priority.**                 │
- │        Sort by belief ascending. The weakest claim —        │
- │        whether a premise, an upstream, or the weak side      │
- │        of a contradiction — is always the next target.       │
+ │  4. gaia check --hole . → which claims need priors?         │
+ │     gaia inquiry review . → belief context                  │
+ │     └─ Pick the most interesting hole or weakest claim       │
+ │        using domain judgment, not mechanical sorting.        │
  │                                                             │
  │  5a. Search: find upstream conclusions → new_conclusions    │
  │      → claim(U) + support([U], P, prior=...)               │
@@ -275,7 +274,7 @@ gaia inquiry obligation add <claim_or_strategy_qid> -c "<concern>"
 
 **3. Compile & infer.** `gaia compile . && gaia infer .`
 
-**4. Review.** `gaia inquiry review .` Sort beliefs ascending. **The claim with the lowest belief is always the next target** — whether it's a premise lacking upstream support, or the weak side of a contradiction that needs balancing.
+**4. Review.** Run `gaia check --hole .` — holes are claims that have **never been evaluated**. They are the real gaps in the graph. Then run `gaia inquiry review .` for belief context. Use judgment to pick the most interesting or weakest-looking claim among the holes. If no holes remain, pick the claim that the agent thinks is most likely to be a weak point (not necessarily the lowest belief — use domain judgment).
 
 **5a. Find upstream conclusions.** Search LKM with the chosen claim's content (`POST /claims/match`, top-10). Pick the **conclusion-type claims** that provide independent strong support → `claim(U)` + `support([U], P, prior=...)`. Record them in a list `new_conclusions`.
 
