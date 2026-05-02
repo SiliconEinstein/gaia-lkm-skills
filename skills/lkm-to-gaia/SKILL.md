@@ -246,9 +246,10 @@ gaia inquiry obligation add <claim_or_strategy_qid> -c "<concern>"
 
 **4. Review.** `gaia inquiry review .` Sort beliefs ascending. **The claim with the lowest belief is always the next target** — whether it's a premise lacking upstream support, or the weak side of a contradiction that needs balancing.
 
-**5. Search & expand.** Search LKM with the chosen premise's content (`POST /claims/match`, top-10). In the results:
-- **Upstream support**: conclusions from other reasoning chains that corroborate this premise → `claim(U)` + `support([U], P, prior=...)`. Multiple supports allowed.
-- **Contradiction**: claims that can't both be true with this premise or its peers → `contradiction(P, X, prior=...)` + `gaia inquiry obligation add <qid> -c "resolve this contradiction"`.
+**5. Search & expand.** Search LKM with the chosen claim's content (`POST /claims/match`, top-10). **Every search is a chance to discover new contradictions.** Scan the full top-10 for:
+- **Upstream support**: conclusions that corroborate this claim → `claim(U)` + `support([U], P, prior=...)`.
+- **Contradiction candidates**: claims that can't both be true with this claim or any peer already in the graph. Each is a potential **new open problem**. Flag them: `contradiction(P, X, prior=...)` + `gaia inquiry obligation add <qid> -c "resolve: ..."`.
+- **Resolution**: if new evidence explains why the contradiction occurs (e.g. sample quality differences), the contradiction weakens — this is progress, not failure. A contradiction that survives after both sides have strong evidence is a genuine open problem.
 
 **6. Repeat.** Back to step 2. Exit when `gaia inquiry review` shows no clear next target, all holes filled, all warrants reviewed, and all obligations resolved.
 
