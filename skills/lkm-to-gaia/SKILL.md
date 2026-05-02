@@ -240,10 +240,10 @@ The exploration is **review-driven**: each iteration compiles, infers, and uses 
  │        whether a premise, an upstream, or the weak side      │
  │        of a contradiction — is always the next target.       │
  │                                                             │
- │  5a. Search LKM for SUPPORTS (top-10)                       │
+ │  5a. Search: find upstream conclusions → new_conclusions    │
  │      → claim(U) + support([U], P, prior=...)               │
  │                                                             │
- │  5b. Search LKM for CONTRADICTIONS (required, 2nd query)    │
+ │  5b. Search: contradictions among new_conclusions           │
  │      → contradiction(P, X, prior=...)                       │
  │      → gaia inquiry obligation add <qid> -c "..."           │
  │                                                             │
@@ -271,16 +271,11 @@ gaia inquiry obligation add <claim_or_strategy_qid> -c "<concern>"
 
 **4. Review.** `gaia inquiry review .` Sort beliefs ascending. **The claim with the lowest belief is always the next target** — whether it's a premise lacking upstream support, or the weak side of a contradiction that needs balancing.
 
-**5a. Find supports.** Search LKM with the chosen claim's content (`POST /claims/match`, top-10). Scan for conclusions that corroborate this claim → `claim(U)` + `support([U], P, prior=...)`.
+**5a. Find upstream conclusions.** Search LKM with the chosen claim's content (`POST /claims/match`, top-10). Pick the **conclusion-type claims** that provide independent strong support → `claim(U)` + `support([U], P, prior=...)`. Record them in a list `new_conclusions`.
 
-**5b. Hunt contradictions (MANDATORY — do not skip).** Run a **second search** specifically for contradictions. Use a query designed to find claims that would conflict with the target claim or any of its peers already in the graph. For example:
-- If the target is "PBE underestimates band gaps", search for "PBE band gap accurate reliable agrees with experiment"
-- If the target is "experimental gap values are reliable", search for "experimental band gap unreliable technique dependent varies"
-- For the weak side of any existing contradiction, search for evidence that would reinforce it
+**5b. Check new conclusions for contradictions (MANDATORY).** For each claim in `new_conclusions`, search LKM again — specifically looking for claims that **contradict** it or any other claim in `new_conclusions`. These new conclusions were pulled from different papers and may conflict with each other or with existing claims already in the graph. For each contradiction found: `contradiction(P, X, prior=...)` + `gaia inquiry obligation add <qid> -c "resolve: ..."`.
 
-For each contradiction candidate found: `contradiction(P, X, prior=...)` + `gaia inquiry obligation add <qid> -c "resolve: ..."`.
-
-**Two searches every iteration — one for support, one for contradiction. Always both.**
+**Two searches every iteration. 5a finds the evidence; 5b checks if the evidence is internally consistent.**
 
 **6. Repeat.** Back to step 2. Exit when `gaia inquiry review` shows no clear next target, all holes filled, all warrants reviewed, and all obligations resolved.
 
