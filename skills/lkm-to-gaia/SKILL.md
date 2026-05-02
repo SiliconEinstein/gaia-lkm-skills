@@ -78,7 +78,7 @@ The agent reads the LKM evidence JSON and writes Gaia DSL, applying these rules:
 
 Every distinct `gcn_*` claim (post shared-premise extraction) → one `claim(...)` per `$gaia-lang` §2.
 
-**Self-contained check (MANDATORY).** Before writing a claim, verify it can be judged true or false **without referring back to the evidence chain**. LKM claims often omit critical context — e.g., "the calculated band gaps" without specifying which material or method. If the claim is not self-contained, **rewrite it** to include the missing information (material, method, numerical values, conditions) extracted from the evidence chain's steps and premises. Save the original LKM text in metadata:
+**Self-contained check (MANDATORY).** Before writing a claim, verify it can be judged true or false **without referring back to the evidence chain**. LKM claims often omit critical context — the reader cannot tell what system, method, quantity, or conditions the claim is about. If the claim is not self-contained, **rewrite it** to include the missing information extracted from the evidence chain (steps, premises, paper metadata). Save the original LKM text in metadata:
 
 ```python
 <label> = claim(
