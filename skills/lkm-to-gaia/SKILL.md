@@ -287,7 +287,7 @@ The exploration is **obligation-driven**: each iteration identifies gaps via `ga
 
 **Gate: can both sides be made self-contained?** If the evidence chain doesn't provide enough information to write two self-contained atomic claims (explicit system, method, values for both sides), do NOT decompose. A partial decomposition is worse than the original compound claim. Pass through to the next step.
 
-**Extract.** For each side, write an atomic claim with explicit system, method, and value. Every numerical value must be traceable to its source (original claim vs evidence chain step N). Do not invent precision.
+**Extract.** For each side, write an atomic claim with explicit system, method, and value. Every detail in an atomic claim — system, method, numerical value, condition — must be traceable to an authoritative source: the original LKM claim text, the evidence chain (steps/premises), or the cited paper's metadata (data.papers). Do not invent or infer details that cannot be anchored to one of these sources.
 
 **Connect.** Write the Gaia operator linking the atomic claims:
 - Conflict → `contradiction(A, B, reason="...", prior=...)`
