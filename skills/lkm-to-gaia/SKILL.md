@@ -86,6 +86,27 @@ Every distinct `gcn_*` claim (post shared-premise extraction) → one `claim(...
 - When two claims are merged into one: `lkm_ids=["gcn_a", "gcn_b"]`.
 - Empty content → placeholder string + `todo="revisit when LKM populates this premise"` in metadata.
 
+### 1a. Decompose compound claims (theory-vs-experiment)
+
+When an LKM claim C has the form **"theory T predicts X; experiment E observes Y; T and E agree/conflict"**, do NOT emit a single `claim(C)`. Instead, decompose it:
+
+**If T and E conflict:**
+```python
+A = claim("<T's prediction>", ...)       # the theoretical prediction
+B = claim("<E's observation>", ...)       # the experimental observation
+D = contradiction(A, B, reason="...", prior=...)   # the conflict itself
+# C is equivalent to D — the meta-claim just names the contradiction
+```
+
+**If T and E agree:**
+```python
+A = claim("<T's prediction>", ...)
+B = claim("<E's observation>", ...)
+D = equivalence(A, B, reason="...", prior=...)     # the agreement
+```
+
+The decomposition turns one opaque meta-claim into two testable claims + one explicit relation. This allows BP to independently weigh evidence for A and B, and for the relation between them.
+
 ### 2. Factors → Deduction
 
 Every `gfac_*` factor → `deduction([premises], conclusion, reason="<markdown>", prior=0.95)` (positional-first). The `reason` is the full LKM evidence, formatted as a **numbered markdown list** — one numbered item per `factors[].steps[]` entry from the LKM JSON, preserving the step order:
