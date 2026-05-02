@@ -274,7 +274,16 @@ gaia inquiry obligation add <claim_or_strategy_qid> -c "<concern>"
 
 **3. Compile & infer.** `gaia compile . && gaia infer .`
 
-**4. Review.** Run `gaia check --hole .` — holes are claims that have **never been evaluated**. They are the real gaps in the graph. Then run `gaia inquiry review .` for belief context. Use judgment to pick the most interesting or weakest-looking claim among the holes. If no holes remain, pick the claim that the agent thinks is most likely to be a weak point (not necessarily the lowest belief — use domain judgment).
+**4. Review.** Run `gaia check --hole .` and `gaia inquiry review .`. Use domain judgment to identify:
+- Claims that need upstream support but have none → mark as obligation
+- Interesting weak points that deserve further exploration → mark as obligation
+- Gaps in the graph (e.g. missing method comparisons, missing material classes) → mark as obligation
+
+```bash
+gaia inquiry obligation add <qid> -c "<what needs to be found or verified>"
+```
+
+Then run `gaia inquiry obligation list` to see all unresolved obligations. **Pick the most interesting one as the next target.** The obligation list is the exploration's TODO — obligations persist across iterations and guide what to explore next.
 
 **5a. Find upstream conclusions.** Search LKM with the chosen claim's content (`POST /claims/match`, top-10). Pick the **conclusion-type claims** that provide independent strong support → `claim(U)` + `support([U], P, prior=...)`. Record them in a list `new_conclusions`.
 
