@@ -287,16 +287,18 @@ Then run `gaia inquiry obligation list` to see all unresolved obligations. **Pic
 
 **5a. Find upstream conclusions.** Search LKM with the chosen claim's content (`POST /claims/match`, top-10). Pick the **conclusion-type claims** that provide independent strong support → `claim(U)` + `support([U], P, prior=...)`. Record them in a list `new_conclusions`.
 
-**5b. Hunt contradictions (MANDATORY).** For each claim in `new_conclusions`, the agent decides how to search for claims that would **logically contradict** it. There is no fixed query strategy — the agent uses domain reasoning:
+**5b. Hunt contradictions (MANDATORY).** For each claim in `new_conclusions`, the agent uses **scientific reasoning** to design a search that would surface counter-evidence. This is NOT mechanical text inversion ("PBE underestimates" → "PBE is accurate"). Instead, think:
 
-- If the claim is experimental → search for theoretical predictions on the same system
-- If the claim is from one theoretical method → search for another method on the same system
-- If the claim asserts a numerical value → search for claims asserting a different value for the same quantity
-- If the claim asserts a universal statement → search for counterexamples
+- *What physical scenario would falsify or challenge this claim?*
+- *Under what conditions would the opposite be true?*
+- *What alternative mechanism could explain the same observation?*
 
-For each contradiction found: `contradiction(P, X, prior=...)` + `gaia inquiry obligation add <qid> -c "resolve: ..."`.
+For example:
+- Claim: "PBE underestimates gaps by ~40%" → search for *error cancellation between DFT gap error and exciton binding energy* (the scientific scenario where PBE appears accurate)
+- Claim: "GW is the gold standard" → search for *vertex corrections beyond GW, or systematic GW errors for specific material classes*
+- Claim: "HSE fixes the gap problem" → search for *materials where HSE fails, or where the optimal mixing fraction deviates far from 25%*
 
-**The agent is responsible for designing the search to maximize the chance of finding contradictions. Creativity and domain knowledge are required.**
+The agent uses the LKM search engine to find content related to these scientifically meaningful falsification scenarios. For each contradiction candidate found: `contradiction(P, X, prior=...)` + `gaia inquiry obligation add <qid> -c "resolve: ..."`.
 
 **6. Repeat.** Back to step 2 — inspect the newly added claims for suspicious reasoning, then compile, review, and continue. Exit when all holes filled, all warrants reviewed, and `gaia inquiry obligation list` is empty.
 
