@@ -299,7 +299,17 @@ equivalence(C, D, reason="the meta-claim C names the relationship expressed by D
 ```
 where D is `contradiction(A, B)` or `equivalence(A, B)`.
 
-**4. Hunt contradictions (MANDATORY).** For each new atomic claim, use scientific reasoning to design a search that would surface counter-evidence. For each found: `contradiction(P, X, prior=...)` + `gaia inquiry obligation add <qid> -c "resolve: ..."`.
+**4. Hunt contradictions (MANDATORY).** For each new atomic claim, use **scientific falsification** to design a search that would surface counter-evidence.
+
+**Principle: retain the system, challenge the value.** Keep the specific material/method/quantity from the claim. Add terms that would appear in a paper that found a *different* result for the same quantity.
+
+- Claim: "PBE BeSe gap = 2.51 eV" → search: "BeSe band gap measured optical absorption different value"
+- Claim: "HSE06 ZnO within 10% of experiment" → search: "HSE06 ZnO underestimates gap by more than 0.5 eV"
+- Claim: "GW within 0.1-0.2 eV of experiment" → search: "GW quasiparticle gap deviates from experiment dependence starting point"
+
+**Do NOT:** drop the specific system (loses relevance), mechanically invert the text (API may timeout), or search for "limitations" (returns consensus).
+
+For each contradiction candidate found: `contradiction(P, X, prior=...)` + `gaia inquiry obligation add <qid> -c "resolve: ..."`.
 
 **5. Mark suspicions.** Flag unreliable reasoning chains or premises:
 ```bash
