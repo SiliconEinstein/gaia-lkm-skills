@@ -287,7 +287,9 @@ Then run `gaia inquiry obligation list` to see all unresolved obligations. **Pic
 
 **5a. Find upstream conclusions.** Search LKM with the chosen claim's content (`POST /claims/match`, top-10). Pick the **conclusion-type claims** that provide independent strong support → `claim(U)` + `support([U], P, prior=...)`. Record them in a list `new_conclusions`.
 
-**5b. Check new conclusions for contradictions (MANDATORY).** For each claim in `new_conclusions`, search LKM again — specifically looking for claims that **contradict** it or any other claim in `new_conclusions`. These new conclusions were pulled from different papers and may conflict with each other or with existing claims already in the graph. For each contradiction found: `contradiction(P, X, prior=...)` + `gaia inquiry obligation add <qid> -c "resolve: ..."`.
+**5b. Check new conclusions for contradictions (MANDATORY).** For each claim in `new_conclusions`, take its **full claim text** and use it directly as the LKM search query. In the returned top-10 results, scan for claims that **logically cannot both be true** with the search claim. These are contradiction candidates. For each found: `contradiction(P, X, prior=...)` + `gaia inquiry obligation add <qid> -c "resolve: ..."`.
+
+**Why the full text:** LKM's semantic search returns claims related to the query content. Using the claim's own text as the query surfaces claims on the same topic — including those that disagree. Keywords like "limitation" or "problem" bias the search and miss contradictions that are simply stated as alternative facts.
 
 **Two searches every iteration. 5a finds the evidence; 5b checks if the evidence is internally consistent.**
 
