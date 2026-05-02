@@ -94,30 +94,34 @@ Every distinct `gcn_*` claim (post shared-premise extraction) → one `claim(...
 - When two claims are merged into one: `lkm_ids=["gcn_a", "gcn_b"]`.
 - Empty content → placeholder string + `todo="revisit when LKM populates this premise"` in metadata.
 
-### 1a. Decompose compound claims
+### 1a. Refine + decompose root claims
 
-When an LKM claim C has the form **"method/source M₁ says X; method/source M₂ says Y; they agree/conflict"** — whether M₁ and M₂ are two theories, theory vs experiment, or two experiments — do NOT emit a single `claim(C)`. Decompose:
+For each root claim from LKM, apply two transformations before writing DSL:
 
-**If M₁ and M₂ conflict:**
+**(1) Refinement — make self-contained.** Ensure the claim can be judged true/false independently. If the LKM text omits system, method, quantity, or conditions, add them from the evidence chain. Save the original LKM text in `lkm_original` metadata.
+
+**(2) Decomposition — break compound claims into atomic propositions.** If the claim is a logical compound of simpler assertions (e.g., "method A predicts X, method B measures Y, they disagree"), decompose it into atomic claims + Gaia operators:
+
+- **If the compound says "M₁ and M₂ conflict":**
+  ```python
+  A = claim("<M₁'s atomic assertion>", ...)
+  B = claim("<M₂'s atomic assertion>", ...)
+  D = contradiction(A, B, reason="...", prior=...)
+  ```
+
+- **If the compound says "M₁ and M₂ agree":**
+  ```python
+  A = claim("<M₁'s atomic assertion>", ...)
+  B = claim("<M₂'s atomic assertion>", ...)
+  D = equivalence(A, B, reason="...", prior=...)
+  ```
+
+The original LKM claim C is preserved as a `claim(C, lkm_original=...)`. Link it to the decomposition:
 ```python
-A = claim("<M₁'s prediction/observation>", ...)
-B = claim("<M₂'s prediction/observation>", ...)
-D = contradiction(A, B, reason="...", prior=...)   # the conflict
+equivalence(C, D, reason="C is the meta-claim that names the contradiction between A and B")
 ```
 
-**If M₁ and M₂ agree:**
-```python
-A = claim("<M₁'s prediction/observation>", ...)
-B = claim("<M₂'s prediction/observation>", ...)
-D = equivalence(A, B, reason="...", prior=...)
-```
-
-Examples:
-- GGA band gap vs experimental band gap (theory vs experiment)
-- HSE06 band gap vs GW band gap (theory vs theory)
-- ARPES gap vs transport gap (experiment vs experiment)
-
-This turns one opaque meta-claim into two testable atomic claims + one explicit relation. BP independently weighs evidence for A and B, and for the relation between them.
+**Why decompose:** contradiction hunting (step 5b) needs atomic claims with specific systems, methods, and values. Searching with a compound claim like "theory vs experiment disagreement of ~40%" returns other compound claims, not atomic counter-evidence. Searching with "ScN G₀W₀ gap = X eV" finds claims asserting different values for the same quantity.
 
 ### 2. Factors → Deduction
 
