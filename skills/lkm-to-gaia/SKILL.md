@@ -267,8 +267,8 @@ The exploration is **obligation-driven**: each iteration identifies gaps via `ga
  │  8. Search: find upstream conclusions for the target claim   │
  │      → claim(U) + support([U], P, prior=...)               │
  │                                                             │
- │  9. Back to step 2 — refine + decompose new claims,          │
- │     hunt contradictions, mark suspicions, compile, review.    │
+ │  9. Back to step 1 — bootstrap new claims (deduction if      │
+ │     evidence chain available), refine, decompose, continue.    │
  │     Repeat until: obligation list empty, 0 holes,             │
  │     0 unreviewed warrants (or user-specified goal met).       │
  │                                                             │
@@ -298,7 +298,7 @@ gaia inquiry obligation add <claim_or_strategy_qid> -c "<concern>"
 
 **8. Search supports.** Search LKM with the target claim (`POST /claims/match`, top-10). Pick conclusion-type claims → `claim(U)` + `support([U], P, prior=...)`.
 
-**9. Repeat.** Back to step 2. Exit when obligation list empty, 0 holes, 0 unreviewed warrants.
+**9. Repeat.** Back to step 1 — bootstrap any new claims that have evidence chains (write deduction), then refine, decompose, and continue. Exit when obligation list empty, 0 holes, 0 unreviewed warrants.
 
 ## Workflow (incremental mode)
 
