@@ -128,6 +128,8 @@ Warrant prior reflects how strongly the upstream corroborates the premise:
 
 **Highest priority: experiment vs theory conflict.** When one claim comes from an experimental measurement and the other from a theoretical prediction, a contradiction between them signals either new physics or a flaw in the theory — either way, it's a first-class open problem.
 
+**Avoid echo chambers.** When BP resolves a contradiction strongly in one direction (one side belief > 0.95, other < 0.1), the graph may be overconfident. The agent MUST then search for evidence supporting the **weak side** of the contradiction — not just reinforce the strong side. A belief of 0.011 on a contradicted experimental claim means the graph thinks the experiment is wrong; that demands aggressive search for additional experimental evidence before accepting the resolution.
+
 Contradictions come from **two sources**:
 
 **Source A — Orchestrator flag files** (`contradictions.md` from discovery Step 2b). The agent reads each flagged pair and decides:
@@ -208,8 +210,10 @@ The exploration is **review-driven**: each iteration compiles, infers, and uses 
  │  3. gaia compile . && gaia infer .                          │
  │                                                             │
  │  4. gaia inquiry review .                                   │
- │     └─ which premise claim is most worth exploring next?    │
- │        (lowest belief? weakest prior? least support?)       │
+ │     └─ **Lowest belief = highest priority.**                 │
+ │        Sort by belief ascending. The weakest claim —        │
+ │        whether a premise, an upstream, or the weak side      │
+ │        of a contradiction — is always the next target.       │
  │                                                             │
  │  5. Search LKM with that premise → top-10 results           │
  │     ├─ found upstream evidence / equivalent conclusions     │
@@ -240,7 +244,7 @@ gaia inquiry obligation add <claim_or_strategy_qid> -c "<concern>"
 
 **3. Compile & infer.** `gaia compile . && gaia infer .`
 
-**4. Review.** `gaia inquiry review .` Inspect the belief report. Decide which premise to explore next — typically the one with lowest belief, weakest prior, or fewest support edges.
+**4. Review.** `gaia inquiry review .` Sort beliefs ascending. **The claim with the lowest belief is always the next target** — whether it's a premise lacking upstream support, or the weak side of a contradiction that needs balancing.
 
 **5. Search & expand.** Search LKM with the chosen premise's content (`POST /claims/match`, top-10). In the results:
 - **Upstream support**: conclusions from other reasoning chains that corroborate this premise → `claim(U)` + `support([U], P, prior=...)`. Multiple supports allowed.
