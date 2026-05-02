@@ -86,26 +86,30 @@ Every distinct `gcn_*` claim (post shared-premise extraction) → one `claim(...
 - When two claims are merged into one: `lkm_ids=["gcn_a", "gcn_b"]`.
 - Empty content → placeholder string + `todo="revisit when LKM populates this premise"` in metadata.
 
-### 1a. Decompose compound claims (theory-vs-experiment)
+### 1a. Decompose compound claims
 
-When an LKM claim C has the form **"theory T predicts X; experiment E observes Y; T and E agree/conflict"**, do NOT emit a single `claim(C)`. Instead, decompose it:
+When an LKM claim C has the form **"method/source M₁ says X; method/source M₂ says Y; they agree/conflict"** — whether M₁ and M₂ are two theories, theory vs experiment, or two experiments — do NOT emit a single `claim(C)`. Decompose:
 
-**If T and E conflict:**
+**If M₁ and M₂ conflict:**
 ```python
-A = claim("<T's prediction>", ...)       # the theoretical prediction
-B = claim("<E's observation>", ...)       # the experimental observation
-D = contradiction(A, B, reason="...", prior=...)   # the conflict itself
-# C is equivalent to D — the meta-claim just names the contradiction
+A = claim("<M₁'s prediction/observation>", ...)
+B = claim("<M₂'s prediction/observation>", ...)
+D = contradiction(A, B, reason="...", prior=...)   # the conflict
 ```
 
-**If T and E agree:**
+**If M₁ and M₂ agree:**
 ```python
-A = claim("<T's prediction>", ...)
-B = claim("<E's observation>", ...)
-D = equivalence(A, B, reason="...", prior=...)     # the agreement
+A = claim("<M₁'s prediction/observation>", ...)
+B = claim("<M₂'s prediction/observation>", ...)
+D = equivalence(A, B, reason="...", prior=...)
 ```
 
-The decomposition turns one opaque meta-claim into two testable claims + one explicit relation. This allows BP to independently weigh evidence for A and B, and for the relation between them.
+Examples:
+- GGA band gap vs experimental band gap (theory vs experiment)
+- HSE06 band gap vs GW band gap (theory vs theory)
+- ARPES gap vs transport gap (experiment vs experiment)
+
+This turns one opaque meta-claim into two testable atomic claims + one explicit relation. BP independently weighs evidence for A and B, and for the relation between them.
 
 ### 2. Factors → Deduction
 
