@@ -17,7 +17,9 @@ function usage() {
     lines.push("  lkm.mjs papers-ocr --paper-ids id1,id2,... [--out file]");
   }
   lines.push("");
-  lines.push("Auth: every request requires a Bohrium access key in the LKM_ACCESS_KEY env var.");
+  if (!DEBUG) {
+    lines.push("Auth: every request requires a Bohrium access key in the LKM_ACCESS_KEY env var.");
+  }
   console.log(`${lines.join("\n")}\n`);
 }
 
