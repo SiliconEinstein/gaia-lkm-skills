@@ -403,8 +403,12 @@ Incremental mode hands the source fragment back to the host, which appends to `p
 
 ## What this skill is NOT
 
+Single responsibility: **LKM evidence (raw JSON + orchestrator flag files) → Gaia DSL knowledge package**. Everything else is a sibling skill or downstream consumer.
+
 - **Not a discovery skill.** Discovery is `$evidence-graph-synthesis` + `$lkm-api`. This skill consumes raw evidence JSON + flag files.
-- **Not a renderer.** `gaia render` + the publish skill handle presentation. This skill stops at `gaia compile`-ready source.
+- **Not an orchestrator.** Does not sequence other skills, does not decide which roots to formalize, does not route between siblings. Sequencing is `$evidence-graph-synthesis`'s job.
+- **Not a graph builder.** `$evidence-subgraph` is a sibling, not a dependency. This skill takes the raw LKM JSON the orchestrator already retrieved; it does not assemble the upstream evidence graph.
+- **Not a render / visualization skill.** Visual presentation is `gaia-render` (sibling) + the publish skill. This skill stops at `gaia compile`-ready source.
 - **Not a reviewer.** Setting reviewed priors, interpreting BP, identifying weak points are the review skill and `gaia.inquiry.run_review`. This skill emits `TODO:review` markers and stops there.
 - **Not a Gaia DSL teacher.** For *what* `claim` / `deduction` / `support` / `equivalence` mean and how to write them, read `$gaia-lang` directly.
 - **Not a wrapper for the gaia-discovery loop.** The `/lkm-evidence` slash skill is a separate downstream consumer.
