@@ -1,0 +1,4 @@
+interface:
+  display_name: "Gaia Render"
+  short_description: "Render a compiled Gaia knowledge package as a graph visualization (DOT / Mermaid / static raster) with BP-belief shading"
+  default_prompt: "Use $gaia-render to produce a graph visualization of this Gaia package's compiled IR (and beliefs, if available)."
