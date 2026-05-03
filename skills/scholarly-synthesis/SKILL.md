@@ -1,9 +1,11 @@
 ---
 name: scholarly-synthesis
-description: Write a domain-vocabulary scholarly synthesis centered on one chain-backed quantitative claim about a system or setting (any field — physics, chemistry, materials, biology, ML, climate, astrophysics, etc.). The rendered evidence graph from `$evidence-subgraph` is **Figure 1 of the body**, placed immediately after the abstract. Section structure traces the closure chain from observational / experimental anchors → theoretical or computational inputs → derivation / inversion / fitting → cross-method comparison → open problems. Heavy on equations, units, and named author–year references resolved via the `$lkm-api` `data.papers` metadata block. When source-paper figures or data tables are appropriate to quote, the agent does so on a best-effort basis with `Adapted from <author–year>` attribution; when such material is not recoverable from the chain payload, the agent surfaces the missing-material list to the user instead of fabricating. Banned-phrase audit (no LKM/system vocabulary in main narrative). **Mandatory inputs:** an audited evidence graph, the audit table, the `data.papers` metadata, and the four discovery-flag files from the orchestrator (`contradictions.json`, `equivalences.json`, `cross_validation.json`, `dismissed_pairs.json`). If the graph is not provided, stop and require the user to generate one first via `$evidence-subgraph`.
+description: Write a domain-vocabulary scholarly synthesis centered on one chain-backed quantitative claim about a system or setting (any field — physics, chemistry, materials, biology, ML, climate, astrophysics, etc.). Section structure traces the closure chain from observational / experimental anchors → theoretical or computational inputs → derivation / inversion / fitting → cross-method comparison → open problems. Heavy on equations, units, and named author–year references resolved via a supplied `data.papers` bibliographic metadata block. When source-paper figures or data tables are appropriate to quote, the agent does so on a best-effort basis with `Adapted from <author–year>` attribution; when such material is not recoverable from the input payload, the agent surfaces the missing-material list to the user instead of fabricating. Banned-phrase audit (no system / pipeline vocabulary in main narrative). **Mandatory inputs:** an audited evidence graph (source + rendered raster), an audit table with payload anchors, and the `data.papers` bibliographic metadata. If the graph is not provided, stop and instruct the user to supply one.
 ---
 
 # Scholarly Synthesis
+
+> **Status: future work.** This skill currently exposes only an atomic surface — synthesis primitive that turns an audited evidence graph plus bibliographic metadata into a domain-vocabulary scholarly article. Full polish (including discovery-flag integration for cross-method comparison and open-problem narration) is deferred to after the LKM→gaia priority workflow lands. The body below is accurate-for-purpose as a writing primitive; expect substantive refinement later.
 
 ## Principle
 
@@ -11,28 +13,25 @@ The synthesis answers exactly one question: **how is this result closed?**
 
 Not "is this system / model / phenomenon X conventional?", not "what is the general theory of the field?" — only: given the observational / experimental anchors and the theoretical / computational inputs, what derivation produces the target result, what assumptions does that derivation hide, what theory–theory or method–method tensions does it surface, and where do open theory–experiment / model–observation gaps remain?
 
-The graph and audit table from `$evidence-subgraph` are **mandatory scaffolding**. The synthesis's subject is the **scientific / scholarly claim itself**, in the field's normal vocabulary — not the graph, not the retrieval pipeline.
+The supplied evidence graph and audit table are **mandatory scaffolding**. The synthesis's subject is the **scientific / scholarly claim itself**, in the field's normal vocabulary — not the graph, not whatever pipeline produced it.
 
 ## Mandatory inputs
 
-This skill **requires** the following inputs to be supplied (typically by the orchestrator `$evidence-graph-synthesis`, or the user directly):
+This skill **requires** the following inputs to be supplied by the caller:
 
-1. **Audited evidence graph** — DOT or Mermaid `flowchart` source plus a rendered raster (PNG / PDF / SVG) from `$evidence-subgraph`. The rendered raster is what gets embedded as Figure 1 of the body.
-2. **Audit table** — per-edge bridge sentences with chain-payload anchors (premise / factor / step references into the LKM JSON).
-3. **`data.papers` metadata** (from `$lkm-api`) — the authoritative paper-id → bibliographic-metadata map; the references list is built from this.
-4. **Discovery flag files** from the orchestrator: `contradictions.json`, `equivalences.json`, `cross_validation.json`, and `dismissed_pairs.json`. All four must exist per `$evidence-subgraph`'s `references/run-folder-output-contract.md` (each may carry `pairs: []` if no records of that kind were produced — including the narrow-target case where discovery was skipped entirely). `contradictions.json` and `cross_validation.json` contain only **promoted** records — i.e. pairs that passed the promotion gate defined in `$evidence-subgraph`'s `references/pair-classification.md`. `dismissed_pairs.json` is the audit log of contradiction or cross-validation candidates that failed that gate; it is not normally cited in the synthesis but is part of the input surface for completeness. These files shape Section 5 (cross-method comparison) and Section 6 (open problems). They are unrelated to `missing-material.md`, which this skill produces itself when source-paper figures or tables cannot be reproduced verbatim.
+1. **Audited evidence graph** — DOT or Mermaid `flowchart` source plus a rendered raster (PNG / PDF / SVG). The rendered raster is what gets embedded as Figure 1 of the body.
+2. **Audit table** — per-edge bridge sentences with payload anchors (premise / factor / step references into the underlying source data).
+3. **`data.papers` metadata** — the authoritative paper-id → bibliographic-metadata map; the references list is built from this.
 
-If the **graph is not provided**, stop and instruct the user to first run `$evidence-subgraph` (via `$evidence-graph-synthesis` or directly) on their chosen root claim. Do not attempt to write a synthesis from raw chain JSON without the audited graph — the graph is what disciplines the synthesis's structure and prevents drift into ungrounded prose.
-
-If any of the four **discovery flag files** are not provided, stop and request them from the orchestrator. Empty `pairs: []` files are acceptable and expected for narrow-target inputs that skipped discovery — the orchestrator should still produce them.
+If the **graph is not provided**, stop and instruct the user to supply one (graph + raster + audit table). Do not attempt to write a synthesis from raw source JSON without the audited graph — the graph is what disciplines the synthesis's structure and prevents drift into ungrounded prose.
 
 ## Source-paper figures and tables (best-effort)
 
-A literature synthesis benefits from reproducing or adapting figures and data tables from the source papers — that is convention in the field. This skill follows the convention on a **best-effort** basis, bounded by what the chain payload actually carries.
+A literature synthesis benefits from reproducing or adapting figures and data tables from the source papers — that is convention in the field. This skill follows the convention on a **best-effort** basis, bounded by what the supplied source payload actually carries.
 
-**When the chain payload describes a figure / table.** When premise `content`, claim content, or `factors[i].steps[j].reasoning` quotes or paraphrases a specific figure caption, table row, or numerical breakdown from a source paper, the synthesis may quote that text verbatim with attribution `Adapted from <author–year>`. The "adapted from" tag is mandatory whenever the wording originates from a paper that is not the user-selected root.
+**When the source payload describes a figure / table.** When premise `content`, claim content, or `factors[i].steps[j].reasoning` quotes or paraphrases a specific figure caption, table row, or numerical breakdown from a source paper, the synthesis may quote that text verbatim with attribution `Adapted from <author–year>`. The "adapted from" tag is mandatory whenever the wording originates from a paper that is not the user-selected root.
 
-**When the chain payload does not carry the figure / table itself.** The chain payload is propositional content — it does not include rendered figure images, image-format tables, or non-textual artifacts. The skill must **not fabricate** a figure or invented numerical table. Instead, the skill records the gap in a **`missing-material.md`** file in the run folder, one row per gap:
+**When the source payload does not carry the figure / table itself.** The supplied payload is propositional content — it does not include rendered figure images, image-format tables, or non-textual artifacts. The skill must **not fabricate** a figure or invented numerical table. Instead, the skill records the gap in a **`missing-material.md`** file in the run folder, one row per gap:
 
 ```
 | section | citation in synthesis | what was referenced | source paper (DOI) | why not reproduced |
@@ -44,7 +43,7 @@ A literature synthesis benefits from reproducing or adapting figures and data ta
 
 ## Topic-agnosticism
 
-This skill is installed by users across many fields. Domain-specific terms in the produced synthesis come from the LKM chain payload (premise / factor / step / claim content) and the user-selected claim, plus bibliographic context from `data.papers` — **not** from the skill text. The closure-chain abstraction generalizes:
+This skill is installed by users across many fields. Domain-specific terms in the produced synthesis come from the supplied source payload (premise / factor / step / claim content) and the user-selected claim, plus bibliographic context from `data.papers` — **not** from the skill text. The closure-chain abstraction generalizes:
 
 - **Computational / first-principles fields** — `(electronic structure / force field / simulation inputs) → (intermediate computed quantities) → (derivation / inversion) → (parameter or predicted observable)`.
 - **Experimental / observational fields** — `(measurement protocol + calibration + sample / observation conditions) → (raw signal / dataset) → (analysis / inversion) → (extracted parameter or property)`.
@@ -86,7 +85,7 @@ Generalizable to any chain-backed quantitative root. Adapt the closure-chain exp
 
 2. **Abstract.** ≤ 250 English-word equivalents. For CJK-language syntheses, the analogous bound is ≈ 350 Chinese / Japanese characters; for other languages, scale by typical word density. Cover: the system / setting, the observational signals or experimental anchors that motivate the question, the theoretical / computational task (the chain to close), the central inversion / fitting result, what it resolves, and what it leaves open. End with keywords.
 
-3. **Figure 1 — the closure-chain map.** Embed the rendered evidence graph (from `$evidence-subgraph`) immediately after the abstract, **before** Section 1. Caption in domain language. Two well-formed examples:
+3. **Figure 1 — the closure-chain map.** Embed the rendered evidence graph immediately after the abstract, **before** Section 1. Caption in domain language. Two well-formed examples:
 
    - English: *"Figure 1. Closure-chain map of <topic>: how the experimental anchors and the theoretical / computational inputs combine to fix <target quantity>. Edge legend on the figure."*
    - 中文: *「图 1. 〈课题〉闭合链图：实验锚点与理论/计算输入如何共同确定〈目标量〉。边的图例见图内。」*
@@ -110,34 +109,12 @@ Generalizable to any chain-backed quantitative root. Adapt the closure-chain exp
    The equation, optimization, or procedure that fixes the target result. Quote it explicitly. Derive or describe the resulting value. Make a clean separation between *measured* / *computed* / *fitted* / *assumed* — a reader should be able to colour each input by category and see what the conclusion really rests on.
 
 8. **Section 5 — Cross-method or cross-formalism comparison.**
-   Where applicable: analytical formulas vs numerical solvers, mean-field vs many-body, perturbative vs non-perturbative, model-A vs model-B, in-distribution vs out-of-distribution, simulation-with-X vs simulation-without-X. Quote the discrepancy with units. Explain its origin (truncation conventions, neglected sub-effects, dataset shifts). When verification edges in the graph **partially disconfirm** the root, narrate that tension explicitly here.
-
-   **Pull from `cross_validation.json`** (promoted cross-validations only). Each record's `independence_basis` names the specific independence axis between the two pathways and is the structuring sentence for the comparison narrative; each record's `scientific_weight` names what the agreement (or partial disagreement) actually buys for confidence in the target. Cite both sides by author–year. For `polarity == partial_disconfirm` records, narrate the tension explicitly and connect it to Section 6 if the disagreement opens an open question.
-
-   **Pull from `equivalences.json`** as supporting material (lineage classification unchanged): pairs whose lineage is `independent experimental`, `independent theoretical / computational`, or `cross-paradigm confirmation` strengthen the cross-method narrative. Pairs classified `same paper, different version` (arXiv preprint vs journal version) must not be cited as independent confirmation; pairs classified `unclassified` should be flagged as "two reports of the same value whose independence has not been established" rather than treated as confirmation.
-
-   **Do not cite `dismissed_pairs.json` records** in this section. Cross-validation candidates that were dismissed as `confirmed_equivalence`, `trivially_dependent`, or `non_generative` (per `pair-classification.md`) do not contribute scientific weight and must not be presented as cross-method support.
+   Where applicable: analytical formulas vs numerical solvers, mean-field vs many-body, perturbative vs non-perturbative, model-A vs model-B, in-distribution vs out-of-distribution, simulation-with-X vs simulation-without-X. Quote the discrepancy with units. Explain its origin (truncation conventions, neglected sub-effects, dataset shifts). When verification edges in the graph **partially disconfirm** the root, narrate that tension explicitly here. Cite both sides by author–year.
 
 9. **Section 6 — Open problems and what would discriminate.**
-   Assumptions that carry the conclusion (symmetry assumptions, single-channel reductions, harmonic / linearity assumptions, fixed priors, etc.); theory–experiment / model–observation gaps still uncovered; theory–theory or method–method tensions; **specific** experiments / measurements / calculations that would discriminate the surviving alternatives. Avoid generic gestures — name the measurement and the threshold.
+   Assumptions that carry the conclusion (symmetry assumptions, single-channel reductions, harmonic / linearity assumptions, fixed priors, etc.); theory–experiment / model–observation gaps still uncovered; theory–theory or method–method tensions; **specific** experiments / measurements / calculations that would discriminate the surviving alternatives. Avoid generic gestures — name the measurement and the threshold. Cite both sides of every contradiction by author–year.
 
-   **Pull contradiction pairs from `contradictions.json`** (promoted contradictions only). Each record carries:
-
-   - `new_question` — a checkable question generated by the tension; this is the structuring sentence for the open-problem paragraph.
-   - `hypothesized_cause[]` — one or more values from the closed enum `{hidden_variable, boundary_condition, measurement_protocol, model_assumption, evidence_reliability}`. Each value selects a distinct hypothesis sub-paragraph in the narrative:
-     - `hidden_variable` — name a candidate variable the field has not yet recognised in the comparison and the measurement that would expose it.
-     - `boundary_condition` — describe the parameter axis whose boundary the field has not mapped, and the parameter scan that would map it.
-     - `measurement_protocol` — describe the protocol divergence the field has not audited, and the protocol-controlled re-measurement that would isolate it.
-     - `model_assumption` — name the assumption the field has not disentangled from the target, and the calculation that would relax it.
-     - `evidence_reliability` — name the evidence-quality concern (sample bias, low statistics, replication gap, undisclosed prior) and the stricter-evidence re-test that would address it.
-
-   When a contradiction record carries multiple `hypothesized_cause` values, narrate each in its own sub-paragraph or fold them into a single paragraph that names every cause — do not silently drop any of them. Cite both sides of every contradiction by author–year.
-
-   Pairs whose lineage in `equivalences.json` is `unclassified` are also candidates for this section, framed as "two reports of the same value whose independence has not been established."
-
-   **Do not cite `dismissed_pairs.json` records** in this section. Contradiction candidates dismissed as `confirmed_equivalence`, `resolved_moderator`, or `non_generative` do not represent open scientific questions and must not be presented as such.
-
-10. **References.** Author–year, fully bibliographic. **Build entries from the `data.papers` metadata block** supplied with the inputs: `en_title` for English titles (or `zh_title` if the synthesis is Chinese and a Chinese title is preferred); `authors` (split on `|` and reformat); `publication_date`; `publication_name`; `doi`. The references list is part of the **main narrative** for ban-list purposes — no `paper:<id>` strings, no LKM identifiers, no internal claim ids. Append a short closing line such as: *"For further information about each cited result, refer to the original paper via the DOI listed above."*
+10. **References.** Author–year, fully bibliographic. **Build entries from the supplied `data.papers` metadata block:** `en_title` for English titles (or `zh_title` if the synthesis is Chinese and a Chinese title is preferred); `authors` (split on `|` and reformat); `publication_date`; `publication_name`; `doi`. The references list is part of the **main narrative** for ban-list purposes — no `paper:<id>` strings, no system identifiers, no internal claim ids. Append a short closing line such as: *"For further information about each cited result, refer to the original paper via the DOI listed above."*
 
 11. **Optional methodology / provenance appendix.** The only place where the audit table or system identifiers (`gcn_*`, `gfac_*`, `paper:<id>`) may appear. The rendered graph itself is **not** appendix material — it has been promoted to Figure 1 of the body. Caption any appendix tables plainly: this material summarises how the literature was organised during preparation; it is **not** the scientific content of the synthesis.
 
@@ -163,18 +140,17 @@ If LaTeX is requested:
 
 Before declaring the synthesis complete:
 
-1. **Mandatory-inputs check.** Confirm graph (source + rendered raster) + audit table + `data.papers` + all four discovery-flag files (`contradictions.json`, `equivalences.json`, `cross_validation.json`, `dismissed_pairs.json`) were all supplied. If any is missing, STOP and request it. Files carrying `pairs: []` are acceptable.
+1. **Mandatory-inputs check.** Confirm graph (source + rendered raster) + audit table + `data.papers` were all supplied. If any is missing, STOP and request it.
 2. **Figure 1 placement.** The rendered evidence graph appears as Figure 1 of the body, immediately after the abstract and before Section 1. Caption is in domain language and contains zero banned phrases.
 3. **Banned-phrase grep.** Run a regex grep for the ban list (English + locale mirror) against the main-narrative source (excluding the appendix and the embedded graph file itself, which is binary). Zero hits required. The allow-list above clarifies legitimate uses of words like "chain" / "tier" in the domain sense.
-4. **Best-effort numerical-anchor check.** For every number in the synthesis, try to locate it in the chain payload (premise `content`, factor steps, claim content) or — for numbers attributed to a different paper — in that paper's `data.papers` entry plus the chain payload of the root. The check is **soft**: chain payloads are sometimes incomplete, and a number may legitimately not be locatable inside the JSON we have. When a number cannot be confirmed, do not delete it — note `anchor not locatable in chain payload` next to the audit-table row that supplied it. A number that the chain payload **contradicts**, however, is a real error and must be fixed.
+4. **Best-effort numerical-anchor check.** For every number in the synthesis, try to locate it in the supplied source payload (premise `content`, factor steps, claim content) or — for numbers attributed to a different paper — in that paper's `data.papers` entry plus the source payload of the root. The check is **soft**: payloads are sometimes incomplete, and a number may legitimately not be locatable inside the JSON we have. When a number cannot be confirmed, do not delete it — note `anchor not locatable in payload` next to the audit-table row that supplied it. A number that the payload **contradicts**, however, is a real error and must be fixed.
 5. **Citation completeness.** Every author–year mention in the body has a matching reference entry built from `data.papers`, and vice versa. Every "Adapted from <author–year>" attribution names a paper already in the references list.
-6. **Discovery-flag integration.** Section 6 (open problems) cites promoted contradiction pairs from `contradictions.json` where they fall within the topic of the user-selected root, and structures each open-problem paragraph around the record's `new_question` and `hypothesized_cause[]`. Section 5 (cross-method) cites promoted cross-validation pairs from `cross_validation.json` (using each record's `independence_basis` as the structuring sentence and `scientific_weight` as the confidence claim), supplemented by equivalence pairs from `equivalences.json` whose lineage is `independent experimental`, `independent theoretical / computational`, or `cross-paradigm confirmation`. **No record from `dismissed_pairs.json` is cited in either section.** If a promoted file is non-empty and the corresponding section makes no use of it, document the omission in the run's `notes.md` (e.g. *"4 contradiction pairs out of scope for this root, see file"*).
-7. **Missing-material list.** `missing-material.md` is up-to-date: every "Adapted from" reference whose figure / table could not be reproduced has a row pointing to the source paper's DOI.
-8. **Equation-number consistency.** No undefined `\eqref{...}`, no duplicated labels.
+6. **Missing-material list.** `missing-material.md` is up-to-date: every "Adapted from" reference whose figure / table could not be reproduced has a row pointing to the source paper's DOI.
+7. **Equation-number consistency.** No undefined `\eqref{...}`, no duplicated labels.
 
 ## What this skill is NOT
 
-- Not a broad literature-survey writer. For thematic / cross-paper syntheses on a topic, run discovery via `$evidence-graph-synthesis` and pick a single chain-backed root — this skill writes one closure-chain article at a time.
-- Not a graph-renderer. The graph comes from `$evidence-subgraph`; this skill embeds the rendered raster as Figure 1 and consumes the audit table for verification.
-- Not a figure-generator. Figures and data tables adapted from source papers may be quoted with attribution when the chain payload supplies the text; image-format figures cannot be reproduced and are surfaced as missing-material gaps for the user to fill in.
+- Not a broad literature-survey writer. This skill writes one closure-chain article at a time, anchored on a single chain-backed root.
+- Not a graph-renderer. The audited graph and rendered raster are caller-supplied inputs; this skill embeds the raster as Figure 1 and consumes the audit table for verification.
+- Not a figure-generator. Figures and data tables adapted from source papers may be quoted with attribution when the supplied payload carries the text; image-format figures cannot be reproduced and are surfaced as missing-material gaps for the user to fill in.
 - Not for purely qualitative claims. A claim with no numeric or formula-level anchor has no closure step to write about; this skill does not apply.
