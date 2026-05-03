@@ -239,6 +239,8 @@ Output: `merge_audit.md` logs every decision for reproducibility.
 
 The exploration is **obligation-driven**: each iteration identifies gaps via `gaia check --hole` and `gaia inquiry review`, marks them as obligations, then picks the most interesting obligation to resolve by searching LKM. Obligations persist across iterations — `gaia inquiry obligation list` is the exploration's TODO list.
 
+**At the start of every iteration, the agent MUST create a checklist of all 9 steps.** Mark each step as done immediately after completing it. This prevents steps from being forgotten or skipped. The checklist is ephemeral (session-only), not written to the package.
+
 ```
  ┌─────────────────────────────────────────────────────────────┐
  │                                                             │
