@@ -251,7 +251,7 @@ The exploration is **obligation-driven**: each iteration identifies gaps via `ga
  │  3. Decompose — break compound claims into atomic propositions│
  │     claim(A) + claim(B) + contradiction(A,B) or equivalence │
  │                                                             │
- │  4. Hunt contradictions for each new atomic claim            │
+ │  4. Hunt contradictions (NEVER SKIP — every new claim)        │
  │     → contradiction(P, X, prior=...)                        │
  │     → gaia inquiry obligation add <qid> -c "..."            │
  │                                                             │
