@@ -4,7 +4,7 @@ This file complements `SKILL.md`. It contains the visual style and rendering det
 
 ## Minimum artifacts
 
-The authoritative on-disk layout is fixed by `run-folder-output-contract.md` in this directory. The contract requires three graph artifacts (`evidence_graph.json` / `evidence_graph.dot` / `evidence_graph.png`), four pair JSON files (`contradictions.json` / `equivalences.json` / `cross_validation.json` / `dismissed_pairs.json`), and a `raw/` folder of verbatim LKM responses. Mermaid `.mmd`, additional rendered formats (SVG / PDF), and any companion `.md` summaries are non-contractual extras: write them if useful, but do not rely on them downstream.
+The on-disk artifacts the skill emits are listed in `SKILL.md` (Output section): `evidence_graph.json`, `evidence_graph.dot` (and/or `evidence_graph.mmd`), `evidence_graph.png`, the audit table, and the verbatim raw payloads under `raw/`. Additional rendered formats (SVG / PDF) and any companion `.md` summaries are extras — write them if useful.
 
 ## Human-readable node labels (mandatory)
 

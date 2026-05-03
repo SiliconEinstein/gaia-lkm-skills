@@ -1,6 +1,6 @@
 ---
 name: evidence-subgraph
-description: Build, audit, and render a methodological-decomposition evidence graph rooted on a chain-backed quantitative claim of the form "<system or setting> has <quantity> = <value>" or "<computation / measurement> yields <observable>". The graph is the anatomy of how that single result is closed inside one paper's reasoning — observational / experimental constraints, theoretical or computational inputs, intermediate computed quantities, derivation / inversion / fitting steps, parameter and approximation choices, and external-paper / setting context. Multiple labelled joint-support factor diamonds, three-class edge taxonomy (chain support / background / verification support — render in the user's locale, e.g. 链式支撑 / 背景 / 核验支撑 in Chinese), auto-layout (Graphviz neato/sfdp or Mermaid flowchart with linkStyle for per-edge classes — Mermaid mindmap is NOT acceptable), CJK-safe fonts and labels. Domain-agnostic: physics, chemistry, materials, biology, ML, climate, astrophysics, etc. Inputs come from `$lkm-api` (chain payload + `data.papers` metadata). The graph is strictly chain-bounded — only LKM-returned premises and their explicit content are admitted as nodes; no synthetic bridging from external sources. Hand off to `$scholarly-synthesis` for the prose.
+description: Build, audit, and render a methodological-decomposition evidence graph rooted on a chain-backed quantitative claim of the form "<system or setting> has <quantity> = <value>" or "<computation / measurement> yields <observable>". The graph is the anatomy of how that single result is closed inside one paper's reasoning — observational / experimental constraints, theoretical or computational inputs, intermediate computed quantities, derivation / inversion / fitting steps, parameter and approximation choices, and external-paper / setting context. Multiple labelled joint-support factor diamonds, three-class edge taxonomy (chain support / background / verification support — render in the user's locale, e.g. 链式支撑 / 背景 / 核验支撑 in Chinese), auto-layout (Graphviz neato/sfdp or Mermaid flowchart with linkStyle for per-edge classes — Mermaid mindmap is NOT acceptable), CJK-safe fonts and labels. Domain-agnostic: physics, chemistry, materials, biology, ML, climate, astrophysics, etc. Input is an LKM chain payload (`/claims/match` + `/claims/{id}/evidence` JSON, plus the `data.papers` metadata block). The graph is strictly chain-bounded — only LKM-returned premises and their explicit content are admitted as nodes; no synthetic bridging from external sources.
 ---
 
 # Evidence Subgraph
@@ -22,23 +22,29 @@ The same paradigm applies across domains:
 
 The skill text below is domain-agnostic. Every domain-specific term in the produced graph comes from the LKM chain payload (premise / factor / step content and `data.papers` metadata), not from the skill.
 
-## Default root
+## Input
 
-A chain-backed claim returned by `$lkm-api` whose conclusion text names a system / setting and a quantitative result. The orchestrator (`$evidence-graph-synthesis`) provides the user-selected root id; this skill does not perform discovery itself.
+The skill is invoked with a single root claim id and the corresponding LKM chain payload — the `/claims/{id}/evidence` JSON (and, if available, the `/claims/match` JSON that surfaced the root). The root's conclusion text names a system / setting and a quantitative result. The skill does not perform discovery; it does not select among candidates. Callers (or the user directly) supply the chosen root id.
 
-If invoked with a chain-less claim id (`total_chains == 0`), stop and return the failure to the orchestrator. Do not invent premises.
+If invoked with a chain-less claim id (`total_chains == 0`), stop and report the gate failure. Do not invent premises.
 
-## Mandatory output contract
+## Output
 
-Every successful invocation of this skill must leave a conforming run-folder on disk. The directory layout, structured `evidence_graph.json` schema, the verbatim `raw/` payloads, the source-pointer convention (RFC 6901 JSON Pointer), and the pre-success self-check are specified canonically in `references/run-folder-output-contract.md`. Read it before producing any output, and run the contract's §8 self-check before declaring the task complete. Failing any check in §8 is a hard failure.
+Every successful invocation leaves on disk:
 
-**Discovery-flag inputs (loose-md contract).** The orchestrator (`$evidence-graph-synthesis`) emits its discovery flags as loose Markdown files into the run folder, not JSON: `contradictions.md`, `equivalences.md`, and `candidates.md` (the user-selection short-list). This skill consumes those loose-md files when they are needed (notably `equivalences.md` for the no-duplicate-nodes rule in §2). Deeper classification of those candidate pairs — lineage, hypothesized cause, independence basis, cross-validation vs dismissal — is **not** done here; it is deferred to `$lkm-to-gaia`'s Gaia formalization stage. Earlier drafts of this skill referenced a four-file JSON discovery contract and a companion classification reference; that contract has been retired — the cross-validation / dismissal semantics now live in the Gaia formalization, and the upstream flags are loose-md.
+- a structured graph artifact (`evidence_graph.json`) capturing nodes, edges, and per-element source pointers into the LKM payload (RFC 6901 JSON Pointer convention against the verbatim raw payload);
+- the canonical re-renderable graph source (`evidence_graph.dot`, or `evidence_graph.mmd` when Mermaid is the chosen renderer);
+- a human-readable raster (`evidence_graph.png`, plus optionally SVG/PDF);
+- the verbatim LKM raw payloads under `raw/` (at minimum `evidence_<root-gcn-id>.json`; if `/claims/match` was consulted, also `match_NN.json`); raw payloads are never modified, pretty-printed, or stripped — they are the audit substrate the source pointers resolve against;
+- an audit table (rows per non-trivial edge — see §6) co-located with the graph artifacts.
+
+The audit table and every node/edge in `evidence_graph.json` carry a chain-payload anchor (premise `gcn_*`, factor `gfac_*`, `factors[i].steps[j].reasoning`, or claim content) so a reader can trace any element back to the LKM JSON. Anchor discipline is canonical in `references/source-ground-truth.md` — read it before producing output.
 
 ## Workflow
 
 ### 0. Gate: chain-backed root
 
-The `$lkm-api evidence` payload for the root must have `total_chains > 0`. Synthetic premises only with explicit user waiver. If the root id does not satisfy the gate, return to `$lkm-api` for re-discovery — do not proceed.
+The evidence payload for the root must have `total_chains > 0`. Synthetic premises only with explicit user waiver. If the root id does not satisfy the gate, stop and report — do not proceed.
 
 The chain payload itself is the **single source of truth** for every node and audit anchor in this skill: claim `content`, factor `subtype`, premise `id` and `content`, optional `steps[].reasoning`, and the `data.papers` metadata block. No external paper text is admitted as a node.
 
@@ -66,17 +72,17 @@ For each native premise (chain-internal id; `total_chains == 0` standalone but f
 
 Render each as a labelled box (filled, locale-safe font). Label is two short lines: first line = tag (the role this node plays in the chain), second line = numerical / equation / symbol anchor lifted verbatim from the premise `content` (or, when present, `steps[].reasoning`).
 
-**Empty-content premises (temporary).** Some premises currently come back from `$lkm-api` with only an `id` populated and an empty `content` — this is a temporary corpus state and the LKM is being progressively populated. Render as gray dashed nodes with the placeholder label "未展开前提 / unexpanded premise" only when the user explicitly asks for full premise coverage; the default is to omit. The audit table must mark them `content unavailable (temporary)` so a future pipeline run (when content is populated) can revisit them.
+**Empty-content premises (temporary).** Some premises currently come back from the LKM with only an `id` populated and an empty `content` — this is a temporary corpus state and the LKM is being progressively populated. Render as gray dashed nodes with the placeholder label "未展开前提 / unexpanded premise" only when the user explicitly asks for full premise coverage; the default is to omit. The audit table must mark them `content unavailable (temporary)` so a future run (when content is populated) can revisit them.
 
 **No synthetic bridging.** The graph is strictly chain-bounded. If an intermediate quantity is implied but not present in any premise / step / claim content returned by LKM, do **not** mint a node for it — record the gap in the audit table as `gap: <description>` and move on. Inventing nodes silently switches the graph from chain-backed to synthetic.
 
-**No duplicate nodes for equivalent premises.** When two premises (or a premise and a verification-support claim) assert the **same proposition** — same equation, same numerical value, same formal statement, just from different parts of the chain or different source packages — render them as a **single node**. List the two source packages in parentheses on a second label line, or as a side note in the audit table; do not draw two near-identical boxes. This rule applies whether the equivalence comes from within the root chain itself or is flagged in the orchestrator's `equivalences.md`. Because the upstream flag is a recall-oriented candidate list (no lineage classification yet), the merge decision here is a judgement call on the premise text; when in doubt, keep the two as distinct verification-support nodes and let `$lkm-to-gaia`'s formalization stage reconcile them downstream — the independent confirmation is informative for the closure-chain reader and erasing it loses information. Obvious same-paper / same-version restatements (e.g. arXiv preprint and journal version of one paper saying the same thing) should still be merged.
+**No duplicate nodes for equivalent premises.** When two premises (or a premise and a verification-support claim) assert the **same proposition** — same equation, same numerical value, same formal statement, just from different parts of the chain or different source packages — render them as a **single node**. List the two source packages in parentheses on a second label line, or as a side note in the audit table; do not draw two near-identical boxes. The merge decision is a judgement call on the premise text; when in doubt, keep the two as distinct verification-support nodes — the independent confirmation is informative for the closure-chain reader and erasing it loses information. Obvious same-paper / same-version restatements (e.g. arXiv preprint and journal version of one paper saying the same thing) should still be merged.
 
 ### 3. Background / context nodes
 
 Add a panel-style node (visually distinct from reasoning nodes — different fill colour, `shape=note` in DOT) for each of:
 
-- **external paper / formula / dataset / theorem named inside an LKM premise's `content`** — name it by the formula, dataset, theorem, or method it contributed (e.g. *"AD formula"*, *"Morel–Anderson renormalization"*, *"ImageNet-1k"*, *"GPCR-Bench"*, *"Anderson's theorem"*) — **never** by paper id, and **never** drawn from outside the chain payload. The actual paper bibliography lives in `data.papers` and is consumed by `$scholarly-synthesis` for the references list.
+- **external paper / formula / dataset / theorem named inside an LKM premise's `content`** — name it by the formula, dataset, theorem, or method it contributed (e.g. *"AD formula"*, *"Morel–Anderson renormalization"*, *"ImageNet-1k"*, *"GPCR-Bench"*, *"Anderson's theorem"*) — **never** by paper id, and **never** drawn from outside the chain payload. The actual paper bibliography lives in the `data.papers` block of the chain payload and travels with the run-folder for downstream consumers; this skill does not emit a references list.
 - **parameter-setting / approximation / regularization choice** — e.g. *"real-axis solution, weak damping"*, *"hybrid functional"*, *"early stopping"*.
 - **scope-bounding empirical fact** — a fact that bounds where the analysis applies (e.g. *"linear-T resistivity"*, *"validation set held out"*, *"Migdal small parameter ω_ph/E_F ≪ 1"*).
 
@@ -97,7 +103,7 @@ The label rendered on the edge is in the user's locale. The taxonomy itself is f
 ### 5. Layout, fonts, and labels (CJK-safe)
 
 - **Auto-layout renderer**: Graphviz `neato` / `sfdp` for DOT (preferred for archival), or Mermaid `flowchart` with `linkStyle` for per-edge classes (preferred when no Graphviz install). Do **not** use Mermaid `mindmap` — it has no per-edge styling and cannot encode the three-class taxonomy.
-- **Title format**: `<root system / topic> <quantity or theme>: closure-chain map (auto-layout)`. Localize to the user's prompt language (e.g. `<topic>：闭合链图（自动布局）` for Chinese). The "(auto-layout)" tag tells the reader spatial arrangement is non-semantic. Do **not** use phrases that the `$scholarly-synthesis` ban list forbids (e.g. "evidence chain", "证据链与上下文", "subgraph", "证据图") — the rendered graph becomes Figure 1 of the body and any banned phrase in its title will trip the synthesis's banned-phrase grep. "Closure chain" / "闭合链" are explicitly on the synthesis's allow-list.
+- **Title format**: `<root system / topic> <quantity or theme>: closure-chain map (auto-layout)`. Localize to the user's prompt language (e.g. `<topic>：闭合链图（自动布局）` for Chinese). The "(auto-layout)" tag tells the reader spatial arrangement is non-semantic. The phrasing "closure chain" / "闭合链" is intentional — it names what the graph actually is (the closed reasoning that produces the root result) without overloading more general terms.
 - **Locale**: labels in the user's prompt language.
 - **CJK fonts (avoid Graphviz tofu pit).** Default Graphviz fonts (Helvetica, Times) **omit Chinese / Japanese / Korean glyphs**, producing tofu (`□`) blocks in the rendered PNG/SVG. Set fonts explicitly on `graph`, `node`, and `edge` for any non-Latin script:
 
@@ -130,24 +136,13 @@ Run `node skills/evidence-subgraph/scripts/check_dot_cycles.mjs <path-to-graph.d
 
 ### 8. Best-effort numerical-anchor check
 
-Before hand-off, walk every numerical anchor in every reasoning node and try to locate it inside the chain payload — premise `content`, claim content, or `factors[i].steps[j].reasoning`. The check is **soft**: chain payloads are sometimes incomplete, and an anchor may legitimately not be locatable inside the JSON. When you can confirm an anchor, log the chain-payload location in the audit row. When you cannot, mark the row `anchor not locatable in chain payload` and leave the node in place — do not delete the node, do not invent a substitute, and do not fail the run on this alone. A node whose value is contradicted by some other piece of the chain payload, however, is a real error and must be fixed.
+Before declaring the run complete, walk every numerical anchor in every reasoning node and try to locate it inside the chain payload — premise `content`, claim content, or `factors[i].steps[j].reasoning`. The check is **soft**: chain payloads are sometimes incomplete, and an anchor may legitimately not be locatable inside the JSON. When you can confirm an anchor, log the chain-payload location in the audit row. When you cannot, mark the row `anchor not locatable in chain payload` and leave the node in place — do not delete the node, do not invent a substitute, and do not fail the run on this alone. A node whose value is contradicted by some other piece of the chain payload, however, is a real error and must be fixed.
 
-## Standalone use (graph only, no synthesis)
+## Return value
 
-This skill is also invocable directly when the user asks for "just build the evidence graph" without a synthesis. In that case:
+On success, return the run-folder path. The folder contains the structured graph (`evidence_graph.json`), the canonical re-renderable source (`evidence_graph.dot` and/or `evidence_graph.mmd`), the rendered raster (`evidence_graph.png`, plus optional SVG/PDF), the audit table, and the verbatim raw payloads under `raw/`. The relevant `data.papers` block from the chain payload is preserved verbatim under `raw/` so any downstream consumer (or the user directly) can map background-node mentions back to bibliographic records.
 
-- the orchestrator (`$evidence-graph-synthesis`) still handles discovery + the user-selection checkpoint upstream of this skill;
-- after step 8, return the run-folder path (with the contract artifacts under it) directly to the user, with the relevant `data.papers` metadata appended so the user can refer back to the original sources;
-- **do not** invoke `$scholarly-synthesis`.
-
-## Hand-off
-
-Hand off to **`$scholarly-synthesis`** with: the graph source (DOT or Mermaid), a **rendered raster** (PNG / PDF / SVG), the audit table, and the relevant subset of `data.papers`. The rendered raster is what `$scholarly-synthesis` embeds as Figure 1 of the body — this means the rendered graph is consumed by domain readers, not just by other agents. Two consequences for this skill:
-
-1. The graph's **title** (the `label` on the DOT `graph` attribute, or the equivalent on the Mermaid front-matter) must be domain-language and free of `$scholarly-synthesis`'s banned phrases. §5's `<topic>: closure-chain map (auto-layout)` template satisfies this; older drafts that used "evidence chain and context" / "证据链与上下文" must be regenerated, not just recaptioned, because the title is baked into the rendered raster.
-2. The rendered raster must visually open in any PDF / Markdown viewer the user has — this is what the CJK-tofu check (§5) prevents from breaking.
-
-The synthesis skill writes the prose; this skill does not.
+On failure (chain-less root, contradicted anchors that cannot be reconciled, cycle detected after re-classification, CJK glyphs rendering as tofu and no installed font usable), report the failure reason and the run-folder state — do not declare partial success.
 
 ## What this skill is NOT
 
