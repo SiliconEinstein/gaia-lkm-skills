@@ -12,7 +12,7 @@ The repo ships a family of atomic skills plus one orchestrator that sequences th
 
 Five atomic skills + one orchestrator. Full contracts live in each skill's `SKILL.md`; one-line purpose each:
 
-- **`skills/orchestrator/`** — universal entry point. Sequences the five atomic peers into the iterative LKM↔gaia loop. Five turn shapes: cold-start build, extend, verdict on contradictions, traverse and purge duplication, visualize.
+- **`skills/orchestrator/`** — universal entry point. Sequences the five atomic peers into the iterative LKM↔gaia loop. Four turn shapes: cold-start build, extend, traverse and purge duplication, visualize. Contradiction handling is built into Turns 1 and 2 via `$lkm-to-gaia`'s mandatory step 4 (NEVER SKIP) inside the obligation-driven loop, not a separate user-driven turn.
 - **`skills/lkm-api/`** — Bohrium LKM HTTP client (match / evidence / variables verbs; `accessKey` auth; raw JSON pass-through).
 - **`skills/evidence-subgraph/`** — build / audit / render an evidence graph from LKM chain payloads (factor diamonds, three-class edge taxonomy, chain-bounded discipline).
 - **`skills/lkm-to-gaia/`** — convert LKM evidence-chain payloads into a Gaia DSL knowledge package (`<name>-gaia/` batch mode; Python-fragment incremental mode for `plan.gaia.py` hosts).
@@ -21,7 +21,7 @@ Five atomic skills + one orchestrator. Full contracts live in each skill's `SKIL
 
 ## The single growing artifact: `<domain>-gaia/`
 
-All five primary turn shapes operate on the **same on-disk package**. Layout (per `skills/lkm-to-gaia/references/package-skeleton.md`):
+All four primary turn shapes operate on the **same on-disk package**. Layout (per `skills/lkm-to-gaia/references/package-skeleton.md`):
 
 ```
 <domain>-gaia/
@@ -50,11 +50,12 @@ All five primary turn shapes operate on the **same on-disk package**. Layout (pe
 
 ## Turn shapes (one paragraph each — full recipes in `skills/orchestrator/SKILL.md`)
 
-1. **Cold-start build** — broad-topic discovery via `$lkm-api`, chain-backed candidate filter, discovery flag pass (contradictions + equivalences), mandatory user-selection checkpoint, then `$lkm-to-gaia` batch formalization to convergence (`gaia compile && gaia check --hole && gaia infer` all green).
-2. **Extend** — load prior audit trail, query LKM with the sub-topic as obligation seed, append to the existing input set, refresh discovery flags as a delta, re-formalize while preserving prior verdicts.
-3. **Verdict on contradictions** — locate the `contradiction(...)` operator in `.gaia/ir.json`, targeted LKM re-query, classify (real / paraphrase / scope mismatch / measurement noise / strategy-dismissal / under-determined), embed verdict into the DSL, log to `merge_audit.md`, re-propagate beliefs.
-4. **Traverse and purge duplication** — `gaia inquiry review --strict` plus a semantic pass over paraphrased near-duplicates, per-pair decision (auto-merge / keep-both-with-equivalence / surface-to-todo), apply via `$lkm-to-gaia` incremental, log every decision, re-propagate.
-5. **Visualize** — pre-state check on `.gaia/`, `$gaia-render` to Graphviz / Mermaid / raster with BP belief shading, captioned with package + IR hash + inference timestamp.
+1. **Cold-start build** — broad-topic discovery via `$lkm-api`, chain-backed candidate filter, discovery flag pass (contradictions + equivalences), mandatory user-selection checkpoint, then `$lkm-to-gaia` batch formalization to convergence (`gaia compile && gaia check --hole && gaia infer` all green). The 8-step obligation-driven loop runs inside `$lkm-to-gaia`, with step 4 (hunt contradictions — MANDATORY, NEVER SKIP) screening every new claim.
+2. **Extend** — load prior audit trail, query LKM with the sub-topic as obligation seed, append to the existing input set, refresh discovery flags as a delta, re-formalize while preserving prior verdicts. Step 4 (hunt contradictions — MANDATORY, NEVER SKIP) runs again on every new claim and against every previously-formalized claim it now neighbours; this audit-trail-continuity re-batch is how contradiction state evolves across turns.
+3. **Traverse and purge duplication** — `gaia inquiry review --strict` plus a semantic pass over paraphrased near-duplicates, per-pair decision (auto-merge / keep-both-with-equivalence / surface-to-todo), apply via `$lkm-to-gaia` incremental, log every decision, re-propagate.
+4. **Visualize** — pre-state check on `.gaia/`, `$gaia-render` to Graphviz / Mermaid / raster with BP belief shading, captioned with package + IR hash + inference timestamp.
+
+Contradiction handling is **not** a separate turn shape: it is built into Turns 1 and 2 as `$lkm-to-gaia`'s step 4 (NEVER SKIP). Real contradictions become `contradiction(...)` primitives plus obligations, apparent ones land in `artifacts/lkm-discovery/dismissed/` with reason, under-determined ones keep an open obligation for a future turn.
 
 ## Optional: incremental mode + `gaia-discovery` host
 
