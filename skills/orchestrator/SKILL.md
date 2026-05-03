@@ -1,6 +1,6 @@
 ---
 name: orchestrator
-description: Universal entry point for any LKM-driven request. Sequences the atomic skills in the `gaia-lkm-skills` family — `$lkm-api`, `$evidence-subgraph`, `$lkm-to-gaia`, `$gaia-render`, `$scholarly-synthesis` — into the iterative LKM↔gaia loop that builds and refines a `<domain>-gaia/` knowledge package across turns. Four turn shapes are supported end-to-end on the same package: cold-start build, extend, traverse and purge duplication, visualize. Contradiction handling is not a discrete turn — it is built into Turns 1 and 2 via `$lkm-to-gaia`'s mandatory step 4 (NEVER SKIP) inside the obligation-driven loop. Audit-trail continuity (`artifacts/lkm-discovery/{input/, merge_audit.md, dismissed/}`, `.gaia/inquiry/`) is preserved across turns so successive prompts grow the same package without losing prior verdicts. Includes a mandatory user-selection checkpoint between discovery and the build. Domain-agnostic: physics, chemistry, materials, biology, ML, climate, astrophysics, etc. Any agent handling an LKM-related user prompt should route through this skill first.
+description: Universal entry point for any LKM-driven request. Sequences the atomic skills in the `gaia-lkm-skills` family — `$lkm-api`, `$evidence-subgraph`, `$lkm-to-gaia`, `$gaia-render`, `$scholarly-synthesis` — into the iterative LKM↔gaia loop that builds and refines a `<domain>-gaia/` knowledge package across turns. Four turn shapes are supported end-to-end on the same package: cold-start build, extend, traverse and purge duplication, visualize. Open-problem / contradiction handling is not a discrete turn — it is built into Turns 1 and 2 via `$lkm-to-gaia`'s mandatory step 4 (hunt open problems — NEVER SKIP) inside the obligation-driven loop. Audit-trail continuity (`artifacts/lkm-discovery/{input/, merge_audit.md, dismissed/}`, `.gaia/inquiry/`) is preserved across turns so successive prompts grow the same package without losing prior verdicts. Includes a mandatory user-selection checkpoint between discovery and the build. Domain-agnostic: physics, chemistry, materials, biology, ML, climate, astrophysics, etc. Any agent handling an LKM-related user prompt should route through this skill first.
 ---
 
 # Orchestrator (LKM ↔ Gaia loop)
@@ -9,7 +9,7 @@ description: Universal entry point for any LKM-driven request. Sequences the ato
 
 This is the **single front door** for every LKM-driven request. The orchestrator inspects the user's intent, picks the matching turn shape, and sequences atomic skills to grow a `<domain>-gaia/` knowledge package across turns. It does **not** retrieve, draw, formalize, or write itself — it sequences siblings, gates the user-selection checkpoint, and preserves the audit trail.
 
-The primary loop is **iterative**: the same `<domain>-gaia/` package is built cold, extended on follow-up prompts, traversed for duplication, and visualized — all on the same on-disk package. Contradiction handling is **not** a separate user-driven turn shape; it is built into Turns 1 and 2 as `$lkm-to-gaia`'s mandatory step 4 (hunt contradictions — NEVER SKIP) inside the obligation-driven loop, so every new claim is screened against the existing graph and against the rest of the same batch as it lands. Every turn writes to predictable audit-trail files so the next turn can pick up where the previous one left off without losing prior verdicts.
+The primary loop is **iterative**: the same `<domain>-gaia/` package is built cold, extended on follow-up prompts, traversed for duplication, and visualized — all on the same on-disk package. Open-problem / contradiction handling is **not** a separate user-driven turn shape; it is built into Turns 1 and 2 as `$lkm-to-gaia`'s mandatory step 4 (hunt open problems — NEVER SKIP) inside the obligation-driven loop, so every new claim is screened against the existing graph and against the rest of the same batch as it lands. Every turn writes to predictable audit-trail files so the next turn can pick up where the previous one left off without losing prior verdicts.
 
 ## Skill family catalog
 
@@ -47,11 +47,11 @@ All four primary turn shapes operate on the **same on-disk package directory**. 
 └── .gaia/                                   ← produced by `gaia compile` + `gaia infer`
     ├── ir.json
     ├── beliefs.json
-    ├── inquiry/                             ← obligation list, review state
+    ├── inquiry/                             ← obligation list, hypothesis list, review state
     └── ...
 ```
 
-**Audit-trail continuity is the invariant that makes the loop work.** On every turn after the cold-start, the orchestrator MUST read `artifacts/lkm-discovery/{merge_audit.md, dismissed/, merge_decisions.todo}` before doing new LKM queries, so prior verdicts are honoured (a pair already merged stays merged; a candidate already dismissed is not re-introduced silently). Same for `.gaia/inquiry/` — open obligations from prior turns drive the next iteration.
+**Audit-trail continuity is the invariant that makes the loop work.** On every turn after the cold-start, the orchestrator MUST read `artifacts/lkm-discovery/{merge_audit.md, dismissed/, merge_decisions.todo}` before doing new LKM queries, so prior verdicts are honoured (a pair already merged stays merged; a candidate already dismissed is not re-introduced silently). Same for `.gaia/inquiry/` — open obligations and hypotheses from prior turns drive the next iteration. The full inquiry verb surface used by the loop is `gaia inquiry obligation {add,list,close} --scope <QID>`, `gaia inquiry hypothesis {add,list,remove} --scope <QID>`, plus `focus` / `reject` / `review`; see `lkm-to-gaia/SKILL.md` §4 for usage details.
 
 ## Turn shapes
 
@@ -59,7 +59,7 @@ The four primary turn shapes are listed below in the order an agent typically en
 
 A fresh agent reading this section should be able to sustain a multi-turn build-and-explore session against a single `<domain>-gaia/` package by matching each user prompt to one of these shapes and following the recipe.
 
-**Contradiction handling is not a separate turn shape.** It is built into Turns 1 (cold-start) and 2 (extend) as step 4 (hunt contradictions — NEVER SKIP) of `$lkm-to-gaia`'s 8-step obligation-driven loop. Every new claim is screened against the existing graph and against the rest of the same batch as it is formalized; real contradictions become `contradiction(...)` primitives plus obligations, apparent ones are logged to `artifacts/lkm-discovery/dismissed/` with reason, and under-determined ones keep their obligation entry until a future Turn-2 batch resolves them through the audit-trail-continuity re-batch mechanism.
+**Open-problem / contradiction handling is not a separate turn shape.** It is built into Turns 1 (cold-start) and 2 (extend) as step 4 (hunt open problems — NEVER SKIP — research-worthy tensions including experiment vs theory, theory vs theory, coverage gaps, quantitative inconsistencies) of `$lkm-to-gaia`'s 8-step obligation-driven loop. Every new claim is screened against the existing graph and against the rest of the same batch as it is formalized; real tensions become `contradiction(...)` primitives (with `reason="... | new_question: ..."`) plus a paired `gaia inquiry hypothesis add "<open question>" --scope <namespace>::<op_label>` registration, apparent ones are logged to `artifacts/lkm-discovery/dismissed/` with reason, and under-determined ones keep their obligation / hypothesis entry until a future Turn-2 batch resolves them through the audit-trail-continuity re-batch mechanism.
 
 ### Turn 1 — Cold-start build
 
@@ -80,7 +80,7 @@ A fresh agent reading this section should be able to sustain a multi-turn build-
 5. **`$lkm-api`** — pin chosen root, persist `data.papers`. Once the user picks (claim id supplied), re-fetch `evidence` if more than a few minutes have passed; confirm `total_chains > 0`; identify the root paper id; persist the relevant `data.papers` subset.
 6. **`$lkm-to-gaia` (mode `batch`)** — formalize. Hand off raw evidence JSON paths + match JSON path + `contradictions.md` + `equivalences.md` + `candidates.md` + desired package name. The skill emits a `<name>-gaia/` directory with `pyproject.toml`, `src/<import>/{__init__.py, paper_<key>.py, cross_paper.py, priors.py}`, `references.json`, and copies the discovery files into `artifacts/lkm-discovery/{input/, contradictions.md, equivalences.md, candidates.md, merge_audit.md}`.
 
-   Inside `$lkm-to-gaia`, the **8-step obligation-driven loop runs to convergence**: (1) bootstrap → (2) refine self-contained → (3) decompose compound claims → **(4) hunt contradictions — MANDATORY, NEVER SKIP, on every new claim** → (5) mark suspicions → (6) `gaia compile && gaia infer` → (7) review obligation list → (8) search supports → repeat until obligation list empty, 0 holes, 0 unreviewed warrants. Step 4 is the only place contradictions enter the package: real conflicts land as `contradiction(...)` primitives plus an obligation, apparent ones are dismissed to `artifacts/lkm-discovery/dismissed/` with reason, and under-determined ones keep an open obligation for a future turn. There is no separate user-driven verdict turn.
+   Inside `$lkm-to-gaia`, the **8-step obligation-driven loop runs to convergence**: (1) bootstrap → (2) refine self-contained → (3) decompose compound claims → **(4) hunt open problems — MANDATORY, NEVER SKIP, on every new claim — research-worthy tensions including experiment vs theory, theory vs theory, coverage gaps, quantitative inconsistencies — emits `contradiction(A, B, ..., reason="... | new_question: ...")` primitives plus `gaia inquiry hypothesis add "<open question>" --scope <namespace>::<op_label>` for each** → (5) mark suspicions → (6) `gaia compile && gaia infer` → (7) review obligation list → (8) search supports → repeat until obligation list empty, hypothesis list investigated, 0 holes, 0 unreviewed warrants. Step 4 is the only place contradictions enter the package: real conflicts land as `contradiction(...)` primitives plus a paired hypothesis registration, apparent ones are dismissed to `artifacts/lkm-discovery/dismissed/` with reason, and under-determined ones keep an open obligation / hypothesis for a future turn. There is no separate user-driven verdict turn.
 
 **State writes (cumulative, by end of turn):**
 
@@ -89,7 +89,7 @@ A fresh agent reading this section should be able to sustain a multi-turn build-
 - `src/<import>/{paper_*.py, cross_paper.py, priors.py, __init__.py}`, `references.json`, `pyproject.toml`.
 - `.gaia/{ir.json, beliefs.json, inquiry/}` after `gaia compile && gaia infer`.
 
-**Success criterion.** `cd <name>-gaia/ && gaia compile . && gaia check --hole . && gaia infer .` all pass. Obligation list empty (or every remaining obligation has an explicit user-deferred reason). `priors.py` covers every leaf flagged by `gaia check --hole`.
+**Success criterion.** `cd <name>-gaia/ && gaia compile . && gaia check --hole . && gaia infer .` all pass. Obligation list empty + hypothesis list investigated (or every remaining obligation / hypothesis has an explicit user-deferred reason). `priors.py` covers every leaf flagged by `gaia check --hole`.
 
 ### Turn 2 — Extend
 
@@ -103,7 +103,7 @@ A fresh agent reading this section should be able to sustain a multi-turn build-
 4. **User-selection checkpoint.** Same rules as Turn 1 — surface new chain-backed candidates, gate on the user. May skip if the user named a specific narrow target in the prompt.
 5. **`$lkm-to-gaia` (mode `batch`, refresh)** — re-formalize, **preserving prior verdicts**. New claims are added to `paper_<key>.py` modules (existing modules are extended, not replaced); new cross-paper operators land in `cross_paper.py`. Existing claim labels are reused; existing priors in `priors.py` are kept as-is. Append to `merge_audit.md`; surface new ambiguous merges to `merge_decisions.todo`.
 
-   The 8-step obligation-driven loop runs again, including **step 4 (hunt contradictions — MANDATORY, NEVER SKIP)** on every new claim and against every previously-formalized claim it now neighbours. Obligations open from Turn 1 are still in `.gaia/inquiry/` — they remain in scope this turn, and any open `contradiction-resolution` obligation may be discharged here as new evidence lands. This is the audit-trail-continuity re-batch mechanism by which contradiction state evolves across turns; there is no separate verdict turn for the user to invoke.
+   The 8-step obligation-driven loop runs again, including **step 4 (hunt open problems — MANDATORY, NEVER SKIP — research-worthy tensions including experiment vs theory, theory vs theory, coverage gaps, quantitative inconsistencies — emits `contradiction(A, B, ..., reason="... | new_question: ...")` primitives plus `gaia inquiry hypothesis add` for each)** on every new claim and against every previously-formalized claim it now neighbours. Obligations and hypotheses open from Turn 1 are still in `.gaia/inquiry/` — they remain in scope this turn, and any open `contradiction-resolution` obligation or hypothesis may be discharged here as new evidence lands. This is the audit-trail-continuity re-batch mechanism by which open-problem state evolves across turns; there is no separate verdict turn for the user to invoke.
 
 **State writes (delta from Turn 1):**
 
@@ -112,7 +112,7 @@ A fresh agent reading this section should be able to sustain a multi-turn build-
 - Extended `src/<import>/paper_*.py` modules; extended `cross_paper.py`.
 - Refreshed `.gaia/{ir.json, beliefs.json, inquiry/}` after `gaia compile && gaia infer`.
 
-**Success criterion.** Same as Turn 1, plus: prior verdicts (merges, dismissals) are visible in `merge_audit.md` and not silently overturned. `gaia check --hole` does not surface holes for claims that already had priors before this turn.
+**Success criterion.** Same as Turn 1 (incl. obligation list empty + hypothesis list investigated), plus: prior verdicts (merges, dismissals) are visible in `merge_audit.md` and not silently overturned. `gaia check --hole` does not surface holes for claims that already had priors before this turn.
 
 ### Turn 3 — Traverse and purge duplication
 

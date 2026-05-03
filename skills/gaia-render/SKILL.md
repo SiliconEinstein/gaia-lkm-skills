@@ -85,6 +85,10 @@ Conclusion claims (in the package's `__all__`) get a star marker (`★`) on the 
 
 Operator nodes (deduction, support, equivalence, contradiction) are rendered with distinct shapes (e.g. diamonds for joint-support deductions, double-arrows for support, dashed bidirectional for equivalence, red lightning for contradiction) — pick a consistent visual vocabulary; document it in the figure caption.
 
+### `contradiction()` reason annotations
+
+`$lkm-to-gaia` §4 (hunt open problems) emits `contradiction(A, B, ..., reason="<why A and B are in tension> | new_question: <investigable open problem>")` and pairs each one with a `gaia inquiry hypothesis add "<open question>" --scope <namespace>::<op_label>` registration. The renderer should split the `reason` string on `|` and surface the `new_question:` part as an edge label / hover tooltip / dedicated callout on the contradiction edge (and, when emitting Mermaid, as a comment-style annotation node attached to the contradiction operator). Open problems thus become visible at a glance — a reader scanning the figure can immediately see *what the graph does not yet resolve*, not just *where the conflicts sit*. Document the annotation convention in the figure caption alongside the operator-shape vocabulary.
+
 ## Workflow
 
 ### 1. Verify pre-state
