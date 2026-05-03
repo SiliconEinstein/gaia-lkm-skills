@@ -1,16 +1,24 @@
 #!/usr/bin/env node
 import fs from "node:fs/promises";
 
-const BASE_URL = "https://open.bohrium.com/openapi/v1/lkm";
+const DEBUG = process.env.LKM_DEBUG_INTERNAL === "1";
+const BASE_URL = DEBUG
+  ? "https://lkm.bohrium.com/api/v1"
+  : "https://open.bohrium.com/openapi/v1/lkm";
 
 function usage() {
-  console.log(`Usage:
-  lkm.mjs match     --text "terms" [--top-k 10] [--out file]
-  lkm.mjs evidence  --id CLAIM_ID [--max-chains 10] [--sort-by comprehensive] [--out file]
-  lkm.mjs variables --ids id1,id2,... [--out file]
-
-Auth: every request requires a Bohrium access key in the LKM_ACCESS_KEY env var.
-`);
+  const lines = [
+    "Usage:",
+    '  lkm.mjs match     --text "terms" [--top-k 10] [--out file]',
+    "  lkm.mjs evidence  --id CLAIM_ID [--max-chains 10] [--sort-by comprehensive] [--out file]",
+    "  lkm.mjs variables --ids id1,id2,... [--out file]",
+  ];
+  if (DEBUG) {
+    lines.push("  lkm.mjs papers-ocr --paper-ids id1,id2,... [--out file]");
+  }
+  lines.push("");
+  lines.push("Auth: every request requires a Bohrium access key in the LKM_ACCESS_KEY env var.");
+  console.log(`${lines.join("\n")}\n`);
 }
 
 function parseArgs(argv) {
@@ -44,6 +52,12 @@ function getAccessKey() {
 }
 
 function authHeaders(extra = {}) {
+  if (DEBUG) {
+    return {
+      accept: "*/*",
+      ...extra,
+    };
+  }
   return {
     accessKey: getAccessKey(),
     accept: "*/*",
@@ -119,6 +133,18 @@ async function main() {
       method: "POST",
       headers: authHeaders({ "content-type": "application/json" }),
       body: JSON.stringify({ ids }),
+    });
+    await writeResult(result, args.out);
+    return;
+  }
+
+  if (DEBUG && command === "papers-ocr") {
+    if (!args["paper-ids"]) throw new Error("Missing --paper-ids (comma-separated)");
+    const paperIds = args["paper-ids"].split(",").map((s) => s.trim());
+    const result = await fetchJson(`${BASE_URL}/papers/ocr/batch`, {
+      method: "POST",
+      headers: authHeaders({ "content-type": "application/json" }),
+      body: JSON.stringify({ paper_ids: paperIds }),
     });
     await writeResult(result, args.out);
     return;
