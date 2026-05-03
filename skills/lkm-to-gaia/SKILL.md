@@ -262,9 +262,9 @@ The exploration is **obligation-driven**: each iteration identifies gaps via `ga
  │                                                             │
  │  6. gaia compile . && gaia infer .                          │
  │                                                             │
- │  7. gaia check --hole . → which claims need priors?         │
- │     gaia inquiry review . → belief context                  │
- │     └─ Pick the most interesting obligation as next target   │
+ │  7. gaia inquiry obligation list → pick next target          │
+ │     (NOT lowest belief — the obligation list drives it)      │
+ │     gaia check --hole . → fill missing priors                │
  │                                                             │
  │  8. Search: find upstream conclusions for the target claim   │
  │      → claim(U) + support([U], P, prior=...)               │
@@ -320,7 +320,7 @@ gaia inquiry obligation add <claim_or_strategy_qid> -c "<concern>"
 
 **6. Compile & infer.** `gaia compile . && gaia infer .`
 
-**7. Review.** Run `gaia check --hole .` and `gaia inquiry review .`. Use domain judgment to identify gaps and mark obligations. Run `gaia inquiry obligation list` and pick the most interesting obligation.
+**7. Review (obligation-driven).** Run `gaia check --hole .` and `gaia inquiry review .` for belief context. Then run `gaia inquiry obligation list` — **the obligation list, not the belief ranking, determines the next target.** Pick the most interesting unresolved obligation. If the list is empty, use domain judgment to identify gaps and mark new obligations. Never mechanically pick the lowest-belief claim — obligations carry the agent's intentional exploration decisions; beliefs are just diagnostic signals.
 
 **8. Search supports.** Search LKM with the target claim (`POST /claims/match`, top-10). Pick conclusion-type claims → `claim(U)` + `support([U], P, prior=...)`.
 
