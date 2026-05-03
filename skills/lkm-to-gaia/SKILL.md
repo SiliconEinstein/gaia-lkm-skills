@@ -26,7 +26,7 @@ discovery -> $evidence-subgraph (raw LKM evidence JSON)
                   (prose article)    (Gaia package)
 ```
 
-Routed via [`$evidence-graph-synthesis`](../evidence-graph-synthesis/SKILL.md) when the user asks for a "Gaia package", "Gaia DSL", "knowledge package", or "formalized into Gaia".
+Routed via [`$orchestrator`](../orchestrator/SKILL.md) when the user asks for a "Gaia package", "Gaia DSL", "knowledge package", or "formalized into Gaia".
 
 ## Input (received from orchestrator)
 
@@ -405,8 +405,8 @@ Incremental mode hands the source fragment back to the host, which appends to `p
 
 Single responsibility: **LKM evidence (raw JSON + orchestrator flag files) → Gaia DSL knowledge package**. Everything else is a sibling skill or downstream consumer.
 
-- **Not a discovery skill.** Discovery is `$evidence-graph-synthesis` + `$lkm-api`. This skill consumes raw evidence JSON + flag files.
-- **Not an orchestrator.** Does not sequence other skills, does not decide which roots to formalize, does not route between siblings. Sequencing is `$evidence-graph-synthesis`'s job.
+- **Not a discovery skill.** Discovery is `$orchestrator` + `$lkm-api`. This skill consumes raw evidence JSON + flag files.
+- **Not an orchestrator.** Does not sequence other skills, does not decide which roots to formalize, does not route between siblings. Sequencing is `$orchestrator`'s job.
 - **Not a graph builder.** `$evidence-subgraph` is a sibling, not a dependency. This skill takes the raw LKM JSON the orchestrator already retrieved; it does not assemble the upstream evidence graph.
 - **Not a render / visualization skill.** Visual presentation is `gaia-render` (sibling) + the publish skill. This skill stops at `gaia compile`-ready source.
 - **Not a reviewer.** Setting reviewed priors, interpreting BP, identifying weak points are the review skill and `gaia.inquiry.run_review`. This skill emits `TODO:review` markers and stops there.

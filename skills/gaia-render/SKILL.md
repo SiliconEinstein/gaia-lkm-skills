@@ -139,7 +139,7 @@ The two skills are complementary, not redundant. A typical workflow uses both: t
 
 Single responsibility: **compiled Gaia output → graph visualization**. Everything else is a sibling skill or downstream consumer.
 
-- **Not a discovery skill.** Discovery is `$evidence-graph-synthesis` + `$lkm-api`. This skill consumes already-compiled IR.
+- **Not a discovery skill.** Discovery is `$orchestrator` + `$lkm-api`. This skill consumes already-compiled IR.
 - **Not a builder.** It does not write Gaia DSL — `$lkm-to-gaia` does. It does not edit `plan.gaia.py` — the gaia-discovery host loop does.
 - **Not a runner.** It does not invoke `gaia compile` or `gaia infer`. The caller is responsible for the pre-state.
 - **Not the wiki renderer.** Narrative Markdown reproduction is `$gaia-render-obsidian`'s job. This skill emits a single graph artifact, not a vault.

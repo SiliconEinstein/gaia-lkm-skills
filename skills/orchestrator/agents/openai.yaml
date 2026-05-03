@@ -1,0 +1,4 @@
+interface:
+  display_name: "Orchestrator (LKM ↔ Gaia loop)"
+  short_description: "Universal entry point that sequences $lkm-api, $evidence-subgraph, $lkm-to-gaia, $gaia-render, $scholarly-synthesis into the iterative LKM↔gaia loop"
+  default_prompt: "Use $orchestrator to route an LKM-driven request — match user intent to one of the five turn shapes (cold-start build / extend / verdict on contradictions / traverse and purge duplication / visualize) and grow the <domain>-gaia/ knowledge package."
