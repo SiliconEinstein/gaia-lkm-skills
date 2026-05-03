@@ -299,7 +299,7 @@ equivalence(C, D, reason="the meta-claim C names the relationship expressed by D
 ```
 where D is `contradiction(A, B)` or `equivalence(A, B)`.
 
-**4. Hunt contradictions (MANDATORY).** For each new atomic claim, use **scientific falsification** to design a search that would surface counter-evidence.
+**4. Hunt contradictions (MANDATORY — NEVER SKIP).** Every new claim, without exception, must be checked for contradictions. No claim is too obvious, too well-established, too narrow, or too minor to skip this step. Even a claim that looks like an uncontroversial statement of fact may have counter-evidence somewhere in the literature. For each atomic claim, use **scientific falsification** to design a search that would surface counter-evidence.
 
 **Principle: retain the subject, challenge the assertion.** Keep what the claim is *about* (the specific entity, system, or phenomenon). Add terms that would appear in a source that reached a *different* conclusion about the same subject.
 
