@@ -10,3 +10,4 @@ dist/
 *.fls
 *.fdb_latexmk
 *.xdv
+docs/internal/
