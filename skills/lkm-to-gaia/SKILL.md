@@ -253,9 +253,11 @@ The exploration is **obligation-driven**: each iteration identifies gaps via `ga
  │  3. Decompose — break compound claims into atomic propositions│
  │     claim(A) + claim(B) + contradiction(A,B) or equivalence │
  │                                                             │
- │  4. Hunt contradictions (NEVER SKIP — every new claim)        │
- │     → contradiction(P, X, prior=...)                        │
- │     → gaia inquiry obligation add <qid> -c "..."            │
+ │  4. Hunt open problems (NEVER SKIP — every new claim)        │
+ │     Multiple strategies: S2, keyword-drop, extreme-case,     │
+ │     citation-based. Goal: find research-worthy tensions.     │
+ │     → contradiction(A, B, prior=..., reason="| new_question:")│
+ │     → gaia inquiry hypothesis add "..." --scope <op>        │
  │                                                             │
  │  5. Mark suspicions on reasoning chains or weak premises     │
  │     → gaia inquiry obligation add <qid> -c "..."            │
@@ -271,8 +273,9 @@ The exploration is **obligation-driven**: each iteration identifies gaps via `ga
  │                                                             │
  │  9. Back to step 1 — bootstrap new claims (deduction if      │
  │     evidence chain available), refine, decompose, continue.    │
- │     Repeat until: obligation list empty, 0 holes,             │
- │     0 unreviewed warrants (or user-specified goal met).       │
+ │     Repeat until: obligation list empty, hypothesis list      │
+ │     investigated, 0 holes, 0 unreviewed warrants              │
+ │     (or user-specified goal met).                             │
  │                                                             │
  └─────────────────────────────────────────────────────────────┘
 ```
@@ -301,17 +304,68 @@ equivalence(C, D, reason="the meta-claim C names the relationship expressed by D
 ```
 where D is `contradiction(A, B)` or `equivalence(A, B)`.
 
-**4. Hunt contradictions (MANDATORY — NEVER SKIP).** Every new claim, without exception, must be checked for contradictions. No claim is too obvious, too well-established, too narrow, or too minor to skip this step. Even a claim that looks like an uncontroversial statement of fact may have counter-evidence somewhere in the literature. For each atomic claim, use **scientific falsification** to design a search that would surface counter-evidence.
+**4. Hunt contradictions (MANDATORY — NEVER SKIP).**
 
-**Principle: retain the subject, challenge the assertion.** Keep what the claim is *about* (the specific entity, system, or phenomenon). Add terms that would appear in a source that reached a *different* conclusion about the same subject.
+Every new claim, without exception, must be checked for contradictions. No claim is too obvious, too well-established, too narrow, or too minor to skip this step.
 
-- Claim: "PBE BeSe gap = 2.51 eV" → search: "BeSe band gap measured optical absorption different value"
-- Claim: "HSE06 ZnO within 10% of experiment" → search: "HSE06 ZnO underestimates gap by more than 0.5 eV"
-- Claim: "GW within 0.1-0.2 eV of experiment" → search: "GW quasiparticle gap deviates from experiment dependence starting point"
+**The goal is NOT just strict logical contradictions ("cannot both be true"). The goal is to find OPEN PROBLEMS — tensions, boundary conditions, and unresolved questions that are worth investigating further.**
 
-**Do NOT:** drop the specific system (loses relevance), mechanically invert the text (API may timeout), or search for "limitations" (returns consensus).
+A contradiction candidate exists when:
+- **Experiment vs theory/computation conflict** — experimental measurement and theoretical prediction for the same system disagree beyond experimental error bars. **This is the most important category** — it directly reveals where our computational models fail to describe reality.
+- **Theory/theory or computation/computation conflict** — two different theoretical methods or computational approaches predict **very different values** for the same physical quantity. **These are equally important** — when DFT and GW disagree by 2+ eV for the same material, one (or both) is wrong, and we need to know which.
+- Two claims about the same quantity give **mutually exclusive values** (strict logical contradiction)
+- A claim's conclusion is based on a **test set that excludes** the materials or functionals another claim is about (coverage gap)
+- A claim's **numerical error bound** is tighter or looser than another claim about the same method (quantitative inconsistency)
+- Two claims backed by **different evidence chains** reach **different conclusions** about the same topic
 
-For each contradiction candidate found: `contradiction(P, X, prior=...)` + `gaia inquiry obligation add <qid> -c "resolve: ..."`.
+**What makes a good open problem:**
+- It reveals genuine **uncertainty** in the field — experts could reasonably disagree
+- Answering it would **change** how we understand method accuracy or material properties
+- It can be **investigated** by further literature search or computation
+- It connects to **specific, testable** predictions (not vague "needs more research")
+
+**Search strategy — use MULTIPLE strategies for each claim (at least 3):**
+
+For each claim, design searches using different strategies. **Never rely on a single search.**
+
+| Strategy | Description | Example |
+|----------|-------------|---------|
+| **S2 (scientific falsification)** | Retain the specific subject/system, challenge the assertion | Claim: "HSE06 overestimates gaps by 5-10%" → search: "HSE06 underestimates band gap ZnO GaN diamond" |
+| **Keyword-dropping** | Remove qualifiers (e.g., "most", "typically", "common") to find edge cases where the claim breaks | Claim: "GLLBSC within 10-20% for common semiconductors" → search: "GLLBSC band gap error oxide insulator" |
+| **Same-system-different-method** | Search for the same material/system but with a different computational approach | Claim: "mBJ comparable to hybrid accuracy" → search: "semiconductor band gap accuracy GGA metaGGA hybrid comparison benchmark" |
+| **Extreme-case probing** | Search for the material class or physical condition where the claim is most likely to break | Claim: "revTPSS PBEsol-level lattice constants" → search: "revTPSS lattice constant error larger than PBEsol" |
+| **Citation-based (IR data)** | Use the package's own IR to find claims backed by different evidence chains that reach different conclusions. Check: do the two claims use the same test set? The same functionals? Do their source papers cite each other? | Find claims where A's test set excludes the materials/functionals B is about, or where A's conclusion doesn't account for B's evidence. |
+
+**Data sources — use ALL available:**
+1. **LKM API** (`POST /claims/match`) — search for counter-evidence in the literature
+2. **Package IR** (`.gaia/ir.json`) — find internal tensions between claims backed by different evidence
+3. **Citation data** — check which papers back each side, whether test sets overlap, whether functionals compared are the same
+
+**For each contradiction candidate found, write:**
+```python
+<op_label> = contradiction(A, B, prior=<float>,
+    reason="<why A and B are in tension — what specifically is the disagreement> "
+    "| new_question: <the open problem this reveals — phrased as a specific, investigable question>")
+```
+
+**And register the open question in inquiry:**
+```bash
+gaia inquiry hypothesis add "<open question>" --scope <namespace>::<op_label>
+```
+
+**Prior guidelines for contradiction:**
+- Experiment vs theory/computation on the same quantity → 0.90–0.95 (highest — experiment is the ultimate arbiter)
+- Theory/theory or computation/computation on the same quantity (different methods, same system) → 0.85–0.92
+- Direct logical conflict on the same quantity (same paradigm) → 0.85–0.95
+- Test set coverage gap (A's conclusion doesn't account for B's evidence) → 0.70–0.82
+- Quantitative inconsistency (different error bounds for same method) → 0.80–0.90
+- Unclear → 0.50–0.60 (still worth flagging as hypothesis)
+
+**Avoid echo chambers.** When BP resolves a contradiction strongly in one direction (one side belief > 0.95, other < 0.1), search for evidence supporting the **weak side** before accepting the resolution.
+
+**Sub-agent parallelization.** For large batches of claims (50+), spawn Explore sub-agents in parallel, each analyzing a subset. Each sub-agent reads the claims, designs S2 queries for each, checks for internal contradictions within its batch and against the existing package, and reports all candidates. The main agent then runs the actual LKM S2 searches, consolidates findings, and writes contradiction() operators.
+
+**Never skip this step.** Claims that look like they "obviously" have no contradictions are often the ones where the most interesting open problems hide — a claim that is universally accepted but never rigorously tested across diverse conditions is exactly where a contradiction might surface.
 
 **5. Mark suspicions.** Flag unreliable reasoning chains or premises:
 ```bash
