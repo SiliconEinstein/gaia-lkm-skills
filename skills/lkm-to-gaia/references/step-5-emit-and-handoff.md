@@ -56,8 +56,11 @@ Before handoff:
 - Every `deduction(...)` is factor-derived; no-chain source claims have no
   fabricated deductions.
 - Cross-paper operators are in `cross_paper.py`.
-- Audit files reflect contradictions, open questions, equivalences, merges,
-  dismissals, and unresolved decisions.
+- Accepted contradictions use direct `contradiction(A, B)` per
+  `mapping-contract.md` §4, with `open_problem:` in the reason and a high
+  operator prior.
+- Audit files reflect accepted contradictions, hypothesis-only open problems,
+  equivalences, merges, dismissals, and unresolved decisions.
 
 ## Caller Quality Gate
 
@@ -82,8 +85,8 @@ Return:
 - files created or changed,
 - raw LKM payloads consumed,
 - chain-backed vs no-chain source claims added,
-- deductions, supports, equivalences, contradictions, and audit-only open
-  questions added,
+- deductions, supports, equivalences, accepted contradictions, and
+  hypothesis-only open problems added,
 - priors added or still needed,
 - inquiry obligations/hypotheses opened or closed,
 - commands the caller ran and pass/fail status,

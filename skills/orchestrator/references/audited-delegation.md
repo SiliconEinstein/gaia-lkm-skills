@@ -17,7 +17,7 @@ Default loop:
 4. **Require a strict return.** Each subagent must report files changed, commands run, pass/fail status, open obligations, rule deviations, and audit notes.
 5. **Audit.** The orchestrator independently reads the returned source/audit files and reruns the relevant checks. Do not rely only on the subagent summary.
 6. **Repair.** If the artifact violates a skill rule, delegate a focused repair task with the exact audit finding. Iterate until the artifact passes or the blocker is explicit.
-7. **Synthesize.** If multiple validated artifacts must become one package, use a separate synthesis task. Synthesis adds only grounded cross-artifact wiring and logs every merge, non-merge, equivalence, contradiction, or dismissal.
+7. **Synthesize.** If multiple validated artifacts must become one package, use a separate synthesis task. Synthesis adds only grounded cross-artifact wiring and logs every merge, non-merge, equivalence, accepted contradiction, hypothesis-only open problem, or dismissal.
 8. **Verify.** Run the turn's final success checks from the target package. For Gaia packages this means `gaia compile .`, `gaia check --hole .`, and `gaia infer .`; external Gaia CLI/publish workflow commands also rerun their target-specific checks.
 9. **Preserve audit trail.** Copy or append all raw inputs, subagent audit logs, repair notes, and synthesis decisions under `artifacts/lkm-discovery/` or the package's chosen artifact directory.
 

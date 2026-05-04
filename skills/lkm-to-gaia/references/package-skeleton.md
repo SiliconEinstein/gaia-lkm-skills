@@ -14,7 +14,7 @@ on this template alone.
   src/<import_name>/
     __init__.py               # re-exports + `__all__` (exported root conclusions only)
     paper_<key>.py            # one module per source paper (claims + deductions for chains)
-    cross_paper.py            # cross-paper operators (equivalence, contradiction, induction)
+    cross_paper.py            # cross-paper operators and contradiction links
     priors.py                 # leaf-claim priors
   artifacts/
     lkm-discovery/
@@ -22,7 +22,7 @@ on this template alone.
       mapping_audit.md        # per-claim and per-pair transformation log
       merge_decisions.todo    # surfaced ambiguous pairs (if any)
       input/                  # verbatim copy of input files (raw evidence JSON + .md flag files)
-      dismissed/              # contradiction pairs the agent dismissed as false alarms
+      dismissed/              # candidate tension pairs dismissed as false alarms
 ```
 
 ## Naming conventions
@@ -117,7 +117,7 @@ from gaia.lang import (
 ```python
 """cross_paper — operators that span source papers.
 
-Equivalences, contradictions, and cross-validations identified by the
+Equivalences, accepted contradictions, and cross-validations identified by the
 agent during Gaia formalization.
 """
 from gaia.lang import (
@@ -129,7 +129,8 @@ from gaia.lang import (
 from .paper_liu2015 import gcn_66ac13c8
 from .paper_koptsev2011 import gcn_95e896eb
 
-<equivalence(...), contradiction(...), induction(...) calls>
+# Accepted contradictions follow mapping-contract.md §4.
+<equivalence(...), contradiction(...), support(...), induction(...) calls>
 ```
 
 ## `references.json` template
@@ -179,7 +180,7 @@ PRIORS = {
 - `mapping_audit.md` — per-claim and per-pair transformation log
 - `merge_decisions.todo` — surfaced ambiguous pairs (agent couldn't decide merge vs keep)
 - `input/` — verbatim copy of all input files (raw evidence JSON, `contradictions.md`, `equivalences.md`, `candidates.md`)
-- `dismissed/` — contradiction pairs the agent dismissed as false alarms, with rationale
+- `dismissed/` — candidate tension pairs the agent dismissed as false alarms, with rationale
 
 ## What ships in `artifacts/lkm-discovery/mapping_audit.md`
 
@@ -202,9 +203,9 @@ A flat decision log:
 
 ## Contradictions
 
-| pair | a | b | decision | dsl_action |
-|---|---|---|---|---|
-| (none in this run) | | | | |
+| pair | open_problem | decision | dsl_action |
+|---|---|---|---|
+| (none in this run) | | | |
 
 ## Dismissed
 

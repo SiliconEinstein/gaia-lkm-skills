@@ -175,7 +175,7 @@ and rerun.
   checkpoint unless the user supplied a narrow target.
 - `contradictions.md` and `equivalences.md` are discovery/audit flag files, not
   executable truth by themselves.
-- Strict contradiction/open-question behavior is canonical in
+- Open-question-first contradiction handling is canonical in
   `$lkm-to-gaia/references/mapping-contract.md` §4.
 
 ## Delegation

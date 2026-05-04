@@ -74,8 +74,10 @@ obligations, start a new five-step iteration with the new target.
 - Claims must be self-contained and preserve `lkm_original`, `lkm_id`, and
   `source_paper` when available.
 - No `prior` kwarg on `claim(...)`; leaf priors live in `priors.py`.
-- Strict contradictions follow `mapping-contract.md` §4. Other tensions are
-  audit rows plus optional inquiry hypotheses, not Gaia operators.
+- Contradiction handling follows `mapping-contract.md` §4: prioritize open
+  questions, then final-scan accepted scientific contradictions into direct
+  `contradiction(A, B)` operators; other useful tensions remain audit rows plus
+  optional inquiry hypotheses.
 - Audit-trail files are cumulative and must not silently overwrite prior
   verdicts.
 - Package-level quality gates are run by the orchestrator/caller after source

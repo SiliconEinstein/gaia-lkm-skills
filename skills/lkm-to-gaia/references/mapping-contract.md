@@ -103,60 +103,80 @@ After:   U1 ──support──→ shared_factor ←──support── U2
 
 Judge the shared factor's prior normally (cap 0.9).
 
-## 4. Contradiction and open-question logging
+## 4. Open-question-first contradiction handling
 
 This section is the canonical policy for contradiction handling in the local
-LKM→Gaia workflow.
+LKM->Gaia workflow.
 
-Executable `contradiction()` is only for strict same-scope incompatibility:
-both sides cannot simultaneously be true once system/material, quantity,
-method/model, temperature, pressure/field, sample regime, approximation domain,
-and boundary conditions are made explicit. Accepting A must force rejection of
-B, or vice versa.
+The workflow prioritizes open questions during discovery and mapping. When two
+source claims `A` and `B` appear to be in tension, first record the scientific
+open problem they raise. The open problem belongs in
+`artifacts/lkm-discovery/contradictions.md`, `mapping_audit.md`, and, when it
+may drive later work, `.gaia/inquiry/` as a hypothesis.
 
-Many valuable discoveries are not strict contradictions. Model-applicability
-gaps, boundary-condition tensions, coverage gaps, quantitative surprises, and
-unresolved mechanisms are logged as open questions and may get inquiry
-hypotheses, but they do not become executable Gaia operators unless the
-same-scope gate is passed.
+At the final contradiction scan, promote a candidate to executable Gaia DSL when
+it is a scientifically meaningful, adjudicable conflict: the pair concerns the
+same scientific object/question closely enough that resolving the open problem
+would confirm, falsify, or materially qualify at least one side of `A`/`B`.
+This admission standard is intentionally broader than strict logical identity
+of scope. Differences in method, finite-size treatment, extrapolation protocol,
+approximation domain, or benchmark regime do not by themselves block promotion
+when the field-facing question is genuinely the same.
 
-Strict contradiction signals:
-- Two claims assert mutually exclusive values for the same quantity under the same system, method/regime, and conditions.
-- Two claims assert opposite signs or directions for the same effect under the same scope.
-- A theoretical prediction and an experimental observation for the same system disagree beyond stated uncertainty, and the theory claim is explicitly asserted to apply to that system/condition.
-- Two theoretical or computational methods predict mutually incompatible qualitative outcomes for the same system and target quantity under comparable conditions.
-
-Open-question-only signals:
-- A model prediction fails after being applied outside its own assumptions, e.g. an isotropic model applied to an anisotropic material.
-- Different boundary conditions, materials, sample quality, field/temperature windows, or measurement protocols can explain both results.
-- A source itself lists applicability caveats that make both sides simultaneously true.
-- A test set or benchmark excludes the material/functionals in another claim.
-- A result is surprising, incomplete, or mechanism-ambiguous but not logically incompatible.
-
-Strict contradictions come from **two sources**:
-
-**Source A — Orchestrator discovery flags** (`contradictions.md` from discovery). For each flagged pair:
-
-| Situation | DSL output |
-|---|---|
-| **Promoted** (same-scope incompatibility) | `contradiction(a, b, reason="... \| new_question: <...>", prior=<float>)` |
-| **Open question only** (model applicability, boundary-condition gap, coverage gap, unclear mechanism) | Not emitted. Append to audit log and optionally add `gaia inquiry hypothesis`. |
-| **Dismissed** (false alarm) | Not emitted. Copied to `artifacts/lkm-discovery/dismissed/`. |
-
-**Source B — Upstream/internal search.** While searching upstream for a premise P, or while comparing new claims against existing package claims, the agent may find claims that **can't both be true** with P:
+Accepted scientific contradictions use the direct operator:
 
 ```python
-contradiction(P, <conflicting_claim>, reason="found during upstream search for P: <why>", prior=<float>)
+<op_label> = contradiction(
+    A,
+    B,
+    prior=0.95,
+    reason="<why these claims are adjudicably conflicting> | open_problem: <specific discriminating question>",
+)
 ```
 
-Warrant prior for executable contradiction:
-- Experiment vs theory/computation on the same scoped quantity → 0.90–0.95.
-- Direct conflict on the same quantity and paradigm → 0.85–0.90.
-- Same-system method/method conflict with comparable conditions → 0.85–0.92.
+The contradiction operator prior is the warrant strength that this pair should
+be treated as an adjudicable scientific contradiction, not a prior on either
+claim being true. Use `0.95` for clear accepted contradictions. Use `0.85–0.92`
+only when the pair is accepted but the scope match or discriminating question is
+less crisp. Do not lower the operator prior merely because the candidate came
+from different methods; method/method conflicts are often the point of the
+contradiction.
 
-If different boundary conditions may explain it, or if the conflict depends on
-applying a model outside its assumptions, do not emit `contradiction()`; log an
-open question instead.
+### Promotion signals
+
+Promote a candidate to `contradiction(A, B)` when one or more of these apply:
+
+- The claims assert opposite values, signs, orderings, trends, or qualitative
+  conclusions about the same system/material, quantity/effect, or scientific
+  mechanism.
+- The claims use different methods or approximations but are commonly read as
+  answering the same field-facing question.
+- The disagreement can be tested by a concrete calculation, measurement,
+  benchmark, extrapolation, or reanalysis.
+- Resolving that test would make at least one claim, interpretation, or
+  unqualified conclusion untenable or materially qualified.
+
+For example, the low-density 2D homogeneous-electron-gas effective-mass tension
+where treatments can put `m*/m` on opposite sides of unity is admissible as an
+accepted contradiction: the open problem is whether the sign and magnitude of
+the mass renormalization survive matched treatment of correlation,
+finite-size/extrapolation, and approximation regime.
+
+### Hypothesis-only tensions
+
+Keep a candidate as audit/hypothesis-only when the pair is interesting but not
+yet promotable:
+
+- the open problem is still vague or not discriminating,
+- the scope relation is unknown because content/provenance is insufficient,
+- the claims address adjacent but not adjudicably conflicting questions,
+- the candidate is a model-applicability gap, coverage gap, or benchmark
+  omission without a concrete test,
+- the candidate is a false alarm, duplicate wording, or unsupported search lead.
+
+For hypothesis-only rows, record why the pair is scientifically interesting,
+the best current open problem, why no `contradiction(...)` operator was emitted,
+and what query or evidence would be needed to promote it later.
 
 ## 5. `data.papers` → `references.json`
 

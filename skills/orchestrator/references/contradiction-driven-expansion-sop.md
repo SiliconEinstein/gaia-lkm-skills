@@ -5,7 +5,7 @@ contradictions, or grow an existing Gaia package through contradiction-driven
 LKM search.
 
 This SOP owns the exploration workflow. It does not redefine contradiction
-semantics: strict contradiction and open-question behavior remains canonical in
+semantics: open-question-first contradiction handling remains canonical in
 `$lkm-to-gaia/references/mapping-contract.md` §4.
 
 ## Primary Path
@@ -14,9 +14,9 @@ semantics: strict contradiction and open-question behavior remains canonical in
 explicit contradiction request
   -> inspect existing package, audit state, and inquiry state
   -> select target claims, branches, or open questions
-  -> query LKM for candidate conflicts
+  -> query LKM for candidate conflicts and discriminating open problems
   -> preserve raw payloads and candidate-pair records
-  -> classify candidates by the mapping contract
+  -> record open problems and classify candidates by the mapping contract
   -> user-selection checkpoint for non-trivial package changes
   -> $lkm-to-gaia refresh mode emits selected DSL/audit updates
   -> Gaia quality gates
@@ -85,7 +85,8 @@ Each row should include:
 - query text that found the candidate,
 - scope comparison across system, quantity, method/model, regime, and
   conditions,
-- classification: `promoted`, `open_question_only`, `dismissed`, or
+- open problem or discriminating question raised by the pair,
+- classification: `accepted_contradiction`, `hypothesis_only`, `dismissed`, or
   `needs_user`,
 - rationale and next action.
 
@@ -93,11 +94,13 @@ Each row should include:
 
 Classify each candidate by the mapping contract:
 
-- **Promoted:** strict same-scope incompatibility. Queue the pair for
-  `$lkm-to-gaia` refresh so the relevant claims and `contradiction(...)`
-  operator can be emitted.
-- **Open question only:** scientifically interesting tension that fails the
-  strict gate. Keep it in audit files and add an inquiry hypothesis when useful.
+- **Accepted contradiction:** the pair satisfies `mapping-contract.md` §4's
+  relaxed final-scan standard. Queue it for `$lkm-to-gaia` refresh so direct
+  `contradiction(A, B)` is emitted with the associated open problem and high
+  operator prior.
+- **Hypothesis only:** scientifically interesting tension that raises a useful
+  open problem but is not yet promotable. Keep it in audit files and add an
+  inquiry hypothesis when useful.
 - **Dismissed:** false alarm, duplicate wording, different scope, or insufficient
   provenance. Preserve rationale under `dismissed/` or the audit row.
 - **Needs user:** scientifically ambiguous or scope-sensitive; stop for user

@@ -60,6 +60,11 @@ claim priors at 0.90. Do not lower a prior solely because the claim has
 `total_chains=0`; judge content, provenance clarity, method/scope specificity,
 and scientific plausibility.
 
+Accepted `contradiction(...)` operators from Step 3 carry their own high warrant
+prior in source, normally `0.95` as defined in `mapping-contract.md` §4. That
+operator prior is not a leaf-claim prior and should not be mirrored into
+`priors.py`.
+
 ## Inquiry Obligations
 
 Mark unreliable reasoning chains or weak premises:
@@ -72,7 +77,7 @@ Use `gaia inquiry obligation list` as the exploration TODO list. Do not
 mechanically pick the lowest-belief claim; obligations carry intentional
 exploration choices, while beliefs are diagnostics.
 
-Register contradiction/open-question hypotheses from Step 3 with:
+Register open-question hypotheses from Step 3 with:
 
 ```bash
 gaia inquiry hypothesis add "<open question>" --scope <namespace>::<label>

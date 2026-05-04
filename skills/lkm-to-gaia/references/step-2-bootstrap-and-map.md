@@ -87,19 +87,18 @@ For each side, write an atomic claim with explicit system, method, quantity,
 value, and conditions. If the evidence does not support two self-contained
 atomic claims, keep the original compound claim and log the limitation.
 
-Connect decomposed claims only under strict semantic gates:
+Connect decomposed claims through `mapping-contract.md` §4:
 
-- Same-scope incompatibility -> `contradiction(A, B, reason="...", prior=...)`.
+- Accepted scientific contradiction -> emit direct `contradiction(A, B)` with
+  the associated `open_problem:` reason and high operator prior.
 - Same proposition -> `equivalence(A, B, reason="...", prior=...)`.
-- Model-applicability tension, boundary-condition gap, coverage gap, or
-  mechanism ambiguity -> no Gaia operator; log an audit row and optional
-  inquiry hypothesis.
+- Useful but not-yet-promoted tension -> no Gaia operator; log an audit row and
+  optional inquiry hypothesis.
 
-Preserve the original LKM meta-claim as `claim(C, lkm_original="...")`. When a
-strict operator represents the meta-claim, link the meta-claim to the operator
-with `equivalence(C, D, reason="the meta-claim names the relationship expressed
-by D")`. If the result is audit-only, keep C and record the decomposition in
-the audit trail instead.
+Preserve the original LKM meta-claim as `claim(C, lkm_original="...")`. When an
+accepted contradiction represents the meta-claim, follow the operator rules in
+`mapping-contract.md` §4. If the result is hypothesis-only, keep C and record
+the decomposition in the audit trail instead.
 
 ## References And Modules
 
@@ -126,7 +125,8 @@ Before moving to Step 3:
   and have `content_missing=true` audit entries.
 - Search leads outside accepted chains do not enter executable DSL.
 - No-chain source claims are leaf/source claims only.
-- Compound claims have been decomposed or explicitly retained with reason.
+- Compound claims have been decomposed according to `mapping-contract.md` §4 or
+  explicitly retained with reason.
 - References and module placement decisions are ready.
 - Mark Step 2 complete, mark Step 3 in progress, then load
   `step-3-contradictions-and-open-questions.md`.

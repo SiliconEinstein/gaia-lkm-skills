@@ -9,14 +9,10 @@ broad contradiction-discovery pass.
 Read `mapping-contract.md` §4 before making any contradiction decision. If this
 file and the mapping contract disagree, the mapping contract wins.
 
-Executable `contradiction()` is only for strict same-scope incompatibility:
-both sides cannot simultaneously be true once system/material, quantity,
-method/model, temperature, pressure/field, sample regime, approximation domain,
-and boundary conditions are explicit. Accepting A must force rejection of B, or
-vice versa.
-
-Research-worthy tensions that fail the strict gate are open questions, not Gaia
-operators.
+`mapping-contract.md` §4 is the sole authority for contradiction semantics. In
+this step, prioritize open-question discovery, then run a final scan that either
+emits direct `contradiction(A, B)` for accepted scientific contradictions or
+keeps the item as hypothesis/audit-only.
 
 ## Baseline Sources To Check
 
@@ -49,53 +45,70 @@ Record:
 - raw input filename(s),
 - scope comparison across system/material, quantity, method/model, conditions,
   and regime,
-- verdict: `promoted`, `open_question_only`, `dismissed`, or
+- open problem or discriminating question raised by the pair,
+- verdict: `accepted_contradiction`, `hypothesis_only`, `dismissed`, or
   `needs_more_evidence`,
 - rationale and next action.
 
-## Strict Contradiction Output
+## Open-Question-First Review
 
-For each promoted strict contradiction, write:
+For every plausible tension, ask the model to name the best field-facing open
+problem before deciding whether to emit an operator. Register useful open
+problems even when the pair is not yet a Gaia contradiction:
+
+```bash
+gaia inquiry hypothesis add "<open problem>" --scope <namespace>::<label>
+```
+
+Do not wait for perfect contradiction certainty before recording the hypothesis;
+the hypothesis is how later refreshes remember what to test.
+
+## Accepted Contradiction Output
+
+For each final-scan `accepted_contradiction`, emit direct
+`contradiction(A, B)`:
 
 ```python
 <op_label> = contradiction(
     A,
     B,
-    prior=<float>,
-    reason="<why A and B cannot both be true> | new_question: <specific investigable open problem>",
+    prior=0.95,
+    reason="<why A and B are an adjudicable scientific conflict> | open_problem: <specific discriminating question>",
 )
 ```
 
-The `reason` field must include `new_question:`. If a specific investigable
-question is not yet available, use:
+The `reason` field must include `open_problem:`. If no specific open problem can
+be written, the candidate is not ready for `accepted_contradiction`; keep it as
+`hypothesis_only`.
 
-```text
-new_question: no specific investigable question identified yet
-```
-
-When `new_question:` contains a specific investigable question, register it:
+Register the same open problem:
 
 ```bash
-gaia inquiry hypothesis add "<open question>" --scope <namespace>::<op_label>
+gaia inquiry hypothesis add "<open problem>" --scope <namespace>::<op_label>
 ```
 
-Prior ranges:
+Warrant prior ranges for accepted contradiction operators:
 
-- Experiment vs theory/computation on the same scoped quantity: 0.90–0.95.
-- Direct conflict on the same quantity and paradigm: 0.85–0.90.
-- Same-system method/method conflict with comparable conditions: 0.85–0.92.
+- Clear accepted contradiction: `0.95`.
+- Accepted but less crisp scope/test relation: `0.85–0.92`.
+- Do not lower the operator prior solely because the pair is method/method,
+  theory/computation, or finite-size/extrapolation mediated.
 
-## Open-Question-Only Output
+## Hypothesis-Only Output
 
-For model-applicability tensions, boundary-condition gaps, coverage gaps,
-quantitative surprises, unclear mechanisms, or any under-scoped candidate:
+For tensions that raise useful open problems but do not yet satisfy
+`mapping-contract.md` §4's final promotion standard:
 
-- write no Gaia operator,
+- write no Gaia `contradiction(...)` operator,
 - append a row to `artifacts/lkm-discovery/contradictions.md` or a topic audit
   file,
-- include raw LKM anchors, why it is scientifically interesting, why it fails
-  the strict contradiction gate, and the next query,
+- include raw LKM anchors, why it is scientifically interesting, the open
+  problem it raises, why it is not yet accepted as a contradiction, and the next
+  query,
 - add an inquiry hypothesis scoped to the most relevant claim when useful.
+
+Dismiss false alarms, duplicate wording, and unsupported search leads with an
+explicit rationale.
 
 ## Step-Completion Gate
 
@@ -103,9 +116,9 @@ Before moving to Step 4:
 
 - Every new claim has completed baseline screening against available package and
   audit context.
-- Strict same-scope conflicts have Gaia operators plus scoped inquiry
-  hypotheses when a specific investigable `new_question` exists.
-- Non-strict tensions are audit rows, not operators.
+- Accepted contradictions have direct `contradiction(A, B)` operators with an
+  `open_problem:` reason and high operator prior.
+- Non-promoted but useful tensions are preserved as hypothesis/audit-only rows.
 - False alarms are logged or dismissed with reason.
 - Mark Step 3 complete, mark Step 4 in progress, then load
   `step-4-supports-priors-and-review.md`.
