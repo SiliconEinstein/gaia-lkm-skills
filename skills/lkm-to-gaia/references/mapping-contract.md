@@ -123,16 +123,29 @@ of scope. Differences in method, finite-size treatment, extrapolation protocol,
 approximation domain, or benchmark regime do not by themselves block promotion
 when the field-facing question is genuinely the same.
 
-Accepted scientific contradictions use the direct operator:
+Accepted scientific contradictions use the direct operator. Name the operator
+after the two sides so graph views and review output make the conflict visible
+without opening metadata:
 
 ```python
-<op_label> = contradiction(
+<side_a>_vs_<side_b>[_<quantity_or_regime>] = contradiction(
     A,
     B,
     prior=0.95,
     reason="<why these claims are adjudicably conflicting> | open_problem: <specific discriminating question>",
 )
 ```
+
+Label rules:
+- Prefer `<side_a>_vs_<side_b>` with short semantic side names, e.g.
+  `dmc_vs_gw_mass_enhancement`.
+- Add a quantity/regime suffix when needed to disambiguate, e.g.
+  `low_density_dmc_vs_gw_mass_enhancement`.
+- Keep the label a valid Gaia/Python identifier: lowercase letters, digits, and
+  underscores only.
+- Do not name the node `scientific_inconsistency_*`, `paradox_*`, or a generic
+  `contradiction_*`; the operator kind already supplies the relation semantics,
+  while the label should identify the two conflicting sides.
 
 The contradiction operator prior is the warrant strength that this pair should
 be treated as an adjudicable scientific contradiction, not a prior on either
@@ -141,6 +154,18 @@ only when the pair is accepted but the scope match or discriminating question is
 less crisp. Do not lower the operator prior merely because the candidate came
 from different methods; method/method conflicts are often the point of the
 contradiction.
+
+In audit rows, record the taxonomy explicitly:
+
+```text
+decision: accepted_contradiction
+relation_type: scientific_inconsistency
+```
+
+`scientific_inconsistency` is the audit/taxonomy class for accepted
+contradictions under this workflow. It is not the Gaia node label. Avoid
+`paradox` as a formal relation type; it may be used only in synthesis prose when
+appropriate for the field.
 
 ### Promotion signals
 

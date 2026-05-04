@@ -57,8 +57,9 @@ Before handoff:
   fabricated deductions.
 - Cross-paper operators are in `cross_paper.py`.
 - Accepted contradictions use direct `contradiction(A, B)` per
-  `mapping-contract.md` §4, with `open_problem:` in the reason and a high
-  operator prior.
+  `mapping-contract.md` §4, with an `xx_vs_yy` label, `open_problem:` in the
+  reason, high operator prior, and audit
+  `relation_type: scientific_inconsistency`.
 - Audit files reflect accepted contradictions, hypothesis-only open problems,
   equivalences, merges, dismissals, and unresolved decisions.
 

@@ -66,10 +66,11 @@ the hypothesis is how later refreshes remember what to test.
 ## Accepted Contradiction Output
 
 For each final-scan `accepted_contradiction`, emit direct
-`contradiction(A, B)`:
+`contradiction(A, B)` using the `xx_vs_yy` label policy in
+`mapping-contract.md` §4:
 
 ```python
-<op_label> = contradiction(
+<side_a>_vs_<side_b>[_<quantity_or_regime>] = contradiction(
     A,
     B,
     prior=0.95,
@@ -80,6 +81,13 @@ For each final-scan `accepted_contradiction`, emit direct
 The `reason` field must include `open_problem:`. If no specific open problem can
 be written, the candidate is not ready for `accepted_contradiction`; keep it as
 `hypothesis_only`.
+
+The audit row for an emitted contradiction must include:
+
+```text
+decision: accepted_contradiction
+relation_type: scientific_inconsistency
+```
 
 Register the same open problem:
 
@@ -116,8 +124,10 @@ Before moving to Step 4:
 
 - Every new claim has completed baseline screening against available package and
   audit context.
-- Accepted contradictions have direct `contradiction(A, B)` operators with an
-  `open_problem:` reason and high operator prior.
+- Accepted contradictions have direct `contradiction(A, B)` operators whose
+  labels identify both sides with the `xx_vs_yy` convention, with an
+  `open_problem:` reason, high operator prior, and audit
+  `relation_type: scientific_inconsistency`.
 - Non-promoted but useful tensions are preserved as hypothesis/audit-only rows.
 - False alarms are logged or dismissed with reason.
 - Mark Step 3 complete, mark Step 4 in progress, then load

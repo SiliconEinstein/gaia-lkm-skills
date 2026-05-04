@@ -86,6 +86,7 @@ Each row should include:
 - scope comparison across system, quantity, method/model, regime, and
   conditions,
 - open problem or discriminating question raised by the pair,
+- relation type (`scientific_inconsistency` for accepted contradictions),
 - classification: `accepted_contradiction`, `hypothesis_only`, `dismissed`, or
   `needs_user`,
 - rationale and next action.
@@ -96,8 +97,9 @@ Classify each candidate by the mapping contract:
 
 - **Accepted contradiction:** the pair satisfies `mapping-contract.md` §4's
   relaxed final-scan standard. Queue it for `$lkm-to-gaia` refresh so direct
-  `contradiction(A, B)` is emitted with the associated open problem and high
-  operator prior.
+  `contradiction(A, B)` is emitted with an `xx_vs_yy` label, the associated open
+  problem, high operator prior, and audit
+  `relation_type: scientific_inconsistency`.
 - **Hypothesis only:** scientifically interesting tension that raises a useful
   open problem but is not yet promotable. Keep it in audit files and add an
   inquiry hypothesis when useful.

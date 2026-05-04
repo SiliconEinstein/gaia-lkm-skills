@@ -129,7 +129,8 @@ from gaia.lang import (
 from .paper_liu2015 import gcn_66ac13c8
 from .paper_koptsev2011 import gcn_95e896eb
 
-# Accepted contradictions follow mapping-contract.md §4.
+# Accepted contradictions follow mapping-contract.md §4; use xx_vs_yy labels
+# and record relation_type=scientific_inconsistency in the audit row.
 <equivalence(...), contradiction(...), support(...), induction(...) calls>
 ```
 
@@ -203,9 +204,9 @@ A flat decision log:
 
 ## Contradictions
 
-| pair | open_problem | decision | dsl_action |
-|---|---|---|---|
-| (none in this run) | | | |
+| pair | open_problem | decision | relation_type | dsl_action |
+|---|---|---|---|---|
+| (none in this run) | | | | |
 
 ## Dismissed
 

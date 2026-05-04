@@ -90,7 +90,8 @@ atomic claims, keep the original compound claim and log the limitation.
 Connect decomposed claims through `mapping-contract.md` §4:
 
 - Accepted scientific contradiction -> emit direct `contradiction(A, B)` with
-  the associated `open_problem:` reason and high operator prior.
+  an `xx_vs_yy` label, the associated `open_problem:` reason, high operator
+  prior, and audit `relation_type: scientific_inconsistency`.
 - Same proposition -> `equivalence(A, B, reason="...", prior=...)`.
 - Useful but not-yet-promoted tension -> no Gaia operator; log an audit row and
   optional inquiry hypothesis.

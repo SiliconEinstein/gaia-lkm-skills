@@ -76,8 +76,9 @@ obligations, start a new five-step iteration with the new target.
 - No `prior` kwarg on `claim(...)`; leaf priors live in `priors.py`.
 - Contradiction handling follows `mapping-contract.md` §4: prioritize open
   questions, then final-scan accepted scientific contradictions into direct
-  `contradiction(A, B)` operators; other useful tensions remain audit rows plus
-  optional inquiry hypotheses.
+  `contradiction(A, B)` operators with `xx_vs_yy` labels and audit
+  `relation_type: scientific_inconsistency`; other useful tensions remain audit
+  rows plus optional inquiry hypotheses.
 - Audit-trail files are cumulative and must not silently overwrite prior
   verdicts.
 - Package-level quality gates are run by the orchestrator/caller after source
