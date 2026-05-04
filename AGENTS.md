@@ -4,10 +4,10 @@ This file is the contributor contract for `gaia-lkm-skills`. Agent-agnostic — 
 
 ## Where to read first
 
-- **`skills/orchestrator/SKILL.md`** — the single front door. Workflow, turn shapes, audit-trail contract, invariants. Start here on any unfamiliar task.
-- **`README.md`** — repo-level orientation (skill catalog, package layout, turn-shape one-liners).
+- **`skills/orchestrator/SKILL.md`** — the single front door. Thin router: classifies the prompt and points to the right SOP or atomic skill. Start here on any unfamiliar task.
+- **`README.md`** — repo-level orientation (skill catalog, routing paths).
 - **`skills/<name>/SKILL.md`** — the contract for each atomic skill. The body is what an agent reads at runtime.
-- **`skills/<name>/references/`** — on-demand supporting material (palettes, templates, contracts). Linked from `SKILL.md`; do not inline.
+- **`skills/<name>/references/`** — on-demand supporting material (SOPs, palettes, templates). Linked from `SKILL.md`; do not inline.
 
 ## Collaboration contract
 
@@ -39,10 +39,11 @@ The `description` is what an agent reads to decide whether to invoke the skill. 
 Each atomic skill does **one thing** and exposes a clean contract:
 
 - **`$lkm-api`** — HTTP I/O against LKM only. No graph logic, no DSL emission.
-- **`$evidence-subgraph`** — graph build / audit / render only. Consumes `$lkm-api` JSON.
 - **`$lkm-to-gaia`** — LKM evidence → Gaia DSL only. No HTTP, no rendering.
-- **`$gaia-render`** — `<domain>-gaia/` or `plan.gaia.py` → visualization only.
-- **`$scholarly-synthesis`** — audited graph → article only.
+- **`$evidence-subgraph`** — graph build / audit / render only. Consumes `$lkm-api` JSON. Independent optional branch — not an upstream dependency of `$lkm-to-gaia`.
+- **`$scholarly-synthesis`** — audited graph → article only. Independent optional branch.
+
+There is no project-local render skill. For visualization of a compiled Gaia package, use the package's own Gaia CLI render commands.
 
 **No cross-skill orchestration is baked into atomic skills.** If a workflow needs two skills, that workflow lives in `skills/orchestrator/SKILL.md` (or, for narrow paths, in a sub-shape section there). Atomic skills must remain composable — invokable individually without the orchestrator.
 
@@ -57,17 +58,15 @@ Cross-skill references in any `SKILL.md` body use `$<skill-name>` (e.g. `$lkm-ap
 
 If a `SKILL.md` is over ~300 lines, push reference material out into `references/`.
 
-## Audit-trail contract
+## Audit-trail discipline
 
-Any skill that writes to `<domain>-gaia/` MUST respect the orchestrator's audit-trail invariants:
+Any skill that writes to a `<domain>-gaia/` package MUST preserve the audit trail defined by the active SOP (`skills/orchestrator/references/lkm-to-gaia-sop.md` or `contradiction-driven-expansion-sop.md`):
 
-- Append, never silently overwrite, in `artifacts/lkm-discovery/`.
-- New verdicts go into `merge_audit.md` with `(label_a, label_b, verdict, reason, source-pointers)`.
-- Dismissed candidates go into `dismissed/` with the rejection reason.
-- Ambiguous cases go into `merge_decisions.todo` with a one-line user question.
-- Open obligations live under `.gaia/inquiry/` and are honoured on the next turn.
+- Append, never silently overwrite, in the package's audit area.
+- Prior verdicts are honoured. A pair already merged stays merged; a candidate already dismissed is not re-introduced silently.
+- Raw LKM payloads are preserved verbatim before any classification or DSL emission.
 
-Prior verdicts are honoured. A pair already merged stays merged; a candidate already dismissed is not re-introduced silently.
+The exact file shapes (verdict files, dismissed/, todo files, inquiry state) are owned by the active SOP and the `$lkm-to-gaia` workflow — refer to those documents for ground truth.
 
 ## Field-neutrality
 
@@ -75,4 +74,4 @@ Skills must remain reusable across disciplines. Domain knowledge may guide judgm
 
 ## When in doubt
 
-Read `skills/orchestrator/SKILL.md`'s **Invariants** section. It enumerates the load-bearing rules: chain-backed root only, user-selected root only, chain payload as source of truth, audit-trail continuity, single growing package, loose-md flag files only, mandatory user-selection checkpoint, self-checks before declaring a turn complete.
+Read `skills/orchestrator/SKILL.md` and the SOP referenced by the routing path you're on. The orchestrator stays thin; the load-bearing rules live in the SOP and in each atomic skill's contract.

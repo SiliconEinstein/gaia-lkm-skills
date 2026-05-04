@@ -1,4 +1,0 @@
-interface:
-  display_name: "Evidence Subgraph"
-  short_description: "Audit and render evidence-dependence graphs"
-  default_prompt: "Use $evidence-subgraph to trace premises and contexts, audit dependencies, and draw a Graphviz evidence graph."

@@ -11,3 +11,4 @@ dist/
 *.fdb_latexmk
 *.xdv
 docs/internal/
+.claude/
