@@ -18,6 +18,8 @@ For batch mode, emit a new standalone `<name>-gaia/` package:
 │   └── priors.py
 └── artifacts/lkm-discovery/
     ├── input/
+    ├── retrieval_log.jsonl
+    ├── graph_growth_log.jsonl
     ├── candidates.md
     ├── contradictions.md
     ├── equivalences.md
@@ -29,6 +31,8 @@ For batch mode, emit a new standalone `<name>-gaia/` package:
 
 Copy raw LKM JSON verbatim into `artifacts/lkm-discovery/input/`. Do not strip,
 summarize, or rewrite raw payloads.
+Create or append `retrieval_log.jsonl` and `graph_growth_log.jsonl` according to
+`timeline-log-contract.md`.
 
 For refreshes, extend existing modules and audit files rather than replacing
 prior verdicts. Reuse existing labels and priors where possible.
@@ -38,6 +42,7 @@ prior verdicts. Reuse existing labels and priors where possible.
 For an existing standalone package, edit the existing package in place:
 
 - append new raw payloads under `artifacts/lkm-discovery/input/`,
+- append retrieval and graph-growth events without rewriting prior events,
 - extend existing paper modules or create new `paper_<key>.py` modules,
 - preserve existing labels and priors where possible,
 - append audit decisions rather than replacing prior history,
@@ -62,6 +67,15 @@ Before handoff:
   `relation_type: scientific_inconsistency`.
 - Audit files reflect accepted contradictions, hypothesis-only open problems,
   equivalences, merges, dismissals, and unresolved decisions.
+- `retrieval_log.jsonl` covers every package-scoped LKM call consumed by this
+  run, and `graph_growth_log.jsonl` covers every source/audit decision emitted
+  by this run.
+- Every graph-growth event has `schema_version`, `actor_id`, monotonic `seq`,
+  and a populated `graph_delta` block. No frontend-visible graph node or edge
+  requires parsing Python source to reconstruct.
+- Round lifecycle, stage transition, user-selection checkpoint, candidate, and
+  inquiry events required by `timeline-log-contract.md` have been emitted when
+  applicable.
 
 ## Caller Quality Gate
 
@@ -78,6 +92,9 @@ gaia inquiry review --strict .
 If `gaia check --hole .` reports missing priors, fill `priors.py` and rerun the
 gate. If inquiry review reports unreviewed warrants or duplicates, log or
 resolve them according to Step 4 and rerun the gate.
+After each quality-gate attempt, append a `quality_gate_result` event to
+`graph_growth_log.jsonl` with an empty `graph_delta` unless the gate-triggered
+repair actually changed nodes or edges.
 
 ## Hand-Off Report
 
@@ -85,6 +102,8 @@ Return:
 
 - files created or changed,
 - raw LKM payloads consumed,
+- retrieval-log and graph-growth-log event ids added,
+- graph deltas added, including nodes/edges added or removed,
 - chain-backed vs no-chain source claims added,
 - deductions, supports, equivalences, accepted contradictions, and
   hypothesis-only open problems added,

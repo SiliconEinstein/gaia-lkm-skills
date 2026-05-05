@@ -10,6 +10,9 @@ description: Convert LKM evidence/source payloads directly into Gaia DSL source 
 Use LKM as the source of truth to build or update a standalone Gaia knowledge
 package. This skill turns raw LKM payloads, exploration/audit state, and package
 requirements into executable, auditable, and iteratively extensible Gaia DSL.
+For LKM-to-Gaia package work, it also maintains the package's chronological
+retrieval and graph-growth logs so the full search-to-DSL history can be
+replayed later.
 
 It is not only a one-shot converter. During mapping it may continue focused
 LKM-grounded checks for claim-driven supports, open questions, contradictions,
@@ -88,6 +91,9 @@ obligations, start a new five-step iteration with the new target.
   rows plus optional inquiry hypotheses.
 - Audit-trail files are cumulative and must not silently overwrite prior
   verdicts.
+- `retrieval_log.jsonl` and `graph_growth_log.jsonl` are append-only and follow
+  `references/timeline-log-contract.md`. This logging contract applies only to
+  LKM-to-Gaia package work, not to sibling skills.
 - Package-level quality gates are run by the orchestrator/caller after source
   emission.
 
@@ -105,6 +111,7 @@ obligations, start a new five-step iteration with the new target.
 
 - [`references/mapping-contract.md`](references/mapping-contract.md) — detailed mapping rules and module placement conventions
 - [`references/package-skeleton.md`](references/package-skeleton.md) — package output layout + templates aligned with current Gaia CLI conventions
+- [`references/timeline-log-contract.md`](references/timeline-log-contract.md) — chronological replay logs for LKM-to-Gaia retrievals and graph growth
 - [`references/step-1-inputs-and-scope.md`](references/step-1-inputs-and-scope.md) — progressive workflow Step 1
 - [`references/step-2-bootstrap-and-map.md`](references/step-2-bootstrap-and-map.md) — progressive workflow Step 2
 - [`references/step-3-contradictions-and-open-questions.md`](references/step-3-contradictions-and-open-questions.md) — progressive workflow Step 3

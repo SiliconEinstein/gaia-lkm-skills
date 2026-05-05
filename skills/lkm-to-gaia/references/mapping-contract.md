@@ -90,7 +90,7 @@ soft deduction over a directed implication. Higher `p` means the support warrant
 is stronger; `p` close to 1 means `a` nearly determines `b`.
 
 Search effort for each frontier target:
-- Run at least 5 distinct support-channel LKM match queries.
+- Run at least 2 distinct support-channel LKM match queries.
 - Use `top_k=10` for each query.
 - Preserve raw match/evidence payloads.
 - If no candidate satisfies the support standard, record the queries and
@@ -264,7 +264,20 @@ Do NOT define `__all__` in submodules. Use a single `__all__` in `__init__.py`. 
 - Cross-paper operators → `cross_paper.py`.
 - `__init__.py` re-exports via `from .paper_<key> import *` and `from .cross_paper import *`.
 
-## 8. What this contract does NOT cover
+## 8. Timeline replay logs
+
+For LKM-to-Gaia package work, every emitted claim, deduction, support,
+contradiction, equivalence, merge, dismissal, inquiry update, and no-op search
+verdict must be indexed in `graph_growth_log.jsonl`, with links back to the
+retrieval events and raw input files that grounded the decision. Each growth
+event must include a structured `graph_delta` block containing added/removed
+nodes and edges, so a frontend can replay the starmap without parsing Python
+source. The exact JSONL schema lives in `timeline-log-contract.md`.
+
+This requirement is a package replay/audit requirement, not Gaia DSL syntax. It
+does not apply to the raw `$lkm-api` skill or sibling graph/synthesis skills.
+
+## 9. What this contract does NOT cover
 
 - The full `priors.py` shape — follow current package examples and verify with
   `gaia check --hole`.

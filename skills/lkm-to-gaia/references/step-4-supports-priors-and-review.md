@@ -28,11 +28,17 @@ support strategy.
 
 Minimum support-channel effort per frontier claim:
 
-- run at least 5 distinct LKM match queries,
+- run at least 2 distinct LKM match queries,
 - use `top_k=10` for each query,
-- preserve raw match/evidence payloads,
+- preserve raw match/evidence payloads and append retrieval events to
+  `retrieval_log.jsonl`,
 - if no candidate satisfies the support standard, record `support_not_found`
   with query and rejection rationales.
+
+Before accepting, dismissing, or marking a support candidate not found, append a
+`candidate_considered` event for every candidate that enters scope comparison.
+The event must carry `source_query_event_id`, `scope_tuple`, `scope_diff`,
+`evidence_status`, and `preliminary_verdict`.
 
 Warrant prior ranges:
 
@@ -70,7 +76,7 @@ Rules:
 5. Surface ambiguous cases to `merge_decisions.todo`; default is keep distinct.
 
 Log every merge, equivalence, keep-distinct, and ambiguous verdict in
-`merge_audit.md`.
+`merge_audit.md` and append the corresponding graph-growth event.
 
 ## Leaf Priors
 
@@ -92,6 +98,7 @@ Accepted `contradiction(...)` operators from Step 3 carry their own high warrant
 prior in source, normally `0.95` as defined in `mapping-contract.md` §4. That
 operator prior is not a leaf-claim prior and should not be mirrored into
 `priors.py`.
+Append a `prior_added` graph-growth event for each prior batch.
 
 ## Inquiry Obligations
 
@@ -105,11 +112,18 @@ Use `gaia inquiry obligation list` as the exploration TODO list. Do not
 mechanically pick the lowest-belief claim; obligations carry intentional
 exploration choices, while beliefs are diagnostics.
 
+Every `gaia inquiry obligation add` call must be paired with an
+`obligation_added` graph-growth event containing the CLI command, scope, text,
+and `graph_delta`.
+
 Register open-question hypotheses from Step 3 with:
 
 ```bash
 gaia inquiry hypothesis add "<open question>" --scope <namespace>::<label>
 ```
+
+If this step registers a hypothesis, pair it with a `hypothesis_added`
+graph-growth event.
 
 ## Duplicate Controls
 
@@ -132,8 +146,16 @@ Before moving to Step 5:
   found.
 - Root-claim frontier claims have completed the required support-channel search
   or recorded `support_not_found`.
+- Every support candidate that entered scope comparison has a
+  `candidate_considered` event before its final verdict.
 - Shared-factor and duplicate risks have audit decisions.
 - Leaf-prior candidates are ready for `priors.py`.
 - Inquiry obligations/hypotheses are registered or queued.
+- Every inquiry CLI call in this step has a paired `hypothesis_added` or
+  `obligation_added` event.
+- Support, duplicate, merge, and prior decisions have corresponding
+  graph-growth events, including `support_not_found` no-op decisions.
+- Applicable events fill structured `scope_tuple`, `scope_diff`,
+  `rejection_reason`, `warrant_prior`, and `graph_delta`.
 - Mark Step 4 complete, mark Step 5 in progress, then load
   `step-5-emit-and-handoff.md`.

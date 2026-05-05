@@ -18,6 +18,8 @@ on this template alone.
     priors.py                 # leaf-claim priors
   artifacts/
     lkm-discovery/
+      retrieval_log.jsonl   # append-only chronological LKM API call log
+      graph_growth_log.jsonl # append-only chronological Gaia growth/decision log
       merge_audit.md          # dedup decisions
       mapping_audit.md        # per-claim and per-pair transformation log
       merge_decisions.todo    # surfaced ambiguous pairs (if any)
@@ -180,8 +182,18 @@ PRIORS = {
 - `merge_audit.md` — every shared-premise dedup decision
 - `mapping_audit.md` — per-claim and per-pair transformation log
 - `merge_decisions.todo` — surfaced ambiguous pairs (agent couldn't decide merge vs keep)
+- `retrieval_log.jsonl` — ordered index of LKM match/evidence/variables calls,
+  with raw payload filename, query/request, frontier/channel, response code, and
+  `trace_id`
+- `graph_growth_log.jsonl` — ordered index of selected roots, admitted claims,
+  deductions, supports, contradictions, equivalences, dismissals, priors,
+  repairs, and quality-gate results
 - `input/` — verbatim copy of all input files (raw evidence JSON, `contradictions.md`, `equivalences.md`, `candidates.md`)
 - `dismissed/` — candidate tension pairs the agent dismissed as false alarms, with rationale
+
+The JSONL logs follow `timeline-log-contract.md` and apply only to LKM-to-Gaia
+packages. They are the replay index; the markdown audit files carry the detailed
+scientific rationale.
 
 ## What ships in `artifacts/lkm-discovery/mapping_audit.md`
 

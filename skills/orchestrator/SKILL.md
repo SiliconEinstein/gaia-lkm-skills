@@ -37,9 +37,11 @@ root-claim frontier expansion all route through the same SOP.
 
 1. Read `references/lkm-to-gaia-sop.md`.
 2. Read `$lkm-api/SKILL.md` before any API calls.
-3. Read `$lkm-to-gaia/SKILL.md` when selected LKM payloads are ready to map.
-4. Let `$lkm-to-gaia` create and advance its own progressive todo/checklist.
-5. Run Gaia quality gates from the SOP before declaring the turn complete.
+3. Maintain the LKM-to-Gaia timeline logs required by the SOP for every package
+   retrieval and graph-growth decision.
+4. Read `$lkm-to-gaia/SKILL.md` when selected LKM payloads are ready to map.
+5. Let `$lkm-to-gaia` create and advance its own progressive todo/checklist.
+6. Run Gaia quality gates from the SOP before declaring the turn complete.
 
 ### Raw LKM API Task
 

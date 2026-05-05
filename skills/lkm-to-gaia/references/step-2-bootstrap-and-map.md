@@ -8,6 +8,7 @@ payload content into Gaia DSL source.
 - `mapping-contract.md` §§0–2, 5–7 for claim, deduction, references, exports,
   and module placement rules.
 - `package-skeleton.md` when creating or reshaping package files.
+- `timeline-log-contract.md` before recording accepted DSL actions.
 
 ## Bootstrap
 
@@ -129,5 +130,11 @@ Before moving to Step 3:
 - Compound claims have been decomposed according to `mapping-contract.md` §4 or
   explicitly retained with reason.
 - References and module placement decisions are ready.
+- `graph_growth_log.jsonl` has events queued or appended for selected roots,
+  emitted claims, factor-derived deductions, and retained no-op decisions.
+- Every Step 2 growth event has `schema_version`, `actor_id`, monotonic `seq`,
+  and a populated `graph_delta` block. For emitted claims and deductions,
+  `graph_delta.nodes_added` and `graph_delta.edges_added` contain frontend-ready
+  ids, kinds, labels, priors when applicable, and content/reason excerpts.
 - Mark Step 2 complete, mark Step 3 in progress, then load
   `step-3-contradictions-and-open-questions.md`.

@@ -30,9 +30,9 @@ Do not skip a claim because it looks obvious, narrow, or already accepted.
 Focused LKM retrieval is allowed when needed to classify a current candidate
 pair, hydrate a prior discovery flag, verify scope/provenance for a claim already
 being mapped, or run the orchestrator's claim-driven conflict channel. Preserve
-every new raw payload under `artifacts/lkm-discovery/input/`. Do not use
-external PDFs or web summaries as evidence unless the user explicitly changes
-the rule.
+every new raw payload under `artifacts/lkm-discovery/input/` and append a
+matching retrieval event to `retrieval_log.jsonl`. Do not use external PDFs or
+web summaries as evidence unless the user explicitly changes the rule.
 
 For root-claim frontier expansion, each frontier claim must run at least 5 distinct LKM
 match queries with `top_k=10` for this conflict channel unless the audit trail
@@ -57,7 +57,14 @@ Priority order for conflict queries:
 
 For every possible conflict or tension surfaced during this step, append an
 audit row to `artifacts/lkm-discovery/contradictions.md` or
-`mapping_audit.md` before source handoff.
+`mapping_audit.md` before source handoff. Also append a graph-growth event for
+the decision, including `hypothesis_only`, `dismissed`, and `needs_more_evidence`
+cases that produce no Gaia operator.
+
+Before any terminal verdict, append a `candidate_considered` event for every
+candidate that enters scope comparison. Its payload must include
+`frontier_claim`, `candidate_lkm_id`, `source_query_event_id`, `scope_tuple`,
+`scope_diff`, `evidence_status`, and `preliminary_verdict`.
 
 Record:
 
@@ -116,6 +123,10 @@ Register the same open problem:
 gaia inquiry hypothesis add "<open problem>" --scope <namespace>::<op_label>
 ```
 
+Every `gaia inquiry hypothesis add` call must be paired with a
+`hypothesis_added` graph-growth event containing the CLI command, scope, text,
+and `graph_delta`.
+
 Warrant prior ranges for accepted contradiction operators:
 
 - Clear accepted contradiction: `0.95`.
@@ -147,11 +158,18 @@ Before moving to Step 4:
   audit context.
 - Root-claim frontier claims have completed the required conflict-channel
   search or recorded `conflict_not_found` with query/candidate rationales.
+- Every conflict candidate that entered scope comparison has a
+  `candidate_considered` event before its final verdict.
 - Accepted contradictions have direct `contradiction(A, B)` operators whose
   labels identify both sides with the `xx_vs_yy` convention, with an
   `open_problem:` reason, high operator prior, and audit
   `relation_type: scientific_inconsistency`.
 - Non-promoted but useful tensions are preserved as hypothesis/audit-only rows.
+- Every inquiry hypothesis CLI call has a paired `hypothesis_added` event.
 - False alarms are logged or dismissed with reason.
+- `retrieval_log.jsonl` and `graph_growth_log.jsonl` can replay every
+  conflict-channel query and contradiction/open-question decision in this step.
+- Applicable events fill structured `scope_tuple`, `scope_diff`,
+  `open_problem`, `rejection_reason`, `warrant_prior`, and `graph_delta`.
 - Mark Step 3 complete, mark Step 4 in progress, then load
   `step-4-supports-priors-and-review.md`.

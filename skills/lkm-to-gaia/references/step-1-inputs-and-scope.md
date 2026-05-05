@@ -37,6 +37,10 @@ The checklist is ephemeral and is not written to the package.
   open-question/conflict-channel query payloads, and candidate classifications.
 - Existing package path for refresh work, including `artifacts/lkm-discovery/`,
   `.gaia/inquiry/`, and prior source files.
+- Timeline replay files for LKM-to-Gaia work:
+  `artifacts/lkm-discovery/retrieval_log.jsonl` and
+  `artifacts/lkm-discovery/graph_growth_log.jsonl`, following
+  `timeline-log-contract.md`.
 
 These are loose files. `$lkm-to-gaia` reads raw LKM payloads directly and does
 not use an intermediate graph artifact.
@@ -55,7 +59,7 @@ Output: a standalone `<name>-gaia/` package:
 - `src/<import>/paper_<key>.py`
 - `src/<import>/cross_paper.py`
 - `src/<import>/priors.py`
-- `artifacts/lkm-discovery/` with verbatim raw inputs and audit files
+- `artifacts/lkm-discovery/` with verbatim raw inputs, timeline logs, and audit files
 
 Read `package-skeleton.md` before creating or substantially reshaping a package.
 
@@ -95,6 +99,12 @@ Before moving to Step 2:
 - Every selected item is classified as chain-backed claim, LKM source claim, or
   search lead.
 - Raw LKM payload paths are known and will be preserved verbatim.
+- `timeline-log-contract.md` has been read, and retrieval/graph-growth log paths
+  are known or will be created before source emission.
+- Timeline event identity is initialized for this actor: `schema_version`,
+  `actor_id`, and monotonic `seq` are available for emitted events.
+- Batch package creation will emit `package_initialized`; refresh work has read
+  existing `round_*`, `stage_transition`, and checkpoint events when present.
 - Existing audit trail has been read for refresh work.
 - The next todo is marked in progress before loading
   `step-2-bootstrap-and-map.md`.

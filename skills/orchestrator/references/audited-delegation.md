@@ -19,7 +19,12 @@ Default loop:
 6. **Repair.** If the artifact violates a skill rule, delegate a focused repair task with the exact audit finding. Iterate until the artifact passes or the blocker is explicit.
 7. **Synthesize.** If multiple validated artifacts must become one package, use a separate synthesis task. Synthesis adds only grounded cross-artifact wiring and logs every merge, non-merge, equivalence, accepted contradiction, hypothesis-only open problem, or dismissal.
 8. **Verify.** Run the turn's final success checks from the target package. For Gaia packages this means `gaia compile .`, `gaia check --hole .`, and `gaia infer .`; external Gaia CLI/publish workflow commands also rerun their target-specific checks.
-9. **Preserve audit trail.** Copy or append all raw inputs, subagent audit logs, repair notes, and synthesis decisions under `artifacts/lkm-discovery/` or the package's chosen artifact directory.
+9. **Preserve audit trail.** Copy or append all raw inputs, subagent audit logs,
+   repair notes, and synthesis decisions under `artifacts/lkm-discovery/` or the
+   package's chosen artifact directory. For LKM-to-Gaia package work only, also
+   preserve the chronological `retrieval_log.jsonl` and
+   `graph_growth_log.jsonl` entries required by the LKM-to-Gaia timeline
+   contract.
 
 ## Turn-specific defaults
 
@@ -35,7 +40,8 @@ claim, run both the support channel and the open-question/conflict channel from
 that SOP; append new LKM JSON to the existing audit input folder. For each
 accepted candidate batch, delegate an audited `$lkm-to-gaia` source delta when
 useful, then merge it into the existing final package without silently changing
-prior verdicts.
+prior verdicts. Delegated retrievals and source/audit decisions must be
+reflected in the package-level timeline logs.
 
 ### Turn 3: traverse and purge duplication
 
@@ -64,6 +70,8 @@ Every delegated task prompt should include:
 - The checks to run and repair loop expectation.
 - A prohibition on editing unrelated package areas.
 - Required final report fields: files changed, commands run, pass/fail, open risks, deviations.
+- For LKM-to-Gaia package tasks, retrieval-log and graph-growth-log event ids
+  added or needing orchestrator backfill.
 
 ## Acceptance rule
 
