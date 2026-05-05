@@ -5,23 +5,51 @@ leaves, double counting, and untracked weak premises.
 
 ## Upstream Support
 
-For premises or claims that need corroboration, search LKM for upstream
-conclusions relevant to the target claim. A single target may have multiple
-upstream supports; each gets its own directional `support(...)`:
+For root-claim frontier expansion, every frontier claim receives a
+support-channel LKM search. Search for upstream LKM-grounded conclusions relevant to the target
+claim. A single target may have multiple upstream supports; each can get its own
+directional `support(...)`:
 
 ```python
 support([U_1], P, reason="<what U_1 says and why it supports P>", prior=<float>)
 support([U_2], P, reason="<what U_2 says and why it supports P>", prior=<float>)
 ```
 
+When several upstream claims only support the target jointly, use a joint
+support:
+
+```python
+support([U_1, U_2], P, reason="<joint support rationale>", prior=<float>)
+```
+
 `support([a], b, prior=p)` means `a` supports `b`; high `p` means `a` nearly
-determines `b`.
+determines `b`. This is true Gaia DSL syntax for the current `gaia.lang`
+support strategy.
+
+Minimum support-channel effort per frontier claim:
+
+- run at least 5 distinct LKM match queries,
+- use `top_k=10` for each query,
+- preserve raw match/evidence payloads,
+- if no candidate satisfies the support standard, record `support_not_found`
+  with query and rejection rationales.
 
 Warrant prior ranges:
 
 - Strong, same topic and directly implies: 0.85–0.95.
 - Moderate, related and partially overlaps: 0.70–0.85.
 - Weak or lateral: 0.50–0.65.
+
+The `support(...)` edge may be a scientific-review judgment rather than an LKM
+factor, but both endpoint claims must already be LKM-grounded. Do not use
+`support(...)` to smuggle in a new factual bridge claim. If the reason needs a
+new fact, first search LKM and map that fact as its own `claim(...)`.
+
+For cross-scope supports involving different geometry, material, temperature,
+experimental extraction method, approximation, or mass definition, keep the
+warrant weak and close to neutral (`0.50–0.58`) unless the LKM-grounded source
+claim directly implies the target. Audit the scope differences and explain why
+the relation is contextual rather than strong.
 
 If no relevant upstream conclusion is found, do not invent one.
 
@@ -102,6 +130,8 @@ Before moving to Step 5:
 
 - Relevant upstream supports have been searched and mapped or explicitly not
   found.
+- Root-claim frontier claims have completed the required support-channel search
+  or recorded `support_not_found`.
 - Shared-factor and duplicate risks have audit decisions.
 - Leaf-prior candidates are ready for `priors.py`.
 - Inquiry obligations/hypotheses are registered or queued.

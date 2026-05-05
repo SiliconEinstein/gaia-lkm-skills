@@ -1,8 +1,9 @@
 # Step 3 — Screen Contradictions And Open Questions
 
 Load this file only after Step 2 is complete. This step is mandatory for every
-new claim. It is a baseline package-quality screen before source handoff, not a
-broad contradiction-discovery pass.
+new claim. In root-claim frontier expansion it is also the mapping-time
+open-question/conflict channel for each frontier claim selected by the
+orchestrator.
 
 ## Canonical Policy
 
@@ -26,11 +27,31 @@ Check every new claim against:
 
 Do not skip a claim because it looks obvious, narrow, or already accepted.
 
-Focused LKM retrieval is allowed only when needed to classify a current candidate
-pair, hydrate a prior discovery flag, or verify scope/provenance for a claim
-already being mapped. Preserve every new raw payload under
-`artifacts/lkm-discovery/input/`. Do not use external PDFs or web summaries as
-evidence unless the user explicitly changes the rule.
+Focused LKM retrieval is allowed when needed to classify a current candidate
+pair, hydrate a prior discovery flag, verify scope/provenance for a claim already
+being mapped, or run the orchestrator's claim-driven conflict channel. Preserve
+every new raw payload under `artifacts/lkm-discovery/input/`. Do not use
+external PDFs or web summaries as evidence unless the user explicitly changes
+the rule.
+
+For root-claim frontier expansion, each frontier claim must run at least 5 distinct LKM
+match queries with `top_k=10` for this conflict channel unless the audit trail
+records why that lower bound could not be met.
+
+Priority order for conflict queries:
+
+1. Theory-vs-experiment or experiment-vs-theory. For a theoretical/computational
+   frontier claim, first search for experimental observations or measurements
+   that disagree with, qualify, or fail to confirm it. For an experimental
+   frontier claim, first search for theoretical/computational results that
+   disagree with or reinterpret it.
+2. Computation-vs-experiment or measurement-vs-model comparisons not covered by
+   the first category.
+3. Same-system different-method conflicts.
+4. Approximation, boundary-condition, regime, dimensionality, temperature,
+   disorder, sample-quality, or protocol conflicts.
+5. Broader adjacent tensions that may become useful hypotheses but are not yet
+   promotable.
 
 ## Baseline Candidate Records
 
@@ -124,6 +145,8 @@ Before moving to Step 4:
 
 - Every new claim has completed baseline screening against available package and
   audit context.
+- Root-claim frontier claims have completed the required conflict-channel
+  search or recorded `conflict_not_found` with query/candidate rationales.
 - Accepted contradictions have direct `contradiction(A, B)` operators whose
   labels identify both sides with the `xx_vs_yy` convention, with an
   `open_problem:` reason, high operator prior, and audit

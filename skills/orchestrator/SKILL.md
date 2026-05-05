@@ -31,24 +31,15 @@ package-specific render commands after compilation/inference.
 
 Use this for prompts such as "build a Gaia package", "formalize this LKM claim
 into Gaia", "extend the package", "clean duplicate claims", or "continue
-growing this graph".
+growing this graph". This is the only maintained LKM-to-Gaia workflow; support
+search, contradiction/open-question search, duplicate cleanup, and iterative
+root-claim frontier expansion all route through the same SOP.
 
 1. Read `references/lkm-to-gaia-sop.md`.
 2. Read `$lkm-api/SKILL.md` before any API calls.
 3. Read `$lkm-to-gaia/SKILL.md` when selected LKM payloads are ready to map.
 4. Let `$lkm-to-gaia` create and advance its own progressive todo/checklist.
 5. Run Gaia quality gates from the SOP before declaring the turn complete.
-
-### Contradiction-Driven Expansion
-
-Use this when the user explicitly asks to "find contradictions", "explore
-contradictions", or grow an existing Gaia package through contradictions.
-
-1. Read `references/contradiction-driven-expansion-sop.md`.
-2. Read `$lkm-api/SKILL.md` before any API calls.
-3. Use `$lkm-to-gaia` refresh mode only after candidates are classified and
-   selected for package changes.
-4. Run the SOP quality gates before declaring the turn complete.
 
 ### Raw LKM API Task
 

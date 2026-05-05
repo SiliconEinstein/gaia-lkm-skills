@@ -35,7 +35,7 @@ on this template alone.
 | Per-paper module file | `paper_<key>.py` where `<key>` is the references.json key | `paper_liu2015.py` |
 | Cross-paper module file | `cross_paper.py` (fixed) | `cross_paper.py` |
 | Claim Python label | sanitised from `gcn_*` id, human-readable | `gcn_66ac13c8` |
-| `support` strategy result label (cross-validation only) | `s_<id>_a`, `s_<id>_b` | `s_cv_fqhe_a` |
+| `support` strategy result label | short semantic label when assigned | `dmc_rs5_supports_low_density_mass` |
 
 ## `pyproject.toml` template
 
@@ -117,8 +117,8 @@ from gaia.lang import (
 ```python
 """cross_paper — operators that span source papers.
 
-Equivalences, accepted contradictions, and cross-validations identified by the
-agent during Gaia formalization.
+Equivalences, accepted contradictions, and claim-driven support edges identified
+by the agent during Gaia formalization.
 """
 from gaia.lang import (
     contradiction, equivalence, complement, disjunction,

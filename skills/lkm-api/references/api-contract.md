@@ -31,6 +31,11 @@ Default body:
 
 Body field name is **`text`** (required). The old field name `query` is rejected with `code=290002` (`Field validation for 'Text' failed on the 'required' tag`).
 
+Current endpoint behavior is understood as BM25-like free-text retrieval. Put
+concise domain keywords or anchor phrases in `text`. Retrieval methodology
+(number of queries, query families, candidate admission, and handoff rules)
+belongs to the caller's SOP, not this API contract.
+
 Response shape:
 
 ```json
@@ -61,6 +66,9 @@ Response shape:
 ```
 
 The candidate list is at **`data.variables`** — note the rename from the previous endpoint family, which used `data.claims`. Per-entry structure: `id`, `type` (`"claim"`), `role` (`"premise"` | `"conclusion"`), `content`, `score`, `provenance` (with `source_packages` and `representative_lcn`), and `visibility`.
+
+`score` is a retrieval ranking/debug signal from the match engine. Do not treat
+it as scientific confidence, a truth probability, or a Gaia prior.
 
 `data.new_claim_likely` and the top-level `trace_id` are diagnostic.
 

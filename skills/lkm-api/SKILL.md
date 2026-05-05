@@ -25,6 +25,11 @@ Every request requires an `accessKey: <AK>` header (Bohrium access key). See **A
 
 Read `references/api-contract.md` for request/response field-level expectations.
 
+The `match` endpoint is currently understood as BM25-like free-text retrieval.
+Callers should send concise domain keywords or anchor phrases in `text`; this
+skill does not prescribe query-count, root-selection, or downstream mapping
+policy.
+
 ## Authentication (access key)
 
 Every endpoint requires an `accessKey` HTTP header carrying the user's Bohrium access key. The CLI helper (`scripts/lkm.mjs`) reads the key from the env var `LKM_ACCESS_KEY` and exits with a clear error if it is unset. Direct `curl` calls must include the same header.

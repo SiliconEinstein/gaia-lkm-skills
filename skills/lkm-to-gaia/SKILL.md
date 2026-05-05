@@ -12,10 +12,10 @@ package. This skill turns raw LKM payloads, exploration/audit state, and package
 requirements into executable, auditable, and iteratively extensible Gaia DSL.
 
 It is not only a one-shot converter. During mapping it may continue focused
-LKM-grounded checks for contradictions, open questions, supports, equivalences,
-provenance, and obligations. Every newly retrieved LKM payload must be preserved
-verbatim and classified through the mapping contract before it enters executable
-DSL or audit files.
+LKM-grounded checks for claim-driven supports, open questions, contradictions,
+equivalences, provenance, and obligations. Every newly retrieved LKM payload must
+be preserved verbatim and classified through the mapping contract before it
+enters executable DSL or audit files.
 
 A Gaia package produced here compiles via `gaia compile`, propagates beliefs via
 `gaia infer`, and carries LKM provenance into `**metadata` kwargs of every
@@ -37,10 +37,10 @@ Routed via [`$orchestrator`](../orchestrator/SKILL.md) when the user asks for a 
 - **Refresh** extends or repairs an existing standalone package while preserving
   prior labels, priors, raw inputs, and audit verdicts.
 
-Broad topic discovery, root candidate ranking, and user-selection checkpoints
-are organized by the LKM-to-Gaia SOP through `$orchestrator` and `$lkm-api`.
-Once a mapping run starts, this skill may request focused LKM retrievals needed
-to complete its five-step workflow.
+Broad topic discovery, root candidate ranking, user-selection checkpoints, and
+claim-driven frontier iteration are organized by the LKM-to-Gaia SOP through
+`$orchestrator` and `$lkm-api`. Once a mapping run starts, this skill may
+request focused LKM retrievals needed to complete its five-step workflow.
 
 ## Progressive Workflow
 
@@ -70,10 +70,17 @@ obligations, start a new five-step iteration with the new target.
 - Chain-backed claims (`total_chains > 0`) may produce factor-derived
   `deduction(...)`; no-chain LKM source claims may enter after cold start only
   as leaf/source `claim(...)` nodes.
-- Search leads outside accepted chain-backed factors do not enter executable DSL.
+- Search leads outside accepted chain-backed factors or accepted post-cold-start
+  source claims do not enter executable DSL.
 - Claims must be self-contained and preserve `lkm_original`, `lkm_id`, and
   `source_paper` when available.
 - No `prior` kwarg on `claim(...)`; leaf priors live in `priors.py`.
+- Post-cold-start expansion follows the cold-start root frontier selected by the
+  user. For every frontier science claim, the orchestrator runs both support and
+  open-question/conflict LKM channels; this skill maps accepted candidates.
+- Support handling follows `mapping-contract.md` §3: real Gaia
+  `support([premises], conclusion, reason=..., prior=...)` syntax, LKM-grounded
+  endpoints, no synthetic bridge facts, and duplicate/shared-factor controls.
 - Contradiction handling follows `mapping-contract.md` §4: prioritize open
   questions, then final-scan accepted scientific contradictions into direct
   `contradiction(A, B)` operators with `xx_vs_yy` labels and audit

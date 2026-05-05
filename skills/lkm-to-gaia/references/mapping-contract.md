@@ -10,7 +10,7 @@
 - **LKM source claim**: LKM returned claim content and provenance, but `total_chains = 0`. After cold start, emit it as a leaf/source `claim(...)`; do not invent premises or deductions.
 - **Search lead**: insufficient content or provenance for a self-contained claim outside an accepted chain-backed factor. Keep only in audit/search notes.
 
-`total_chains > 0` is required for cold-start root selection. It is not a global admissibility rule for Turn-2 extensions or contradiction exploration.
+`total_chains > 0` is required for cold-start root selection. It is not a global admissibility rule for post-cold-start frontier expansion or conflict-channel candidates.
 
 ## 1. Claims (`gcn_*`)
 
@@ -67,27 +67,60 @@ deduction(
 - **Always `deduction`**, regardless of LKM `subtype`.
 - Multiple `deduction(...)` calls may share the same conclusion label.
 
-## 3. Upstream support for premises
+## 3. Root-claim frontier supports
 
-The agent searches LKM for upstream conclusions relevant to each premise (not from the same chain). A single premise may have **multiple** upstream conclusions — each gets its own `support(...)`:
+During root-claim frontier expansion, the agent searches LKM for content that
+can directly support each frontier claim. A single target claim may have
+**multiple** accepted upstream supports. Use the real Gaia DSL strategy:
 
 ```python
-support([U_1], P, reason="<what U_1 says and why it supports P>", prior=<float>)
-support([U_2], P, reason="<what U_2 says and why it supports P>", prior=<float>)
+support([U_1], target, reason="<what U_1 says and why it supports target>", prior=<float>)
+support([U_2], target, reason="<what U_2 says and why it supports target>", prior=<float>)
 ```
 
-`support([a], b, prior=p)` is directional: a 充分支撑 b。p close to 1 → a 几乎充分决定 b。
+When several upstream claims only support the target jointly, use one joint
+support:
+
+```python
+support([U_1, U_2], target, reason="<joint support rationale>", prior=<float>)
+```
+
+`support([a], b, prior=p)` is directional: `a` supports `b`. In Gaia, support is
+soft deduction over a directed implication. Higher `p` means the support warrant
+is stronger; `p` close to 1 means `a` nearly determines `b`.
+
+Search effort for each frontier target:
+- Run at least 5 distinct support-channel LKM match queries.
+- Use `top_k=10` for each query.
+- Preserve raw match/evidence payloads.
+- If no candidate satisfies the support standard, record the queries and
+  rejection rationales as `support_not_found`; do not invent support.
 
 Warrant prior for each support:
 - Strong (same topic, directly implies) → 0.85–0.95
 - Moderate (related, partially overlaps) → 0.70–0.85
 - Weak/lateral → 0.50–0.65
 
-If no relevant upstream conclusions are found, skip. Do not invent.
+The support relation itself may be a reviewer/agent scientific judgment rather
+than an LKM `gfac_*` factor, but both endpoints must already be LKM-grounded
+Gaia claims. A `support(...)` reason may explain why claim A supports claim B;
+it must not introduce a new factual proposition that should instead be mapped as
+its own LKM-grounded `claim(...)`.
 
-### 3a. Shared-factor extraction (≥2 supports converging on same premise)
+For cross-scope supports (different geometry, material, temperature, extraction
+method, approximation, or mass definition), use weak priors close to neutral
+(`0.50–0.58`) unless the LKM-grounded claim text directly implies the target.
+Record the scope differences in `mapping_audit.md` or `merge_audit.md` so BP
+does not silently treat lateral context as strong independent evidence.
 
-When ≥2 upstream supports converge on the same premise P, check whether the upstream claims share a common factor (same method, model assumption, dataset, physical approximation). If they do, BP would incorrectly treat them as independent evidence. Extract the shared factor as a new claim and route supports through it:
+Support candidates may be chain-backed or no-chain LKM source claims after cold
+start. Chain-backed candidates may add their own `claim(...)` nodes and
+factor-derived `deduction(...)` strategies. No-chain candidates may enter only
+as leaf/source `claim(...)` nodes with clear content and provenance.
+
+### 3a. Shared-factor extraction (≥2 supports converging on same target)
+
+When ≥2 upstream supports converge on the same target claim P, check whether the upstream claims share a common factor (same method, model assumption, dataset, physical approximation). If they do, BP would incorrectly treat them as independent evidence. Extract the shared factor as a new claim and route supports through it:
 
 ```
 Before:  U1 ──support──→ P
@@ -113,6 +146,17 @@ source claims `A` and `B` appear to be in tension, first record the scientific
 open problem they raise. The open problem belongs in
 `artifacts/lkm-discovery/contradictions.md`, `mapping_audit.md`, and, when it
 may drive later work, `.gaia/inquiry/` as a hypothesis.
+
+During root-claim frontier expansion, run an open-question/conflict channel for every
+frontier claim. Minimum effort is 5 distinct LKM match queries with `top_k=10`.
+Prioritize theory-vs-experiment or experiment-vs-theory candidates first: if the
+frontier claim is theoretical/computational, look first for experimental
+observations or measurements that disagree with or qualify it; if the frontier
+claim is experimental, look first for theoretical/computational results that
+disagree with or reinterpret it. Then search same-system different-method,
+boundary-condition, approximation/regime, and adjacent hypothesis candidates.
+If no candidate satisfies the hypothesis or contradiction standard, record the
+queries and rejection rationales as `conflict_not_found`.
 
 At the final contradiction scan, promote a candidate to executable Gaia DSL when
 it is a scientifically meaningful, adjudicable conflict: the pair concerns the

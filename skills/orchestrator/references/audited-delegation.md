@@ -29,7 +29,13 @@ After the mandatory user-selection checkpoint, treat each selected root as an at
 
 ### Turn 2: extend
 
-Search from existing obligations, weak premises, hypotheses, or the user's subtopic. Append new LKM JSON to the existing audit input folder. For each user-selected extension root/lead, delegate an audited `$lkm-to-gaia` source delta when useful, then merge it into the existing final package without silently changing prior verdicts.
+Follow the single workflow in `lkm-to-gaia-sop.md`. Use the cold-start root
+frontier unless the user explicitly names a different target. For each frontier
+claim, run both the support channel and the open-question/conflict channel from
+that SOP; append new LKM JSON to the existing audit input folder. For each
+accepted candidate batch, delegate an audited `$lkm-to-gaia` source delta when
+useful, then merge it into the existing final package without silently changing
+prior verdicts.
 
 ### Turn 3: traverse and purge duplication
 

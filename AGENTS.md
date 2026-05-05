@@ -60,7 +60,7 @@ If a `SKILL.md` is over ~300 lines, push reference material out into `references
 
 ## Audit-trail discipline
 
-Any skill that writes to a `<domain>-gaia/` package MUST preserve the audit trail defined by the active SOP (`skills/orchestrator/references/lkm-to-gaia-sop.md` or `contradiction-driven-expansion-sop.md`):
+Any skill that writes to a `<domain>-gaia/` package MUST preserve the audit trail defined by the active SOP (`skills/orchestrator/references/lkm-to-gaia-sop.md` — the single maintained workflow; support search and contradiction/open-question search are channels inside it):
 
 - Append, never silently overwrite, in the package's audit area.
 - Prior verdicts are honoured. A pair already merged stays merged; a candidate already dismissed is not re-introduced silently.
