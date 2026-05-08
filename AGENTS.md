@@ -18,6 +18,7 @@ This file is the contributor contract for `gaia-lkm-skills`. Agent-agnostic — 
 - Conflict resolution belongs in the PR body, not the merge commit. State which side won, which side lost, and why — so the rationale survives in the PR history.
 - Never rewrite `main` history.
 - Never `gh pr create` autonomously on personal branches without explicit user authorization to ship.
+- Every merge to `main` gets a CalVer tag: `v<YYYY.MM.DD>` (annotated, from the merge commit), suffixed `.1`, `.2`, … for multiple merges the same day (e.g. `v2026.05.08`, `v2026.05.08.1`). Tag message references the PR (`PR #N: <subject>`); push separately with `git push origin <tag>`.
 
 ## Skill authoring discipline
 
