@@ -1,29 +1,30 @@
-# Batch-mode package skeleton
+# Standalone Package Skeleton
 
-> **Prerequisite — read `$gaia-cli` first** for the canonical `pyproject.toml`,
-> `priors.py`, `__init__.py`, `gaia compile` workflow, and module-layout rules.
-> This document covers only what `lkm-to-gaia --mode batch` adds on top: the
-> LKM-discovery artefact directory and the per-paper module convention. Where
-> this document and `$gaia-cli` conflict, `$gaia-cli` wins.
+This document records the local standalone package layout for `batch` and
+`refresh` mode. Gaia syntax and metadata shape are governed by the installed
+Gaia library/CLI; verify package files with the quality gates instead of relying
+on this template alone.
 
 ## Layout
 
 ```
 <name>-gaia/
-  pyproject.toml              # standard $gaia-cli pyproject; [tool.gaia] type=knowledge-package
+  pyproject.toml              # Gaia knowledge-package metadata
   references.json             # CSL-JSON, union of data.papers across all loaded evidence/match files
   src/<import_name>/
     __init__.py               # re-exports + `__all__` (exported root conclusions only)
     paper_<key>.py            # one module per source paper (claims + deductions for chains)
-    cross_paper.py            # cross-paper operators (equivalence, contradiction, induction)
-    priors.py                 # leaf-claim priors, FLOATS per $gaia-cli §6
+    cross_paper.py            # cross-paper operators and contradiction links
+    priors.py                 # leaf-claim priors
   artifacts/
     lkm-discovery/
+      retrieval_log.jsonl   # append-only chronological LKM API call log
+      graph_growth_log.jsonl # append-only chronological Gaia growth/decision log
       merge_audit.md          # dedup decisions
       mapping_audit.md        # per-claim and per-pair transformation log
       merge_decisions.todo    # surfaced ambiguous pairs (if any)
       input/                  # verbatim copy of input files (raw evidence JSON + .md flag files)
-      dismissed/              # contradiction pairs the agent dismissed as false alarms
+      dismissed/              # candidate tension pairs dismissed as false alarms
 ```
 
 ## Naming conventions
@@ -36,11 +37,11 @@
 | Per-paper module file | `paper_<key>.py` where `<key>` is the references.json key | `paper_liu2015.py` |
 | Cross-paper module file | `cross_paper.py` (fixed) | `cross_paper.py` |
 | Claim Python label | sanitised from `gcn_*` id, human-readable | `gcn_66ac13c8` |
-| `support` strategy result label (cross-validation only) | `s_<id>_a`, `s_<id>_b` | `s_cv_fqhe_a` |
+| `support` strategy result label | short semantic label when assigned | `dmc_rs5_supports_low_density_mass` |
 
 ## `pyproject.toml` template
 
-The standard `$gaia-cli` pyproject (see `$gaia-cli` §1) plus a small block recording provenance:
+A Gaia knowledge-package `pyproject.toml` plus a small block recording provenance:
 
 ```toml
 [project]
@@ -103,12 +104,12 @@ from gaia.lang import (
 )
 
 # Claims first appearing in this paper.
-# Per $gaia-lang §2: claim() takes no `prior` kwarg; leaf priors live in priors.py.
+# `claim()` takes no `prior` kwarg; leaf priors live in priors.py.
 
 <claim(...) calls for premises and conclusions rooted in this paper>
 
 # Chain backbone: one deduction per gfac_* whose source_package is this paper.
-# Per $gaia-lang §4: strategies are positional-first.
+# Strategies are positional-first.
 
 <deduction(...) calls>
 ```
@@ -118,8 +119,8 @@ from gaia.lang import (
 ```python
 """cross_paper — operators that span source papers.
 
-Equivalences, contradictions, and cross-validations identified by the
-agent during Gaia formalization.
+Equivalences, accepted contradictions, and claim-driven support edges identified
+by the agent during Gaia formalization.
 """
 from gaia.lang import (
     contradiction, equivalence, complement, disjunction,
@@ -130,12 +131,14 @@ from gaia.lang import (
 from .paper_liu2015 import gcn_66ac13c8
 from .paper_koptsev2011 import gcn_95e896eb
 
-<equivalence(...), contradiction(...), induction(...) calls>
+# Accepted contradictions follow mapping-contract.md §4; use xx_vs_yy labels
+# and record relation_type=scientific_inconsistency in the audit row.
+<equivalence(...), contradiction(...), support(...), induction(...) calls>
 ```
 
 ## `references.json` template
 
-Standard CSL-JSON per `$gaia-lang` §7 `[@key]` rule:
+Standard CSL-JSON records, cited from claim text with `[@key]`:
 
 ```json
 {
@@ -157,12 +160,12 @@ Standard CSL-JSON per `$gaia-lang` §7 `[@key]` rule:
 
 ## `priors.py` template (initial)
 
-Floats per `$gaia-cli` §6. The agent auto-seeds entries for every leaf (any claim that is not the conclusion of a strategy). Conclusions of `deduction(...)` do NOT get entries — BP computes their beliefs.
+The agent auto-seeds entries for every leaf (any claim that is not the conclusion of a strategy). Conclusions of `deduction(...)` do NOT get entries — BP computes their beliefs.
 
 ```python
 """priors.py — leaf-claim priors for this package.
 
-Generated by lkm-to-gaia. Floats per $gaia-cli §6.
+Generated by lkm-to-gaia.
 Every entry is auto-seeded and TODO-marked. Run
 `gaia check --hole .` to surface them all and refine.
 """
@@ -179,8 +182,18 @@ PRIORS = {
 - `merge_audit.md` — every shared-premise dedup decision
 - `mapping_audit.md` — per-claim and per-pair transformation log
 - `merge_decisions.todo` — surfaced ambiguous pairs (agent couldn't decide merge vs keep)
+- `retrieval_log.jsonl` — ordered index of LKM match/evidence/variables calls,
+  with raw payload filename, query/request, frontier/channel, response code, and
+  `trace_id`
+- `graph_growth_log.jsonl` — ordered index of selected roots, admitted claims,
+  deductions, supports, contradictions, equivalences, dismissals, priors,
+  repairs, and quality-gate results
 - `input/` — verbatim copy of all input files (raw evidence JSON, `contradictions.md`, `equivalences.md`, `candidates.md`)
-- `dismissed/` — contradiction pairs the agent dismissed as false alarms, with rationale
+- `dismissed/` — candidate tension pairs the agent dismissed as false alarms, with rationale
+
+The JSONL logs follow `timeline-log-contract.md` and apply only to LKM-to-Gaia
+packages. They are the replay index; the markdown audit files carry the detailed
+scientific rationale.
 
 ## What ships in `artifacts/lkm-discovery/mapping_audit.md`
 
@@ -203,7 +216,7 @@ A flat decision log:
 
 ## Contradictions
 
-| pair | a | b | decision | dsl_action |
+| pair | open_problem | decision | relation_type | dsl_action |
 |---|---|---|---|---|
 | (none in this run) | | | | |
 

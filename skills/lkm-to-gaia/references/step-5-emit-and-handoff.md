@@ -1,0 +1,126 @@
+# Step 5 — Emit And Hand Off
+
+Load this file only after Step 4 is complete. This step finalizes the source
+artifact and hands it back to the orchestrator/caller for quality gates.
+
+## Batch Output
+
+For batch mode, emit a new standalone `<name>-gaia/` package:
+
+```text
+<name>-gaia/
+├── pyproject.toml
+├── references.json
+├── src/<import>/
+│   ├── __init__.py
+│   ├── paper_<key>.py
+│   ├── cross_paper.py
+│   └── priors.py
+└── artifacts/lkm-discovery/
+    ├── input/
+    ├── retrieval_log.jsonl
+    ├── graph_growth_log.jsonl
+    ├── candidates.md
+    ├── contradictions.md
+    ├── equivalences.md
+    ├── mapping_audit.md
+    ├── merge_audit.md
+    ├── merge_decisions.todo
+    └── dismissed/
+```
+
+Copy raw LKM JSON verbatim into `artifacts/lkm-discovery/input/`. Do not strip,
+summarize, or rewrite raw payloads.
+Create or append `retrieval_log.jsonl` and `graph_growth_log.jsonl` according to
+`timeline-log-contract.md`.
+
+For refreshes, extend existing modules and audit files rather than replacing
+prior verdicts. Reuse existing labels and priors where possible.
+
+## Refresh Output
+
+For an existing standalone package, edit the existing package in place:
+
+- append new raw payloads under `artifacts/lkm-discovery/input/`,
+- append retrieval and graph-growth events without rewriting prior events,
+- extend existing paper modules or create new `paper_<key>.py` modules,
+- preserve existing labels and priors where possible,
+- append audit decisions rather than replacing prior history,
+- keep previous `dismissed/` entries and unresolved `merge_decisions.todo`
+  items unless the user explicitly reopens them.
+
+## Local Source Checks
+
+Before handoff:
+
+- Python source parses with `ast.parse`.
+- Gaia labels are lowercase identifiers: `[a-z_][a-z0-9_]*`.
+- `__init__.py` has the only package-level `__all__`.
+- No claim has a `prior` kwarg.
+- Every claim preserves LKM provenance metadata where available.
+- Every `deduction(...)` is factor-derived; no-chain source claims have no
+  fabricated deductions.
+- Cross-paper operators are in `cross_paper.py`.
+- Accepted contradictions use direct `contradiction(A, B)` per
+  `mapping-contract.md` §4, with an `xx_vs_yy` label, `open_problem:` in the
+  reason, high operator prior, and audit
+  `relation_type: scientific_inconsistency`.
+- Audit files reflect accepted contradictions, hypothesis-only open problems,
+  equivalences, merges, dismissals, and unresolved decisions.
+- `retrieval_log.jsonl` covers every package-scoped LKM call consumed by this
+  run, and `graph_growth_log.jsonl` covers every source/audit decision emitted
+  by this run.
+- Every graph-growth event has `schema_version`, `actor_id`, monotonic `seq`,
+  and a populated `graph_delta` block. No frontend-visible graph node or edge
+  requires parsing Python source to reconstruct.
+- Round lifecycle, stage transition, user-selection checkpoint, candidate, and
+  inquiry events required by `timeline-log-contract.md` have been emitted when
+  applicable.
+
+## Caller Quality Gate
+
+The orchestrator/caller accepts the emitted source only after running:
+
+```bash
+gaia compile .
+gaia check --brief .
+gaia check --hole .
+gaia infer .
+gaia inquiry review --strict .
+```
+
+If `gaia check --hole .` reports missing priors, fill `priors.py` and rerun the
+gate. If inquiry review reports unreviewed warrants or duplicates, log or
+resolve them according to Step 4 and rerun the gate.
+After each quality-gate attempt, append a `quality_gate_result` event to
+`graph_growth_log.jsonl` with an empty `graph_delta` unless the gate-triggered
+repair actually changed nodes or edges.
+
+## Hand-Off Report
+
+Return:
+
+- files created or changed,
+- raw LKM payloads consumed,
+- retrieval-log and graph-growth-log event ids added,
+- graph deltas added, including nodes/edges added or removed,
+- chain-backed vs no-chain source claims added,
+- deductions, supports, equivalences, accepted contradictions, and
+  hypothesis-only open problems added,
+- priors added or still needed,
+- inquiry obligations/hypotheses opened or closed,
+- commands the caller ran and pass/fail status,
+- deviations from the mapping contract, if any.
+
+## What This Skill Is Not
+
+- Not orchestration: this skill does not choose user roots or route siblings.
+- Not graph rendering: use Gaia CLI/rendering outside this local skill.
+- Not a Gaia DSL language guide: syntax details belong to the installed Gaia
+  package and must be verified through local Gaia CLI quality gates.
+
+## Step-Completion Gate
+
+When handoff is complete, mark Step 5 complete. If quality gates surface new
+obligations, create a new iteration checklist and return to Step 1 with the new
+target or obligation.
