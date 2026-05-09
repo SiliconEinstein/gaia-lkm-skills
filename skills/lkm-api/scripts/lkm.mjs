@@ -9,6 +9,7 @@ const BASE_URL = DEBUG
 function usage() {
   const lines = [
     "Usage:",
+    '  lkm.mjs search    --query "terms" [--top-k 10] [--out file]',
     '  lkm.mjs match     --text "terms" [--top-k 10] [--out file]',
     "  lkm.mjs evidence  --id CLAIM_ID [--max-chains 10] [--sort-by comprehensive] [--out file]",
     "  lkm.mjs variables --ids id1,id2,... [--out file]",
@@ -99,6 +100,22 @@ async function main() {
 
   if (!command || args.help) {
     usage();
+    return;
+  }
+
+  if (command === "search") {
+    if (!args.query) throw new Error("Missing --query");
+    const topK = Number(args["top-k"] || 10);
+    const result = await fetchJson(`${BASE_URL}/search`, {
+      method: "POST",
+      headers: authHeaders({ "content-type": "application/json" }),
+      body: JSON.stringify({
+        query: args.query,
+        top_k: topK,
+        filters: { visibility: "public" },
+      }),
+    });
+    await writeResult(result, args.out);
     return;
   }
 

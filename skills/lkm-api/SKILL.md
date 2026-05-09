@@ -1,6 +1,6 @@
 ---
 name: lkm-api
-description: Query the Bohrium Large Knowledge Model (LKM) HTTP API. Covers the three endpoints (`POST /claims/match`, `GET /claims/{id}/evidence`, `POST /variables/batch`), the `accessKey` auth contract, request/response shapes, the `data.papers` paper-metadata block, and known API quirks (`code=290001` transient, `code=290002` validation, id-only-with-empty-content premises, premise ids that may not round-trip standalone). Atomic: this skill is the API surface only — it does not prescribe retrieval methodology, root-selection policy, or downstream handoffs.
+description: Query the Bohrium Large Knowledge Model (LKM) HTTP API. Covers the four endpoints (`POST /search`, `POST /claims/match`, `GET /claims/{id}/evidence`, `POST /variables/batch`), the `accessKey` auth contract, request/response shapes, the `data.papers` paper-metadata block, and known API quirks (`code=290001` transient, `code=290002` validation, id-only-with-empty-content premises, premise ids that may not round-trip standalone). Atomic: this skill is the API surface only — it does not prescribe retrieval methodology, root-selection policy, or downstream handoffs.
 ---
 
 # LKM API
@@ -15,8 +15,9 @@ Preserve raw responses verbatim — every field (claim ids, source packages, fac
 
 Use **`https://open.bohrium.com/openapi/v1/lkm`** as the base URL. Do not point the skill at any non-production deployment.
 
-Three endpoints (all on this base):
+Four endpoints (all on this base):
 
+- search: `POST /search`
 - match: `POST /claims/match`
 - evidence: `GET /claims/{id}/evidence`
 - variables: `POST /variables/batch`
@@ -111,9 +112,10 @@ Use `scripts/lkm.mjs` for deterministic API calls. The helper reads the access k
 ```bash
 export LKM_ACCESS_KEY=<bohrium-access-key>   # set once per session
 
+node skills/lkm-api/scripts/lkm.mjs search    --query "your query" --top-k 10 --out search.json
 node skills/lkm-api/scripts/lkm.mjs match     --text "your query" --top-k 10 --out match.json
 node skills/lkm-api/scripts/lkm.mjs evidence  --id gcn_xxx --max-chains 10 --out evidence.json
 node skills/lkm-api/scripts/lkm.mjs variables --ids var1,var2 --out variables.json
 ```
 
-Verbs: `match`, `evidence`, `variables`. The helper uses Node built-in `fetch` and writes JSON to stdout, or to the file given by `--out`. See `references/api-contract.md` for field-level details.
+Verbs: `search`, `match`, `evidence`, `variables`. The helper uses Node built-in `fetch` and writes JSON to stdout, or to the file given by `--out`. See `references/api-contract.md` for field-level details.
