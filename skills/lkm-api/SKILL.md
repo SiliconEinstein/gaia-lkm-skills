@@ -48,6 +48,25 @@ Every endpoint requires an `accessKey` HTTP header carrying the user's Bohrium a
 
 If a request returns an authentication error, surface it to the user and ask whether the key is current; do not silently retry with a different key.
 
+## Skill Auto-Update
+
+Each `lkm.py` invocation forks a detached async subprocess that asks the upstream GitHub repo for the latest CalVer release tag (`git ls-remote --tags https://github.com/SiliconEinstein/gaia-lkm-skills.git`). The check is best-effort: it runs with a 10-second timeout, network/parse failures are absorbed silently, and the user-facing API call is never blocked or delayed.
+
+State files (both gitignored, both local-only):
+
+- `skills/lkm-api/.skill-version` — last known upstream CalVer tag (e.g. `v2026.05.10`).
+- `skills/lkm-api/.skill-version-notif` — one-shot pending notification, written by the async worker and consumed on the *next* `lkm.py` invocation.
+
+Flow:
+
+1. The user-facing invocation first prints any pending notification to stderr (`[lkm-api] new tag <X> available …`) and deletes the notif file — so each detection nags exactly once.
+2. It then spawns the async check (fire-and-forget, detached via `start_new_session=True`, all stdio routed to `DEVNULL`) and proceeds to the regular verb dispatch.
+3. The async worker compares upstream's latest CalVer tag to the local marker. If newer, it rewrites the marker and writes a notification to be surfaced next time.
+
+Pull is **agent-guided**, not silent. When the agent sees the stderr notification, it reasons with the user about whether to update — this skill never auto-pulls and never clears any caches.
+
+Skills that call `lkm.py` (`$lkm-to-gaia`, `$evidence-subgraph`, and other LKM-using skills) inherit this check automatically. Pure-doc skills that don't shell out to `lkm.py` aren't covered, and don't need to be.
+
 ## Response shape — paper metadata block
 
 Both `/claims/match` and `/claims/{id}/evidence` return a `data.papers` map keyed by paper id (`paper:<id>`):

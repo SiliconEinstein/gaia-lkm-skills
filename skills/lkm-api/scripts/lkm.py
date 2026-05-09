@@ -4,6 +4,13 @@
 Mirrors the four public verbs (search / match / evidence / variables) plus
 a DEBUG-only papers-ocr verb. Standard library only — no `requests` or other
 third-party deps. Reads the access key from the `LKM_ACCESS_KEY` env var.
+
+Each invocation also forks a detached async subprocess that pings the
+upstream GitHub repo for a newer CalVer release tag (best-effort, silent on
+failure). When a newer tag than the local `.skill-version` marker is seen,
+the async worker writes a one-shot notification to `.skill-version-notif`,
+surfaced on stderr by the *next* user-facing invocation. Pull is
+agent-guided — this helper never auto-pulls or clears caches.
 """
 
 from __future__ import annotations
@@ -11,6 +18,8 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
+import subprocess
 import sys
 import urllib.error
 import urllib.parse
@@ -24,6 +33,13 @@ BASE_URL = (
     if DEBUG
     else "https://open.bohrium.com/openapi/v1/lkm"
 )
+
+# Skill auto-update — files live in the skill directory (parent of scripts/).
+SKILL_DIR = Path(__file__).resolve().parent.parent
+VERSION_MARKER = SKILL_DIR / ".skill-version"
+VERSION_NOTIF = SKILL_DIR / ".skill-version-notif"
+UPSTREAM_REPO = "https://github.com/SiliconEinstein/gaia-lkm-skills.git"
+CALVER_RE = re.compile(r"^v\d{4}\.\d{2}\.\d{2}(?:\.\d+)?$")
 
 
 def get_access_key() -> str:
@@ -91,6 +107,95 @@ def write_result(result: Any, out_path: str | None) -> None:
         Path(out_path).write_text(text, encoding="utf-8")
     else:
         sys.stdout.write(text)
+
+
+# ---- skill auto-update ---------------------------------------------------
+
+
+def emit_pending_notification() -> None:
+    """If the async worker left a notification, print it once and remove."""
+    try:
+        if VERSION_NOTIF.exists():
+            msg = VERSION_NOTIF.read_text(encoding="utf-8").strip()
+            if msg:
+                sys.stderr.write(f"[lkm-api] {msg}\n")
+            VERSION_NOTIF.unlink()
+    except Exception:
+        # Best-effort — notification surface must never break API calls.
+        pass
+
+
+def kick_off_async_version_check() -> None:
+    """Fork a detached subprocess to query upstream tags. Fire and forget."""
+    try:
+        subprocess.Popen(
+            [sys.executable, str(Path(__file__).resolve()), "_version_check"],
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            start_new_session=True,
+            close_fds=True,
+        )
+    except Exception:
+        # Best-effort — never block the user-facing call.
+        pass
+
+
+def run_version_check() -> int:
+    """Internal verb: query upstream, update marker + notification on change.
+
+    Wrapped end-to-end in try/except — every failure path is silent. This
+    runs in a detached subprocess; nothing here should ever surface to the
+    user-facing invocation.
+    """
+    try:
+        current = ""
+        if VERSION_MARKER.exists():
+            current = VERSION_MARKER.read_text(encoding="utf-8").strip()
+
+        proc = subprocess.run(
+            ["git", "ls-remote", "--tags", UPSTREAM_REPO],
+            capture_output=True,
+            text=True,
+            timeout=10,
+            check=False,
+        )
+        if proc.returncode != 0 or not proc.stdout:
+            return 0
+
+        tags: list[str] = []
+        for line in proc.stdout.splitlines():
+            # Format: "<sha>\trefs/tags/<tag>" (sometimes "<tag>^{}").
+            parts = line.split("refs/tags/", 1)
+            if len(parts) != 2:
+                continue
+            tag = parts[1].strip()
+            if tag.endswith("^{}"):
+                tag = tag[:-3]
+            if CALVER_RE.match(tag):
+                tags.append(tag)
+
+        if not tags:
+            return 0
+
+        # Lexical sort works for vYYYY.MM.DD[.N] (zero-padded date,
+        # numeric suffix tie-breaks since `.1` < `.2` < `.10` only fails
+        # past 9 same-day releases — acceptable for CalVer).
+        latest = sorted(set(tags))[-1]
+
+        if latest != current:
+            VERSION_MARKER.write_text(latest + "\n", encoding="utf-8")
+            current_label = current or "none"
+            msg = (
+                f"new tag {latest} available (current: {current_label}). "
+                f"Pull guidance: cd ~/ThisIsDP/dev/gaia-lkm-skills && "
+                f"git fetch --tags && git checkout {latest} "
+                f"(or update via your skill manager)."
+            )
+            VERSION_NOTIF.write_text(msg, encoding="utf-8")
+        return 0
+    except Exception:
+        return 0
 
 
 # ---- verbs ---------------------------------------------------------------
@@ -218,6 +323,19 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main(argv: list[str] | None = None) -> int:
+    # Hidden internal verb — handled before argparse so it never appears in
+    # --help. Runs entirely silent (best-effort version check).
+    raw = sys.argv[1:] if argv is None else argv
+    if raw and raw[0] == "_version_check":
+        return run_version_check()
+
+    # User-facing path: surface any pending notification, then kick off a
+    # fresh async check. Notification first, so the user sees the *previous*
+    # detection before this run's check (which may overwrite the notif file)
+    # runs to completion.
+    emit_pending_notification()
+    kick_off_async_version_check()
+
     parser = build_parser()
     args = parser.parse_args(argv)
     if not getattr(args, "command", None):
