@@ -1,6 +1,6 @@
 ---
 name: orchestrator
-description: Thin router for project-local LKM/Gaia skills. Use first for LKM-driven or Gaia-graph tasks. Classifies the user request and points the agent to the right atomic skill or SOP. The main maintained workflow is LKM -> Gaia package via $lkm-api and $lkm-to-gaia; evidence-subgraph and scholarly-synthesis are independent optional branches.
+description: Thin router for project-local LKM/Gaia skills. Use first for LKM-driven or Gaia-graph tasks. Classifies the user request and points the agent to the right atomic skill or SOP. The main maintained workflow is LKM -> Gaia package via $lkm-api and $lkm-explorer; evidence-subgraph and scholarly-synthesis are independent optional branches.
 ---
 
 # Orchestrator
@@ -15,10 +15,15 @@ routes the task and loads the right SOP or atomic skill.
 
 - **`$lkm-api`** — Bohrium LKM HTTP API surface: match, evidence, variables,
   auth, raw JSON preservation, and API quirks.
-- **`$lkm-to-gaia`** — maps LKM raw match/evidence/source payloads directly to
-  Gaia DSL via its progressive five-step workflow.
+- **`$gaia-package`** — references-only contract atomic for the unified
+  `<name>-gaia/` package shape, generic emit-mapping rules, and the
+  `graph_growth_log.jsonl` v1 audit schema. Consumed by every Gaia-emitting
+  skill; no scripts, no runtime workflow.
+- **`$lkm-explorer`** — contract-driven LKM exploration that maps LKM raw
+  match/evidence/source payloads into Gaia DSL per `$gaia-package`, via its
+  progressive five-step workflow.
 - **`$evidence-subgraph`** — optional graph-only branch for a chain-backed root;
-  not an upstream dependency of `$lkm-to-gaia`.
+  not an upstream dependency of `$lkm-explorer`.
 - **`$scholarly-synthesis`** — optional/future prose branch from an audited
   evidence graph and `data.papers`; not part of the LKM->Gaia package loop.
 
@@ -31,16 +36,16 @@ package-specific render commands after compilation/inference.
 
 Use this for prompts such as "build a Gaia package", "formalize this LKM claim
 into Gaia", "extend the package", "clean duplicate claims", or "continue
-growing this graph". This is the only maintained LKM-to-Gaia workflow; support
+growing this graph". This is the only maintained LKM-explorer workflow; support
 search, contradiction/open-question search, duplicate cleanup, and iterative
 root-claim frontier expansion all route through the same SOP.
 
-1. Read `references/lkm-to-gaia-sop.md`.
+1. Read `references/lkm-explorer-sop.md`.
 2. Read `$lkm-api/SKILL.md` before any API calls.
-3. Maintain the LKM-to-Gaia timeline logs required by the SOP for every package
-   retrieval and graph-growth decision.
-4. Read `$lkm-to-gaia/SKILL.md` when selected LKM payloads are ready to map.
-5. Let `$lkm-to-gaia` create and advance its own progressive todo/checklist.
+3. Maintain the LKM-explorer timeline logs required by the SOP for every
+   package retrieval and graph-growth decision.
+4. Read `$lkm-explorer/SKILL.md` when selected LKM payloads are ready to map.
+5. Let `$lkm-explorer` create and advance its own progressive todo/checklist.
 6. Run Gaia quality gates from the SOP before declaring the turn complete.
 
 ### Raw LKM API Task

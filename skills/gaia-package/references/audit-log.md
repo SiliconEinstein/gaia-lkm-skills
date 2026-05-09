@@ -40,7 +40,7 @@ original.
 
 LKM-specific files (`retrieval_log.jsonl`, `merge_audit.md`,
 `merge_decisions.todo`, `dismissed/`) are **out of scope for this
-contract** — they live under the audit dir but are owned by `$lkm-to-gaia`.
+contract** — they live under the audit dir but are owned by `$lkm-explorer`.
 
 ## 2. Schema versioning
 
@@ -68,12 +68,12 @@ Every event has the following identity fields:
 ```json
 {
   "schema_version": "1",
-  "event_id": "2026-05-05T14:00:00.123Z__lkm-to-gaia-18430__accepted_claim__7",
+  "event_id": "2026-05-05T14:00:00.123Z__lkm-explorer-18430__accepted_claim__7",
   "timestamp_utc": "2026-05-05T14:00:00.123Z",
   "stage": "mapping",
   "round_id": "round_0001",
-  "actor": "lkm-to-gaia",
-  "actor_id": "lkm-to-gaia-18430",
+  "actor": "lkm-explorer",
+  "actor_id": "lkm-explorer-18430",
   "seq": 7,
   "decision": "accepted_claim"
 }
@@ -96,9 +96,9 @@ Rules:
   `round_0000`; later frontier rounds use `round_0001`, `round_0002`,
   etc. Single-pass paper-extract emitters use `"round_0000"` always.
 - **`actor`** is the emitting skill name (e.g., `"orchestrator"`,
-  `"lkm-to-gaia"`, `"paper-to-gaia"`, or a delegated worker name).
+  `"lkm-explorer"`, `"formalize"`, or a delegated worker name).
 - **`actor_id`** identifies the emitting actor and includes a worker name
-  plus pid or uuid (e.g., `lkm-to-gaia-18430`,
+  plus pid or uuid (e.g., `lkm-explorer-18430`,
   `worker-support-a-550e8400`).
 - **`seq`** is a monotonically increasing integer per actor; reset within
   a run is not allowed.
@@ -160,7 +160,7 @@ event as informational and continue replay.
 
 Different emitters use different subsets of the decision vocabulary:
 
-- **`$lkm-to-gaia`** uses the full vocabulary: lifecycle (cold start,
+- **`$lkm-explorer`** uses the full vocabulary: lifecycle (cold start,
   frontier rounds, user-selection checkpoints), candidate handling
   (`candidate_considered`, `dismissed`, `hypothesis_only`, the `_not_found`
   family, `merge`/`keep_distinct`), graph growth, and quality gates.
@@ -312,7 +312,7 @@ A frontend that replays by `seq` will see the package come into existence
 in the order Phase 4 conceptually emitted it, regardless of when the file
 was actually flushed to disk.
 
-For multi-pass emitters (e.g., `$lkm-to-gaia`'s frontier-expansion
+For multi-pass emitters (e.g., `$lkm-explorer`'s frontier-expansion
 rounds), wall-clock order and logical order coincide because events are
 appended as decisions are made.
 
@@ -334,7 +334,7 @@ appended as decisions are made.
 
 ## 9. Round lifecycle (multi-pass emitters)
 
-Multi-pass emitters (e.g., `$lkm-to-gaia`) emit explicit round lifecycle
+Multi-pass emitters (e.g., `$lkm-explorer`) emit explicit round lifecycle
 events. Single-pass paper-extract emitters skip these.
 
 `round_open` payload:

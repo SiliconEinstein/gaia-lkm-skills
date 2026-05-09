@@ -29,7 +29,7 @@ the upstream-specific extensions used to distinguish provenance.
 
 ### LKM-extracted-claim kwargs
 
-Used by `$lkm-to-gaia` (and any future LKM-driven emitter). Not emitted
+Used by `$lkm-explorer` (and any future LKM-driven emitter). Not emitted
 by paper-extract.
 
 | kwarg              | type            | meaning                                                                |
@@ -498,7 +498,7 @@ appropriate for the field.
 
 The **promotion criteria** (when a tension becomes an accepted
 contradiction vs an audit-only hypothesis) and the open-question-first
-discovery workflow are upstream-specific (e.g., `$lkm-to-gaia` runs an
+discovery workflow are upstream-specific (e.g., `$lkm-explorer` runs an
 explicit open-question/conflict channel during frontier expansion). Those
 rules live in the consumer skill's contract.
 

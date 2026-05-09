@@ -13,7 +13,7 @@ Default loop:
 
 1. **Partition.** Split the turn into atomic units with clear inputs and outputs: one selected root, one evidence graph, one duplicate batch, one render target, one synthesis step, etc.
 2. **Delegate.** Spawn a subagent for each atomic unit when the work is independent enough to parallelize or risky enough to benefit from isolation.
-3. **Force skill loading.** The subagent prompt must name the exact skill files it must read before acting, especially `lkm-to-gaia/SKILL.md` or `evidence-subgraph/SKILL.md`.
+3. **Force skill loading.** The subagent prompt must name the exact skill files it must read before acting, especially `lkm-explorer/SKILL.md` or `evidence-subgraph/SKILL.md`.
 4. **Require a strict return.** Each subagent must report files changed, commands run, pass/fail status, open obligations, rule deviations, and audit notes.
 5. **Audit.** The orchestrator independently reads the returned source/audit files and reruns the relevant checks. Do not rely only on the subagent summary.
 6. **Repair.** If the artifact violates a skill rule, delegate a focused repair task with the exact audit finding. Iterate until the artifact passes or the blocker is explicit.
@@ -21,24 +21,25 @@ Default loop:
 8. **Verify.** Run the turn's final success checks from the target package. For Gaia packages this means `gaia compile .`, `gaia check --hole .`, and `gaia infer .`; external Gaia CLI/publish workflow commands also rerun their target-specific checks.
 9. **Preserve audit trail.** Copy or append all raw inputs, subagent audit logs,
    repair notes, and synthesis decisions under `artifacts/lkm-discovery/` or the
-   package's chosen artifact directory. For LKM-to-Gaia package work only, also
-   preserve the chronological `retrieval_log.jsonl` and
-   `graph_growth_log.jsonl` entries required by the LKM-to-Gaia timeline
-   contract.
+   package's chosen artifact directory. For LKM-explorer package work only,
+   also preserve the chronological `retrieval_log.jsonl` and
+   `graph_growth_log.jsonl` entries (the former per
+   `$lkm-explorer/references/timeline-log-contract.md`, the latter per the
+   canonical schema in `$gaia-package/references/audit-log.md`).
 
 ## Turn-specific defaults
 
 ### Turn 1: cold-start build
 
-After the mandatory user-selection checkpoint, treat each selected root as an atomic LKM-to-Gaia mapping task when work needs delegation. Each worker reads `$lkm-to-gaia` and returns a standalone package source delta plus audit notes. Synthesize validated source deltas into the initial final package only after each delta passes its own mapping checks.
+After the mandatory user-selection checkpoint, treat each selected root as an atomic LKM-explorer mapping task when work needs delegation. Each worker reads `$lkm-explorer` and returns a standalone package source delta plus audit notes. Synthesize validated source deltas into the initial final package only after each delta passes its own mapping checks.
 
 ### Turn 2: extend
 
-Follow the single workflow in `lkm-to-gaia-sop.md`. Use the cold-start root
+Follow the single workflow in `lkm-explorer-sop.md`. Use the cold-start root
 frontier unless the user explicitly names a different target. For each frontier
 claim, run both the support channel and the open-question/conflict channel from
 that SOP; append new LKM JSON to the existing audit input folder. For each
-accepted candidate batch, delegate an audited `$lkm-to-gaia` source delta when
+accepted candidate batch, delegate an audited `$lkm-explorer` source delta when
 useful, then merge it into the existing final package without silently changing
 prior verdicts. Delegated retrievals and source/audit decisions must be
 reflected in the package-level timeline logs.
@@ -70,7 +71,7 @@ Every delegated task prompt should include:
 - The checks to run and repair loop expectation.
 - A prohibition on editing unrelated package areas.
 - Required final report fields: files changed, commands run, pass/fail, open risks, deviations.
-- For LKM-to-Gaia package tasks, retrieval-log and graph-growth-log event ids
+- For LKM-explorer package tasks, retrieval-log and graph-growth-log event ids
   added or needing orchestrator backfill.
 
 ## Acceptance rule

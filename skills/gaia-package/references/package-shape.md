@@ -13,7 +13,7 @@ rather than relying on this document alone.
 ### Multi-paper layout
 
 Used when the package aggregates evidence across several source papers (the
-typical `$lkm-to-gaia` case):
+typical `$lkm-explorer` case):
 
 ```
 <name>-gaia/
@@ -96,10 +96,10 @@ requires-python = ">=3.12"
 [tool.gaia]
 type = "knowledge-package"
 uuid = "<auto-minted UUID4>"
-generated_by = "<emitter skill name, e.g. lkm-to-gaia or paper-to-gaia>"
+generated_by = "<emitter skill name, e.g. lkm-explorer or formalize>"
 # emitter-specific provenance fields:
-# generated_from_search = "<search query>"           # lkm-to-gaia
-# generated_from_roots = ["<root_claim_id>", ...]    # lkm-to-gaia
+# generated_from_search = "<search query>"           # lkm-explorer
+# generated_from_roots = ["<root_claim_id>", ...]    # lkm-explorer
 # generated_from_paper = "<reference_key>"           # paper-extract
 # generated_from_doi = "<paper DOI>"                 # paper-extract
 
@@ -335,7 +335,7 @@ characters `\\`, which is what LaTeX expects.
 
 The audit directory under `artifacts/` holds the structured replay log and
 the human-readable audit tables. **Its name is chosen by the caller**
-(`lkm-discovery/` for `$lkm-to-gaia`, `paper-extract/` for `$formalize`).
+(`lkm-discovery/` for `$lkm-explorer`, `paper-extract/` for `$formalize`).
 This contract specifies the layout *under* that directory, not the directory
 name itself.
 
@@ -353,10 +353,10 @@ See `audit-log.md` for the `graph_growth_log.jsonl` v1 schema and the
 
 Caller-specific files (defined by the consumer skill, **not** here):
 
-- **`$lkm-to-gaia`** adds `retrieval_log.jsonl` (LKM API call log),
+- **`$lkm-explorer`** adds `retrieval_log.jsonl` (LKM API call log),
   `merge_audit.md` (shared-premise dedup), `merge_decisions.todo` (ambiguous
   pairs), and `dismissed/` (false-alarm tension pairs). These are
-  LKM-workflow-specific and stay documented in `$lkm-to-gaia`.
+  LKM-workflow-specific and stay documented in `$lkm-explorer`.
 - **`$formalize`** emits the common files only — there is no
   `retrieval_log.jsonl` because no API calls are made; no `merge_audit.md`
   because the workflow is single-paper; no `dismissed/` because there is no

@@ -1,6 +1,6 @@
 ---
 name: gaia-package
-description: References-only atomic defining the unified Gaia knowledge package contract — package layout and file templates, emit mapping rules for claim/deduction/support/contradiction/equivalence/question primitives plus provenance metadata (provenance_source enum, claim_kind, weak_types, p1/p2/review_prior, refs whitelist), and the graph_growth_log.jsonl v1 audit schema. Referenced by `$lkm-to-gaia` (LKM-driven exploration → Gaia DSL; pending rename to `$lkm-explorer`) and the upcoming `$formalize` skill. No scripts; pure contract.
+description: References-only atomic defining the unified Gaia knowledge package contract — package layout and file templates, emit mapping rules for claim/deduction/support/contradiction/equivalence/question primitives plus provenance metadata (provenance_source enum, claim_kind, weak_types, p1/p2/review_prior, refs whitelist), and the graph_growth_log.jsonl v1 audit schema. Referenced by `$lkm-explorer` (LKM-driven exploration → Gaia DSL) and the upcoming `$formalize` skill. No scripts; pure contract.
 ---
 
 # Gaia-Package
@@ -11,7 +11,7 @@ description: References-only atomic defining the unified Gaia knowledge package 
 `<name>-gaia/` knowledge package emitted by upstream skills, plus the audit log
 that makes those packages replayable. It is references-only: no scripts, no
 runtime workflow, no execution. Skills that *produce* Gaia packages (currently
-`$lkm-to-gaia`; pending `$formalize`) consume this contract and add their own
+`$lkm-explorer`; pending `$formalize`) consume this contract and add their own
 upstream-specific rules on top.
 
 The split exists so that the package-emission contract is authored once and
@@ -38,10 +38,10 @@ shared, rather than duplicated and drifted across every Gaia-emitting skill.
   owns its own workflow contract.
 - **LKM-only audit shapes.** `retrieval_log.jsonl`, `merge_audit.md`,
   `merge_decisions.todo`, the `dismissed/` folder, and the `lkm-discovery/`
-  audit-dir name are LKM-workflow-specific and remain in `$lkm-to-gaia`.
+  audit-dir name are LKM-workflow-specific and remain in `$lkm-explorer`.
 - **Audit-dir naming.** This skill specifies the layout *under* the audit
   directory (`graph_growth_log.jsonl`, `mapping_audit.md`, `input/`); the
-  caller chooses the directory name (`lkm-discovery/` for `$lkm-to-gaia`,
+  caller chooses the directory name (`lkm-discovery/` for `$lkm-explorer`,
   `paper-extract/` for the upcoming `$formalize`).
 - **Gaia DSL grammar.** The Gaia library/CLI is the source of truth for what
   compiles. Verify with `gaia compile` and `gaia check --hole`.
@@ -73,8 +73,7 @@ shared, rather than duplicated and drifted across every Gaia-emitting skill.
 
 This contract is consumed by:
 
-- **`$lkm-to-gaia`** (current name; pending rename to **`$lkm-explorer`** in a
-  follow-up commit) — LKM evidence + audit flags → Gaia DSL. Adds frontier
+- **`$lkm-explorer`** — LKM evidence + audit flags → Gaia DSL. Adds frontier
   expansion, cold-start root selection, support-channel and
   open-question/conflict channel handling, retrieval logging, and the
   `lkm-discovery/` audit-dir on top of this contract.
@@ -82,11 +81,6 @@ This contract is consumed by:
   Gaia DSL. Adds Phase 1–4 paper-decomposition workflow, conclusion / weak-point
   / highlight extraction, and the `paper-extract/` audit-dir on top of this
   contract.
-
-Follow-up commits will (1) rename `$lkm-to-gaia` to `$lkm-explorer` and prune
-the now-shared content from its references, (2) create `$formalize`, and
-(3) update `$orchestrator`'s atomic-list and the AGENTS.md atomicity section.
-None of those changes are part of this commit.
 
 For frontmatter shape, atomicity discipline, and `$<skill>` cross-ref
 convention, see [`AGENTS.md`](../../AGENTS.md). For the routing front door, see

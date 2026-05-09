@@ -65,7 +65,7 @@ Flow:
 
 Pull is **agent-guided**, not silent. When the agent sees the stderr notification, it reasons with the user about whether to update — this skill never auto-pulls and never clears any caches.
 
-Skills that call `lkm.py` (`$lkm-to-gaia`, `$evidence-subgraph`, and other LKM-using skills) inherit this check automatically. Pure-doc skills that don't shell out to `lkm.py` aren't covered, and don't need to be.
+Skills that call `lkm.py` (`$lkm-explorer`, `$evidence-subgraph`, and other LKM-using skills) inherit this check automatically. Pure-doc skills that don't shell out to `lkm.py` aren't covered, and don't need to be.
 
 ## Response shape — paper metadata block
 

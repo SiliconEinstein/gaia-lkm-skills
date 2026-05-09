@@ -1,9 +1,15 @@
-# LKM-To-Gaia SOP
+# LKM-Explorer SOP
 
 Use this SOP as the **single maintained workflow** when the user asks to build,
 extend, audit, or refine a Gaia knowledge package from LKM content. There is no
 separate expansion SOP: support search and open-question/conflict search are two
 channels inside this SOP.
+
+The package shape, generic emit-mapping rules, and the
+`graph_growth_log.jsonl` audit schema referenced below are owned by
+[`$gaia-package`](../../gaia-package/). LKM-driven exploration, the
+`lkm-discovery/` audit dir, the `retrieval_log.jsonl`, and LKM-only mapping
+rules are owned by [`$lkm-explorer`](../../lkm-explorer/).
 
 ## Primary Path
 
@@ -13,7 +19,7 @@ user request
   -> $lkm-api retrieves raw match/evidence payloads
   -> retrieval_log.jsonl records package-scoped LKM calls
   -> cold start: user selects one chain-backed root claim
-  -> $lkm-to-gaia maps accepted payloads to Gaia DSL
+  -> $lkm-explorer maps accepted payloads to Gaia DSL
   -> graph_growth_log.jsonl records source/audit graph growth
   -> Gaia quality gates produce .gaia/ir.json
   -> later rounds expand from the cold-start root frontier
@@ -93,7 +99,7 @@ Use this stage when no package exists yet or the user asks for a fresh package.
 10. After user selection, append `user_selection_checkpoint_closed`,
     `selected_root`, `stage_transition` (`cold_start` -> `mapping`), and
     `round_open` for `round_0000` with the selected root as `frontier_in`.
-11. Read `$lkm-to-gaia/SKILL.md` and run its progressive five-step workflow in
+11. Read `$lkm-explorer/SKILL.md` and run its progressive five-step workflow in
     batch mode. Every emitted growth event must include `graph_delta`.
 12. Run the Quality Gates, append `quality_gate_result`, then append
     `round_close` for `round_0000`. Record the user-selected root claim as the
@@ -241,7 +247,7 @@ The corresponding JSONL events should fill structured fields when applicable:
 `scope_tuple`, `scope_diff`, `open_problem`, `rejection_reason`, and
 `warrant_prior`.
 
-After candidate classification, run `$lkm-to-gaia` progressive workflow in
+After candidate classification, run `$lkm-explorer` progressive workflow in
 refresh mode for accepted package changes.
 
 ## Stage 3 — Duplicate And Prior Maintenance
@@ -297,25 +303,28 @@ repair changed nodes or edges; repair passes get separate `repair` events.
 - For cold-start Gaia packages, the selected root must be chain-backed
   (`total_chains > 0`).
 - After cold start, LKM source claims with `total_chains = 0` may enter
-  `$lkm-to-gaia` as leaf/source claims when content and provenance are clear.
+  `$lkm-explorer` as leaf/source claims when content and provenance are clear.
 - Iterative graph growth after cold start follows root-claim frontier expansion
   from the user-selected root claim. Do not substitute a graph-centrality,
   belief-based, contradiction-side, or arbitrary frontier policy unless the user
   explicitly asks for a different workflow.
 - `artifacts/lkm-discovery/input/` is append-only for raw retrievals.
-- `retrieval_log.jsonl` and `graph_growth_log.jsonl` are append-only chronological
-  replay indexes for LKM-to-Gaia package work only; follow
-  `$lkm-to-gaia/references/timeline-log-contract.md`.
+- `retrieval_log.jsonl` and `graph_growth_log.jsonl` are append-only
+  chronological replay indexes for LKM-explorer package work only.
+  `retrieval_log.jsonl` schema lives in
+  `$lkm-explorer/references/timeline-log-contract.md`;
+  `graph_growth_log.jsonl` v1 schema lives in
+  `$gaia-package/references/audit-log.md`.
 - `merge_audit.md`, `mapping_audit.md`, `merge_decisions.todo`, `dismissed/`,
   and `.gaia/inquiry/` preserve prior decisions across rounds.
 - `contradictions.md` and `equivalences.md` are discovery/audit flag files, not
   executable truth by themselves.
 - Open-question-first contradiction handling is canonical in
-  `$lkm-to-gaia/references/mapping-contract.md` §4.
+  `$lkm-explorer/references/mapping-contract.md` §4.
 
 ## Delegation
 
 For complex or separable LKM->Gaia work, use the audited delegation pattern in
 `audited-delegation.md`. Delegation must follow this single SOP, force subagents
-to load `$lkm-to-gaia/SKILL.md`, and never removes the orchestrator's
+to load `$lkm-explorer/SKILL.md`, and never removes the orchestrator's
 responsibility to audit returned artifacts against the relevant skill contract.
