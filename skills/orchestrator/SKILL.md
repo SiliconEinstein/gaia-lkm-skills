@@ -1,6 +1,6 @@
 ---
 name: orchestrator
-description: Thin router for project-local LKM/Gaia skills. Use first for LKM-driven or Gaia-graph tasks. Classifies the user request and points the agent to the right atomic skill or SOP. The main maintained workflow is LKM -> Gaia package via $lkm-api and $lkm-explorer; evidence-subgraph and scholarly-synthesis are independent optional branches.
+description: Thin router for project-local LKM/Gaia skills. Use first for LKM-driven or Gaia-graph tasks. Classifies the user request and points the agent to the right atomic skill or SOP. Two main maintained workflows — LKM → Gaia package via $lkm-api and $lkm-explorer (claim-driven, contradiction-driven), and Paper → Gaia package via $formalize (single-paper, 4-phase). Both emit packages conforming to the $gaia-package contract. Evidence-subgraph and scholarly-synthesis are independent optional branches; gaia-cli is the CLI toolchain reference.
 ---
 
 # Orchestrator
@@ -22,10 +22,19 @@ routes the task and loads the right SOP or atomic skill.
 - **`$lkm-explorer`** — contract-driven LKM exploration that maps LKM raw
   match/evidence/source payloads into Gaia DSL per `$gaia-package`, via its
   progressive five-step workflow.
+- **`$formalize`** — single-paper formalization: reads a paper Markdown,
+  performs four analytical phases (extract conclusions / build reasoning chain
+  / review weak points / emit), and produces a Gaia knowledge package per
+  `$gaia-package`. Phase 1b cross-grounds via `$lkm-api` `/search` reverse
+  trace.
+- **`$gaia-cli`** — Gaia CLI toolchain reference (`init`, `compile`, `check`,
+  `infer`, `render`, `register`, `add`). Pure documentation; consulted by
+  callers running quality gates after package emission.
 - **`$evidence-subgraph`** — optional graph-only branch for a chain-backed root;
   not an upstream dependency of `$lkm-explorer`.
 - **`$scholarly-synthesis`** — optional/future prose branch from an audited
-  evidence graph and `data.papers`; not part of the LKM->Gaia package loop.
+  evidence graph and `data.papers`; not part of the LKM/Paper → Gaia package
+  loop.
 
 There is no local render skill. For package visualization, use Gaia CLI or
 package-specific render commands after compilation/inference.
@@ -48,6 +57,22 @@ root-claim frontier expansion all route through the same SOP.
 5. Let `$lkm-explorer` create and advance its own progressive todo/checklist.
 6. Run Gaia quality gates from the SOP before declaring the turn complete.
 
+### Paper -> Gaia Package
+
+Use this for prompts such as "review 一下这文章", "帮我看看这文章结构",
+"把这论文 formalize 成 gaia 包", "paper.md → gaia", "produce a Gaia package
+from this paper", or any variant where the upstream is a single paper Markdown
+and the requested output is Gaia DSL or a Gaia knowledge package.
+
+1. Read `$formalize/SKILL.md`.
+2. Run the 4-phase workflow: extract conclusions → build reasoning chain →
+   review weak points → emit package. Phase-3 cross-grounds via Phase 1b LKM
+   reverse trace (`$lkm-api` `/search`); Phase 1b is best-effort and skips
+   silently when the paper isn't in the LKM corpus.
+3. Emit conforms to `$gaia-package`.
+4. Run Gaia quality gates (per `$gaia-cli`) after emission: `gaia compile`,
+   `gaia check --hole`, `gaia infer`.
+
 ### Raw LKM API Task
 
 Use `$lkm-api` directly when the user only asks to fetch, inspect, or compare
@@ -68,5 +93,5 @@ metadata. Keep this path separate from LKM->Gaia package construction.
 ### Visualization
 
 No project-local render skill exists. If the user asks to visualize a compiled
-Gaia package, use repo/package Gaia CLI render commands directly and preserve
-the same quality/audit discipline.
+Gaia package, use Gaia CLI render commands directly (see `$gaia-cli` for the
+toolchain reference) and preserve the same quality/audit discipline.
