@@ -1,0 +1,97 @@
+# LKM-Explorer Audit Dir
+
+> Generic package layout, naming conventions, and file templates
+> (`pyproject.toml`, `__init__.py`, `paper_<key>.py`, `cross_paper.py`,
+> `priors.py`, `references.json`) are in
+> [`$gaia-package/references/package-shape.md`](../../gaia-package/references/package-shape.md).
+> Generic `mapping_audit.md` table conventions are in
+> [`$gaia-package/references/audit-log.md`](../../gaia-package/references/audit-log.md).
+> This file documents ONLY the `artifacts/lkm-discovery/` audit directory
+> specific to LKM-driven exploration.
+
+## Audit-dir layout
+
+`$lkm-explorer` writes its audit dir under
+`artifacts/lkm-discovery/` (the audit-dir name itself is fixed by this skill;
+generic audit-dir-under-package layout is in `$gaia-package`):
+
+```
+<name>-gaia/
+  artifacts/
+    lkm-discovery/
+      retrieval_log.jsonl     # append-only chronological LKM API call log (LKM-specific)
+      graph_growth_log.jsonl  # append-only chronological Gaia growth/decision log (canonical v1 schema in $gaia-package)
+      merge_audit.md          # dedup decisions
+      mapping_audit.md        # per-claim and per-pair transformation log
+      merge_decisions.todo    # surfaced ambiguous pairs (if any)
+      input/                  # verbatim copy of input files (raw evidence JSON + .md flag files)
+      dismissed/              # candidate tension pairs dismissed as false alarms
+      candidates.md           # discovery flag file
+      contradictions.md       # discovery flag file
+      equivalences.md         # discovery flag file
+```
+
+## What ships in `artifacts/lkm-discovery/`
+
+- `merge_audit.md` — every shared-premise dedup decision
+- `mapping_audit.md` — per-claim and per-pair transformation log; LKM table
+  conventions documented below; canonical generic conventions in
+  [`$gaia-package/references/audit-log.md`](../../gaia-package/references/audit-log.md)
+- `merge_decisions.todo` — surfaced ambiguous pairs (agent couldn't decide
+  merge vs keep)
+- `retrieval_log.jsonl` — ordered index of LKM match/evidence/variables calls,
+  with raw payload filename, query/request, frontier/channel, response code,
+  and `trace_id`. LKM-specific schema lives in
+  [`timeline-log-contract.md`](timeline-log-contract.md)
+- `graph_growth_log.jsonl` — ordered index of selected roots, admitted claims,
+  deductions, supports, contradictions, equivalences, dismissals, priors,
+  repairs, and quality-gate results. Canonical schema in
+  [`$gaia-package/references/audit-log.md`](../../gaia-package/references/audit-log.md)
+- `input/` — verbatim copy of all input files (raw evidence JSON,
+  `contradictions.md`, `equivalences.md`, `candidates.md`)
+- `dismissed/` — candidate tension pairs the agent dismissed as false alarms,
+  with rationale
+
+The two JSONL logs are the replay index; the markdown audit files carry the
+detailed scientific rationale.
+
+## What ships in `artifacts/lkm-discovery/mapping_audit.md`
+
+LKM-explorer-specific table format. A flat decision log:
+
+```markdown
+# Mapping audit log — <package name>
+
+## Factors -> deductions
+
+| factor_id | source_paper | premises | conclusion | dsl_kind |
+|---|---|---|---|---|
+| gfac_9d88a6f8 | paper:814606014073536517 | gcn_2386d1b6, gcn_9f7a3e33 | gcn_66ac13c8 | deduction |
+
+## Equivalences
+
+| pair | a | b | decision | dsl_action |
+|---|---|---|---|---|
+| gcn_73c88cf / gcn_66ac13c8 | gcn_73c88cf | gcn_66ac13c8 | same paper (arXiv->PRB) | merged; no equivalence() |
+
+## Contradictions
+
+| pair | open_problem | decision | relation_type | dsl_action |
+|---|---|---|---|---|
+| (none in this run) | | | | |
+
+## Dismissed
+
+| pair | origin | rationale |
+|---|---|---|
+| (none in this run) | | |
+```
+
+This audit log is the reviewer's first stop after `gaia infer .` returns
+surprising beliefs.
+
+The shared "Factors -> deductions / Equivalences / Contradictions / Dismissed"
+section structure is part of the LKM-explorer convention; the broader
+`mapping_audit.md` table conventions (column names, decision vocabulary,
+multi-emitter compatibility) are in
+[`$gaia-package/references/audit-log.md`](../../gaia-package/references/audit-log.md).

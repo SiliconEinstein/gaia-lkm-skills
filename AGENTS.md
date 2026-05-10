@@ -18,6 +18,7 @@ This file is the contributor contract for `gaia-lkm-skills`. Agent-agnostic — 
 - Conflict resolution belongs in the PR body, not the merge commit. State which side won, which side lost, and why — so the rationale survives in the PR history.
 - Never rewrite `main` history.
 - Never `gh pr create` autonomously on personal branches without explicit user authorization to ship.
+- Every merge to `main` gets a CalVer tag: `v<YYYY.MM.DD>` (annotated, from the merge commit), suffixed `.1`, `.2`, … for multiple merges the same day (e.g. `v2026.05.08`, `v2026.05.08.1`). Tag message references the PR (`PR #N: <subject>`); push separately with `git push origin <tag>`.
 
 ## Skill authoring discipline
 
@@ -39,8 +40,9 @@ The `description` is what an agent reads to decide whether to invoke the skill. 
 Each atomic skill does **one thing** and exposes a clean contract:
 
 - **`$lkm-api`** — HTTP I/O against LKM only. No graph logic, no DSL emission.
-- **`$lkm-to-gaia`** — LKM evidence → Gaia DSL only. No HTTP, no rendering.
-- **`$evidence-subgraph`** — graph build / audit / render only. Consumes `$lkm-api` JSON. Independent optional branch — not an upstream dependency of `$lkm-to-gaia`.
+- **`$gaia-package`** — references-only contract atomic. Defines the unified `<name>-gaia/` knowledge package shape (layout + file templates), the generic emit-mapping rules (claim/deduction/support/contradiction/equivalence body discipline, metadata kwargs), and the `graph_growth_log.jsonl` v1 audit schema. Consumed by every Gaia-emitting skill. No scripts, no runtime workflow.
+- **`$lkm-explorer`** — contract-driven LKM exploration → Gaia knowledge package per `$gaia-package`. LKM evidence → Gaia DSL via a five-step contradiction-driven workflow. Owns the `lkm-discovery/` audit dir and the LKM-specific `retrieval_log.jsonl`. No HTTP, no rendering.
+- **`$evidence-subgraph`** — graph build / audit / render only. Consumes `$lkm-api` JSON. Independent optional branch — not an upstream dependency of `$lkm-explorer`.
 - **`$scholarly-synthesis`** — audited graph → article only. Independent optional branch.
 
 There is no project-local render skill. For visualization of a compiled Gaia package, use the package's own Gaia CLI render commands.
@@ -60,13 +62,13 @@ If a `SKILL.md` is over ~300 lines, push reference material out into `references
 
 ## Audit-trail discipline
 
-Any skill that writes to a `<domain>-gaia/` package MUST preserve the audit trail defined by the active SOP (`skills/orchestrator/references/lkm-to-gaia-sop.md` — the single maintained workflow; support search and contradiction/open-question search are channels inside it):
+Any skill that writes to a `<domain>-gaia/` package MUST preserve the audit trail defined by the active SOP (`skills/orchestrator/references/lkm-explorer-sop.md` — the single maintained workflow; support search and contradiction/open-question search are channels inside it):
 
 - Append, never silently overwrite, in the package's audit area.
 - Prior verdicts are honoured. A pair already merged stays merged; a candidate already dismissed is not re-introduced silently.
 - Raw LKM payloads are preserved verbatim before any classification or DSL emission.
 
-The exact file shapes (verdict files, dismissed/, todo files, inquiry state) are owned by the active SOP and the `$lkm-to-gaia` workflow — refer to those documents for ground truth.
+The exact file shapes (verdict files, dismissed/, todo files, inquiry state) are owned by the active SOP and the `$lkm-explorer` workflow — refer to those documents for ground truth.
 
 ## Field-neutrality
 

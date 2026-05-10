@@ -1,6 +1,6 @@
 # Step 1 — Inputs, Scope, And Checklist
 
-Load this file first when `$lkm-to-gaia` starts a batch or refresh mapping
+Load this file first when `$lkm-explorer` starts a batch or refresh mapping
 task. Do not load later step files until this step is complete.
 
 ## Goal
@@ -10,7 +10,7 @@ claim, output target, and audit-trail location before writing Gaia DSL.
 
 ## Required Session Todos
 
-The agent running `$lkm-to-gaia` must create a session todo/checklist with these
+The agent running `$lkm-explorer` must create a session todo/checklist with these
 five steps, mark Step 1 in progress, and update statuses as each step completes:
 
 1. Step 1 — Inputs, scope, and evidence status.
@@ -37,12 +37,13 @@ The checklist is ephemeral and is not written to the package.
   open-question/conflict-channel query payloads, and candidate classifications.
 - Existing package path for refresh work, including `artifacts/lkm-discovery/`,
   `.gaia/inquiry/`, and prior source files.
-- Timeline replay files for LKM-to-Gaia work:
-  `artifacts/lkm-discovery/retrieval_log.jsonl` and
-  `artifacts/lkm-discovery/graph_growth_log.jsonl`, following
-  `timeline-log-contract.md`.
+- Timeline replay files for LKM-explorer work:
+  `artifacts/lkm-discovery/retrieval_log.jsonl` (schema in
+  `timeline-log-contract.md`) and
+  `artifacts/lkm-discovery/graph_growth_log.jsonl` (canonical v1 schema in
+  `$gaia-package/references/audit-log.md`).
 
-These are loose files. `$lkm-to-gaia` reads raw LKM payloads directly and does
+These are loose files. `$lkm-explorer` reads raw LKM payloads directly and does
 not use an intermediate graph artifact.
 
 ## Modes

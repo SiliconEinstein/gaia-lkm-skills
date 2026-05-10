@@ -1,6 +1,6 @@
 ---
 name: lkm-api
-description: Query the Bohrium Large Knowledge Model (LKM) HTTP API. Covers the three endpoints (`POST /claims/match`, `GET /claims/{id}/evidence`, `POST /variables/batch`), the `accessKey` auth contract, request/response shapes, the `data.papers` paper-metadata block, and known API quirks (`code=290001` transient, `code=290002` validation, id-only-with-empty-content premises, premise ids that may not round-trip standalone). Atomic: this skill is the API surface only — it does not prescribe retrieval methodology, root-selection policy, or downstream handoffs.
+description: Query the Bohrium Large Knowledge Model (LKM) HTTP API. Covers the four endpoints (`POST /search`, `POST /claims/match`, `GET /claims/{id}/evidence`, `POST /variables/batch`), the `accessKey` auth contract, request/response shapes, the `data.papers` paper-metadata block, and known API quirks (`code=290001` transient, `code=290002` validation, id-only-with-empty-content premises, premise ids that may not round-trip standalone). Atomic: this skill is the API surface only — it does not prescribe retrieval methodology, root-selection policy, or downstream handoffs.
 ---
 
 # LKM API
@@ -15,8 +15,9 @@ Preserve raw responses verbatim — every field (claim ids, source packages, fac
 
 Use **`https://open.bohrium.com/openapi/v1/lkm`** as the base URL. Do not point the skill at any non-production deployment.
 
-Three endpoints (all on this base):
+Four endpoints (all on this base):
 
+- search: `POST /search`
 - match: `POST /claims/match`
 - evidence: `GET /claims/{id}/evidence`
 - variables: `POST /variables/batch`
@@ -32,20 +33,39 @@ policy.
 
 ## Authentication (access key)
 
-Every endpoint requires an `accessKey` HTTP header carrying the user's Bohrium access key. The CLI helper (`scripts/lkm.mjs`) reads the key from the env var `LKM_ACCESS_KEY` and exits with a clear error if it is unset. Direct `curl` calls must include the same header.
+Every endpoint requires an `accessKey` HTTP header carrying the user's Bohrium access key. The CLI helper (`scripts/lkm.py`) reads the key from the env var `LKM_ACCESS_KEY` and exits with a clear error if it is unset. Direct `curl` calls must include the same header.
 
 **Agent flow on first use of this skill in a session:**
 
 1. Check whether `LKM_ACCESS_KEY` is set in the shell (e.g. `printenv LKM_ACCESS_KEY`).
 2. If unset, **ask the user once** for their Bohrium access key. Phrase the ask explicitly so the user knows what is being requested and why.
 3. Once the user provides it, persist it for reuse:
-   - **Current session:** `export LKM_ACCESS_KEY=<key>` so subsequent `lkm.mjs` calls in this session pick it up. Do **not** echo or log the key after exporting.
+   - **Current session:** `export LKM_ACCESS_KEY=<key>` so subsequent `lkm.py` calls in this session pick it up. Do **not** echo or log the key after exporting.
    - **Future sessions:** if the agent has a persistent memory facility, save the access key there so future invocations of this skill can read it back without re-asking. If no such facility exists, instruct the user to add the export line to their shell rc themselves — do not edit the user's shell rc without explicit permission.
 4. Reuse the same key for every subsequent request in the run; do not re-ask.
 
 **Never** write the access key into any file inside the repo (skills/, scripts/, references/, working folders, JSON artifacts), into a commit message, into a saved transcript, or into any cloud-uploaded artifact. The key is a per-user secret.
 
 If a request returns an authentication error, surface it to the user and ask whether the key is current; do not silently retry with a different key.
+
+## Skill Auto-Update
+
+Each `lkm.py` invocation forks a detached async subprocess that asks the upstream GitHub repo for the latest CalVer release tag (`git ls-remote --tags https://github.com/SiliconEinstein/gaia-lkm-skills.git`). The check is best-effort: it runs with a 10-second timeout, network/parse failures are absorbed silently, and the user-facing API call is never blocked or delayed.
+
+State files (both gitignored, both local-only):
+
+- `skills/lkm-api/.skill-version` — last known upstream CalVer tag (e.g. `v2026.05.10`).
+- `skills/lkm-api/.skill-version-notif` — one-shot pending notification, written by the async worker and consumed on the *next* `lkm.py` invocation.
+
+Flow:
+
+1. The user-facing invocation first prints any pending notification to stderr (`[lkm-api] new tag <X> available …`) and deletes the notif file — so each detection nags exactly once.
+2. It then spawns the async check (fire-and-forget, detached via `start_new_session=True`, all stdio routed to `DEVNULL`) and proceeds to the regular verb dispatch.
+3. The async worker compares upstream's latest CalVer tag to the local marker. If newer, it rewrites the marker and writes a notification to be surfaced next time.
+
+Pull is **agent-guided**, not silent. When the agent sees the stderr notification, it reasons with the user about whether to update — this skill never auto-pulls and never clears any caches.
+
+Skills that call `lkm.py` (`$lkm-explorer`, `$evidence-subgraph`, and other LKM-using skills) inherit this check automatically. Pure-doc skills that don't shell out to `lkm.py` aren't covered, and don't need to be.
 
 ## Response shape — paper metadata block
 
@@ -106,14 +126,15 @@ Some `factors[].premises[].id` values exist only embedded in a parent claim's `e
 
 ## CLI helper
 
-Use `scripts/lkm.mjs` for deterministic API calls. The helper reads the access key from `LKM_ACCESS_KEY` and refuses to run if it is unset:
+Use `scripts/lkm.py` for deterministic API calls. The helper reads the access key from `LKM_ACCESS_KEY` and refuses to run if it is unset:
 
 ```bash
 export LKM_ACCESS_KEY=<bohrium-access-key>   # set once per session
 
-node skills/lkm-api/scripts/lkm.mjs match     --text "your query" --top-k 10 --out match.json
-node skills/lkm-api/scripts/lkm.mjs evidence  --id gcn_xxx --max-chains 10 --out evidence.json
-node skills/lkm-api/scripts/lkm.mjs variables --ids var1,var2 --out variables.json
+python skills/lkm-api/scripts/lkm.py search    --query "your query" --top-k 10 --out search.json
+python skills/lkm-api/scripts/lkm.py match     --text "your query" --top-k 10 --out match.json
+python skills/lkm-api/scripts/lkm.py evidence  --id gcn_xxx --max-chains 10 --out evidence.json
+python skills/lkm-api/scripts/lkm.py variables --ids var1,var2 --out variables.json
 ```
 
-Verbs: `match`, `evidence`, `variables`. The helper uses Node built-in `fetch` and writes JSON to stdout, or to the file given by `--out`. See `references/api-contract.md` for field-level details.
+Verbs: `search`, `match`, `evidence`, `variables`. The helper is Python stdlib only (no `pip install` step) — it uses `urllib.request` for HTTP and writes JSON to stdout, or to the file given by `--out`. See `references/api-contract.md` for field-level details.

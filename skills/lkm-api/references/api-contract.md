@@ -2,6 +2,67 @@
 
 Production base URL: **`https://open.bohrium.com/openapi/v1/lkm`**. Every endpoint below requires the header `accessKey: <bohrium-access-key>` (see `SKILL.md` → "Authentication" for the agent flow that obtains and persists the key).
 
+## Search (public retrieval)
+
+Endpoint:
+
+```http
+POST https://open.bohrium.com/openapi/v1/lkm/search
+```
+
+Headers:
+
+```
+accessKey: <bohrium-access-key>
+content-type: application/json
+```
+
+Default body:
+
+```json
+{
+  "query": "search terms",
+  "top_k": 10,
+  "filters": {
+    "visibility": "public"
+  }
+}
+```
+
+Body field name is **`query`** (required) — distinct from `/claims/match`, which uses `text`. Optional fields: `scopes` (string array), `filters` (object; commonly `visibility`, `role`), `top_k` (integer; server default applies if omitted).
+
+Apifox names this surface "公开检索" (public retrieval). Both `/search` and `/claims/match` return per-entry results in `data.variables[]` keyed by the same paper provenance, but they are separate endpoints with distinct request bodies — keep `query` (search) and `text` (match) straight.
+
+Response shape:
+
+```json
+{
+  "code": 0,
+  "data": {
+    "variables": [
+      {
+        "id": "gcn_…",
+        "type": "claim",
+        "role": "premise" | "conclusion",
+        "content": "...",
+        "score": 0.0,
+        "provenance": {
+          "source_packages": ["paper:<id>"],
+          "representative_lcn": { "local_id": "...", "package_id": "...", "version": "..." }
+        },
+        "visibility": "public"
+      }
+    ],
+    "papers": {
+      "paper:<id>": { /* paper-metadata block — see "Paper metadata block (data.papers)" below */ }
+    }
+  },
+  "trace_id": "..."
+}
+```
+
+Per-entry structure in `data.variables[]` matches `/claims/match`: `id`, `type`, `role`, `content`, `score`, `provenance`, `visibility`. The `data.papers` map follows the same shape used elsewhere in this contract — see "Paper metadata block (`data.papers`)" below for the full schema; do not redefine inline.
+
 ## Match (claim retrieval by free text)
 
 Endpoint:
