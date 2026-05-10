@@ -2,7 +2,7 @@
 
 LKM-side agent skills for building Gaia knowledge packages from LKM evidence chains.
 
-The repo ships a family of atomic skills plus a thin orchestrator that classifies an incoming prompt and routes it to the right SOP or atomic skill. Two primary flows are maintained: **LKM → Gaia package** via `$lkm-api` and `$lkm-explorer`, and **Paper → Gaia package** via `$formalize` — both emit packages conforming to the `$gaia-package` contract. `$evidence-subgraph` and `$scholarly-synthesis` are independent optional branches; `$gaia-cli` is the toolchain reference consulted when running quality gates.
+The repo ships a family of atomic skills plus a thin orchestrator that classifies an incoming prompt and routes it to the right SOP or atomic skill. Two primary flows are maintained: **LKM → Gaia package** via `$lkm-api` and `$lkm-explorer`, and **Paper → Gaia package** via `$formalize` — both emit packages conforming to the `$gaia-package` contract. `$evidence-subgraph` and `$scholarly-synthesis` are independent optional branches; `$gaia-cli` is the toolchain reference consulted when running quality gates; `$gaia-review-lite` is the lightweight prompt-driven audit template for a compiled package.
 
 ## Entry point
 
@@ -18,6 +18,7 @@ Atomic skills + one thin orchestrator. Full contracts live in each skill's `SKIL
 - **`skills/lkm-explorer/`** — contract-driven LKM exploration → Gaia knowledge package per `$gaia-package`. Maps raw LKM match/evidence/source payloads into Gaia DSL via a five-step contradiction-driven workflow. Two modes: `batch` (fresh package) and `refresh` (extend or repair an existing package in place). Owns the `lkm-discovery/` audit dir and the LKM-specific `retrieval_log.jsonl`.
 - **`skills/formalize/`** — paper-driven sibling to `$lkm-explorer`. Reads a single physics paper Markdown and emits a Gaia knowledge package per `$gaia-package` via a four-phase analytical workflow (extract conclusions → reconstruct reasoning chain → audit weak points → emit DSL). Phase 1b cross-grounds the paper against LKM's existing graph via `$lkm-api`'s `/search` reverse trace (best-effort; skips silently when the paper isn't in the corpus). Audit dir is `artifacts/paper-extract/`.
 - **`skills/gaia-cli/`** — Gaia CLI toolchain reference (`init`, `compile`, `check`, `infer`, `render`, `register`, `add`). Pure documentation atomic; consulted by callers running quality gates after package emission.
+- **`skills/gaia-review-lite/`** — lightweight ("flash") scientific audit prompt template for a compiled Gaia package. Claim+contradiction-centric quick review producing `docs/scientific_story.md` and `docs/open_questions_review.md`. References-only documentation atomic; covers ~30-40% of named IR primitive types (see its `## Coverage` section). `$gaia-review-deep` is the planned full-IR follow-up.
 - **`skills/evidence-subgraph/`** — build / audit / render an evidence graph from LKM chain payloads (factor diamonds, three-class edge taxonomy, chain-bounded discipline). Optional graph-only branch; not an upstream dependency of `$lkm-explorer`.
 - **`skills/scholarly-synthesis/`** — *optional / future-work*: write a domain-vocabulary scholarly synthesis from an audited evidence graph + bibliographic metadata. Not part of the LKM/Paper → Gaia package loop.
 
@@ -29,6 +30,7 @@ Atomic skills + one thin orchestrator. Full contracts live in each skill's `SKIL
 4. **Evidence Graph Only** — `$evidence-subgraph` only when the user explicitly asks for a closure-chain or evidence graph without Gaia formalization. Root must be chain-backed (`total_chains > 0`).
 5. **Scholarly Synthesis** — `$scholarly-synthesis` only on explicit request. Requires audited evidence graph + audit table + `data.papers`. Kept separate from package construction.
 6. **Visualization** — no project-local render skill. Use the package's own Gaia CLI render commands (see `$gaia-cli`) after `gaia compile` / `gaia infer`.
+7. **Lite Scientific Review** — `$gaia-review-lite` for a quick claim+contradiction-centric audit of a compiled Gaia package. Produces `docs/scientific_story.md` plus `docs/open_questions_review.md`. Use when a full IR audit is overkill; check its `## Coverage` section before routing here. `$gaia-review-deep` (TBD) is the planned full-IR follow-up.
 
 ## How an agent uses this repo
 

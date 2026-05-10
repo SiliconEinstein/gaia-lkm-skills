@@ -30,6 +30,12 @@ routes the task and loads the right SOP or atomic skill.
 - **`$gaia-cli`** — Gaia CLI toolchain reference (`init`, `compile`, `check`,
   `infer`, `render`, `register`, `add`). Pure documentation; consulted by
   callers running quality gates after package emission.
+- **`$gaia-review-lite`** — lightweight ("flash") scientific audit prompt
+  template for a compiled Gaia package. Claim+contradiction-centric quick
+  review producing `docs/scientific_story.md` and
+  `docs/open_questions_review.md`. References-only documentation atomic;
+  covers ~30-40% of named IR primitive types — see its `## Coverage`
+  section. `$gaia-review-deep` (TBD) is the planned full-IR follow-up.
 - **`$evidence-subgraph`** — optional graph-only branch for a chain-backed root;
   not an upstream dependency of `$lkm-explorer`.
 - **`$scholarly-synthesis`** — optional/future prose branch from an audited
@@ -95,3 +101,14 @@ metadata. Keep this path separate from LKM->Gaia package construction.
 No project-local render skill exists. If the user asks to visualize a compiled
 Gaia package, use Gaia CLI render commands directly (see `$gaia-cli` for the
 toolchain reference) and preserve the same quality/audit discipline.
+
+### Lite Scientific Review (claim + contradiction-centric)
+
+Use `$gaia-review-lite` when the user asks for a quick / lite / flash
+scientific review of a compiled Gaia package and a full IR audit is overkill.
+It produces `docs/scientific_story.md` and `docs/open_questions_review.md`,
+focused on `claim` knowledge plus `support` / `deduction` / `contradiction`
+relations. Hypothesis-only items in `.gaia/inquiry` are out of scope.
+Covered surface is ~30-40% of named IR primitive types — confirm the
+uncovered list in `$gaia-review-lite`'s `## Coverage` section is acceptable
+for the package at hand, otherwise wait for `$gaia-review-deep`.
