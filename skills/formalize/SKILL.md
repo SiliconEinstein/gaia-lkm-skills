@@ -1,14 +1,15 @@
 ---
 name: formalize
-description: Single-paper formalization — read one physics academic paper (Markdown) and emit a standalone Gaia knowledge package conforming to the `$gaia-package` contract. Runs a four-phase analytical workflow (Phase 1 extract conclusions / motivation / open questions / cross-conclusion logic graph; Phase 2 reconstruct each conclusion's reasoning chain; Phase 3 audit weak points and highlights, calibrate `prior_probability` / `p1` / `p2` / `review_prior`; Phase 4 emit Gaia DSL package files), gated by an upfront suitability check (skip review/survey/perspective papers and corrupted Markdown). Surfaces 9 argument-pattern weak-point types (`measurement`, `causal`, `model`, `statistical`, `generalization`, `comparative`, `formal`, `computational`, `external`). Cross-grounds the paper against LKM's existing knowledge graph in Phase 1b via `$lkm-api`'s `/search` endpoint, filtering on `provenance.source_packages` and verifying evidence-chain closure. Sibling to `$lkm-explorer` (the LKM-driven exploratory workflow); both produce `<name>-gaia/` packages whose layout, emit-mapping rules, and `graph_growth_log.jsonl` audit schema are owned by `$gaia-package`. Audit dir is `artifacts/paper-extract/`. Use whenever the user asks to "formalize a paper into Gaia", "produce a Gaia package from this paper", "turn this paper into a knowledge package", or any variant where the upstream is a single paper Markdown and the requested output is Gaia DSL — even if the user does not explicitly mention Gaia DSL syntax.
+description: Single-paper formalization — read one physics academic paper (Markdown preferred; plain-text or other readable formats also accepted) and emit a standalone Gaia knowledge package conforming to the `$gaia-package` contract. Runs a four-phase analytical workflow (Phase 1 extract conclusions / motivation / open questions / cross-conclusion logic graph; Phase 2 reconstruct each conclusion's reasoning chain; Phase 3 audit weak points and highlights, calibrate `prior_probability` / `p1` / `p2` / `review_prior`; Phase 4 emit Gaia DSL package files), gated by an upfront suitability check (skip review/survey/perspective papers and corrupted paper text). Surfaces 9 argument-pattern weak-point types (`measurement`, `causal`, `model`, `statistical`, `generalization`, `comparative`, `formal`, `computational`, `external`). Cross-grounds the paper against LKM's existing knowledge graph in Phase 1b via `$lkm-api`'s `/search` endpoint, filtering on `provenance.source_packages` and verifying evidence-chain closure. Sibling to `$lkm-explorer` (the LKM-driven exploratory workflow); both produce `<name>-gaia/` packages whose layout, emit-mapping rules, and `graph_growth_log.jsonl` audit schema are owned by `$gaia-package`. Audit dir is `artifacts/paper-extract/`. Use whenever the user asks to "formalize a paper into Gaia", "produce a Gaia package from this paper", "turn this paper into a knowledge package", or any variant where the upstream is a single paper text and the requested output is Gaia DSL — even if the user does not explicitly mention Gaia DSL syntax.
 ---
 
 # Formalize
 
 ## Mission
 
-Read a single physics paper in Markdown form, audit it as a scientific
-reasoning reviewer would, and emit a standalone Gaia knowledge package that
+Read a single physics paper (Markdown preferred; plain-text or other readable
+text formats also accepted), audit it as a scientific reasoning reviewer
+would, and emit a standalone Gaia knowledge package that
 compiles via `gaia compile` and propagates beliefs via `gaia infer`. The
 agent running this skill does the analytical work itself; it does not
 orchestrate a separate extraction pipeline and does not produce intermediate
@@ -23,7 +24,7 @@ Every `claim(...)` carries `provenance_source="paper_extract"` and
 LKM data.
 
 ```
-paper.md
+paper.{md,txt,...}
   |
   v
 $formalize
@@ -42,8 +43,9 @@ frontier across many papers.
 
 This skill operates in **single-paper batch mode** only:
 
-- Input: one paper `.md` file plus a desired package name (or one inferred
-  from the paper's first author + year).
+- Input: one paper text file (`.md` preferred; plain-text and other readable
+  formats also accepted) plus a desired package name (or one inferred from
+  the paper's first author + year).
 - Output: a fresh standalone `<name>-gaia/` package directory.
 
 Refresh / multi-paper batches are out of scope; if the user wants to merge a
@@ -90,7 +92,7 @@ Skip with a short note if:
 - The paper is a review, survey, or perspective without original results.
 - The paper has no identifiable structured contributions (no derivations, no
   measurements, no method introductions).
-- The Markdown is corrupted, truncated, or contains only abstract/metadata.
+- The paper text is corrupted, truncated, or contains only abstract/metadata.
 
 In any of these cases, do not emit a Gaia package. Write a single
 `<package_name>.skip.md` next to the input that records the reason in one
@@ -105,7 +107,7 @@ paragraph. Do not invent contributions to fill the gap.
   Setup, symbols, regimes, and inlined figure/table content live inside the
   claim string itself; structural pointers ("Eq. (3)", "Fig. 4",
   "Section II") are forbidden inside the claim body.
-- **Paper Markdown is the only source of truth.** Do not introduce external
+- **Paper text is the only source of truth.** Do not introduce external
   knowledge, repair missing arguments, or upgrade speculative claims. If a
   symbol is undefined in the paper, leave it undefined and note it in
   `mapping_audit.md`. (Phase 1b LKM cross-grounding is the one exception

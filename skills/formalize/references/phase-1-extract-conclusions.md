@@ -26,7 +26,7 @@ Before extraction, decide whether the paper is amenable to formalization:
 - A review article, survey, or perspective without original results.
 - A paper without identifiable structured contributions (no derivations, no
   new measurements, no new methods).
-- A corrupted / abstract-only Markdown.
+- A corrupted / abstract-only paper text.
 
 If any holds, **stop here**. Do not invent contributions. Record the reason in
 working notes; Phase 4 will write a `<package_name>.skip.md` file instead of
