@@ -47,9 +47,10 @@ Warrant prior ranges:
 - Weak or lateral: 0.50–0.65.
 
 The `support(...)` edge may be a scientific-review judgment rather than an LKM
-factor, but both endpoint claims must already be LKM-grounded. Do not use
-`support(...)` to smuggle in a new factual bridge claim. If the reason needs a
-new fact, first search LKM and map that fact as its own `claim(...)`.
+factor, but both endpoint claims must already be LKM-grounded.
+
+> Support reason discipline (no smuggling; on-the-fly premise claims are normal):
+> see [`$gaia-package/references/emit-mapping.md`](../../gaia-package/references/emit-mapping.md) §4.
 
 For cross-scope supports involving different geometry, material, temperature,
 experimental extraction method, approximation, or mass definition, keep the

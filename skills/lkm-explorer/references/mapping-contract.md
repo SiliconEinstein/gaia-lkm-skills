@@ -75,9 +75,10 @@ Warrant prior for each support:
 
 The support relation itself may be a reviewer/agent scientific judgment rather
 than an LKM `gfac_*` factor, but both endpoints must already be LKM-grounded
-Gaia claims. A `support(...)` reason may explain why claim A supports claim B;
-it must not introduce a new factual proposition that should instead be mapped as
-its own LKM-grounded `claim(...)`.
+Gaia claims.
+
+> Support reason discipline (no smuggling; on-the-fly premise claims are normal):
+> see [`$gaia-package/references/emit-mapping.md`](../../gaia-package/references/emit-mapping.md) §4.
 
 For cross-scope supports (different geometry, material, temperature, extraction
 method, approximation, or mass definition), use weak priors close to neutral

@@ -432,6 +432,29 @@ A `support(...)` reason may explain why claim A supports claim B; it must
 as its own grounded `claim(...)`. Both endpoints must already be grounded
 Gaia claims.
 
+Conversely: when constructing a support and the reason needs a fact that
+isn't yet in the graph, the constructive flow is to first emit that fact
+as its own grounded `claim(...)`, then reference it as a support endpoint.
+Minting new premise claims on the fly during graph construction is the
+normal pattern — the prohibition above is against *smuggling* a new fact
+into the reason field, not against *adding* a claim.
+
+**Premise grounding policy.** When mid-flow premise addition triggers,
+whether to first search LKM for an existing grounded claim depends on the
+consumer skill's grounding contract:
+
+- `$formalize` (paper text as single source of truth) — default skip LKM
+  search; mint the new premise as `provenance_source="paper_extract"` from
+  the paper's own content. The Phase 1b reverse-trace pass is where LKM
+  cross-grounding happens, not the support-construction loop.
+- `$lkm-explorer` (LKM as substrate) — default search LKM via `$lkm-api`
+  `/search`; if hit, the new premise references the existing grounded
+  `claim(...)` (`provenance_source="lkm"`); if miss, mint a new claim on
+  the LKM grounding path.
+- A consumer skill may override its default per-call (e.g. `$formalize`
+  invoked with an explicit cross-grounding flag), but the default reflects
+  that skill's source-of-truth contract.
+
 The support relation itself may be a reviewer/agent scientific judgment
 rather than an upstream-source factor (e.g., not an LKM `gfac_*`), but
 the endpoints are non-negotiable.

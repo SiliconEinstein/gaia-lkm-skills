@@ -101,6 +101,16 @@ Before committing to a weak point, it must pass all five:
 - Background facts not in question here.
 - Caveats that do not affect the conclusion.
 
+### Shared-factor weak points
+
+If two weak points on the same conclusion share an underlying factor — same
+approximation, same dataset, same lemma, same external assumption — extract
+the shared factor as a separate weak-point claim and let both supports
+threaten that one factor. This is the same logic as the `$lkm-explorer`
+`support()` shared-factor extraction rule; see
+[`$lkm-explorer/references/mapping-contract.md`](../../lkm-explorer/references/mapping-contract.md)
+§3a "Shared-factor extraction" for the canonical statement.
+
 ## What Counts as a Highlight
 
 A highlight is a **load-bearing strength**: a specific element of the
