@@ -2,6 +2,67 @@
 
 Production base URL: **`https://open.bohrium.com/openapi/v1/lkm`**. Every endpoint below requires the header `accessKey: <bohrium-access-key>` (see `SKILL.md` → "Authentication" for the agent flow that obtains and persists the key).
 
+## Search (public retrieval)
+
+Endpoint:
+
+```http
+POST https://open.bohrium.com/openapi/v1/lkm/search
+```
+
+Headers:
+
+```
+accessKey: <bohrium-access-key>
+content-type: application/json
+```
+
+Default body:
+
+```json
+{
+  "query": "search terms",
+  "top_k": 10,
+  "filters": {
+    "visibility": "public"
+  }
+}
+```
+
+Body field name is **`query`** (required) — distinct from `/claims/match`, which uses `text`. Optional fields: `scopes` (string array), `filters` (object; commonly `visibility`, `role`), `top_k` (integer; server default applies if omitted).
+
+Apifox names this surface "公开检索" (public retrieval). Both `/search` and `/claims/match` return per-entry results in `data.variables[]` keyed by the same paper provenance, but they are separate endpoints with distinct request bodies — keep `query` (search) and `text` (match) straight.
+
+Response shape:
+
+```json
+{
+  "code": 0,
+  "data": {
+    "variables": [
+      {
+        "id": "gcn_…",
+        "type": "claim",
+        "role": "premise" | "conclusion",
+        "content": "...",
+        "score": 0.0,
+        "provenance": {
+          "source_packages": ["paper:<id>"],
+          "representative_lcn": { "local_id": "...", "package_id": "...", "version": "..." }
+        },
+        "visibility": "public"
+      }
+    ],
+    "papers": {
+      "paper:<id>": { /* paper-metadata block — see "Paper metadata block (data.papers)" below */ }
+    }
+  },
+  "trace_id": "..."
+}
+```
+
+Per-entry structure in `data.variables[]` matches `/claims/match`: `id`, `type`, `role`, `content`, `score`, `provenance`, `visibility`. The `data.papers` map follows the same shape used elsewhere in this contract — see "Paper metadata block (`data.papers`)" below for the full schema; do not redefine inline.
+
 ## Match (claim retrieval by free text)
 
 Endpoint:
@@ -30,6 +91,11 @@ Default body:
 ```
 
 Body field name is **`text`** (required). The old field name `query` is rejected with `code=290002` (`Field validation for 'Text' failed on the 'required' tag`).
+
+Current endpoint behavior is understood as BM25-like free-text retrieval. Put
+concise domain keywords or anchor phrases in `text`. Retrieval methodology
+(number of queries, query families, candidate admission, and handoff rules)
+belongs to the caller's SOP, not this API contract.
 
 Response shape:
 
@@ -60,9 +126,12 @@ Response shape:
 }
 ```
 
-The candidate list is at **`data.variables`** — note the rename from the previous endpoint family, which used `data.claims`. Per-entry structure (id, content, role, score, provenance, type) is unchanged. For each candidate, record: `id`, `score`, `content`, `provenance.source_packages`, and the corresponding `data.papers[<source_package>]` entry.
+The candidate list is at **`data.variables`** — note the rename from the previous endpoint family, which used `data.claims`. Per-entry structure: `id`, `type` (`"claim"`), `role` (`"premise"` | `"conclusion"`), `content`, `score`, `provenance` (with `source_packages` and `representative_lcn`), and `visibility`.
 
-`data.new_claim_likely` and the top-level `trace_id` are diagnostic; downstream skills can ignore them.
+`score` is a retrieval ranking/debug signal from the match engine. Do not treat
+it as scientific confidence, a truth probability, or a Gaia prior.
+
+`data.new_claim_likely` and the top-level `trace_id` are diagnostic.
 
 ## Evidence
 
@@ -111,14 +180,7 @@ Response shape:
 }
 ```
 
-Record:
-
-- `claim.content`
-- `total_chains`
-- `source_package` per chain
-- `factor.id` / `factor.factor_type` / `factor.subtype`
-- every premise `id` and `content`
-- the relevant `data.papers[<paper_id>]` entries
+Per-chain fields: `source_package`, `factors[]` (each with `id`, `factor_type`, `subtype`, `premises[]`, `conclusion`, optional `steps[]`), and `motivating_questions[]`. The top-level `data.total_chains` reports how many chains the API found for the claim.
 
 `sort_by=premises` may not be valid on all deployments. Prefer `comprehensive` or `recent`.
 
@@ -145,13 +207,7 @@ Both `/claims/match` and `/claims/{id}/evidence` return a `data.papers` map keye
 }
 ```
 
-This is the authoritative paper-id → bibliographic-metadata map. Use it for:
-
-- resolving `source_package` (`paper:<id>`) to a citation;
-- building the references list in `$scholarly-synthesis` (author–year, DOI, title);
-- surfacing source pointers to the user ("for further information, refer to the original paper" with the DOI).
-
-If `data.papers` is empty or missing a key the chain references, fall back to `evidence_chains[].source_package` for the id alone — but log the absence as a corpus-quality observation; do not silently substitute.
+This is the API's authoritative paper-id → bibliographic-metadata map. Each chain's `source_package` (`paper:<id>`) keys into it. The API does not hydrate further: if `data.papers` is empty or missing a key the chain references, the only id available from this endpoint is `evidence_chains[].source_package` itself.
 
 ## Variables (Batch)
 
@@ -200,19 +256,8 @@ Transient downstream timeout in the variable-hydration sub-call. Retry once afte
 
 ## Known temporary: id-only premises
 
-Some `factors[].premises[].id` entries currently come back with **empty `content`** even within the parent chain — only the id is populated. This is a temporary state of the corpus (LKM is being progressively populated). Treatment:
-
-- preserve the id in raw JSON;
-- attempt one standalone `GET /claims/{premise_id}/evidence` to recover content (often fails — see "premise A2 pit" below);
-- in the audit table, mark as `content unavailable (temporary)`;
-- in the graph, render only if user explicitly asks for full premise coverage; otherwise omit (default).
-
-## Retrieval discipline
-
-`/claims/match` results are candidates. Evidence chains are stronger, but still require semantic inspection before use in prose. A candidate with no evidence chain may still be useful context but cannot anchor a graph.
-
-For evidence-graph rooting, treat **`total_chains > 0`** on `GET /claims/{id}/evidence` as the **gate** for an acceptable root. Probe additional match hits until such a root is found, or obtain an explicit user waiver for chain-less mode.
+Some `factors[].premises[].id` entries currently come back with **empty `content`** even within the parent chain — only the id is populated. This is a temporary state of the corpus (LKM is being progressively populated); the id itself is preserved in the response. A standalone `GET /claims/{premise_id}/evidence` may recover content but often fails (see "premise A2 pit" below).
 
 ## Premise A2 pit
 
-Premise ids listed inside `evidence_chains[].factors[].premises[]` may **not** resolve as standalone `GET /claims/{premise_id}/evidence` targets (`claim not found` or `total_chains == 0` despite full content recoverable from the parent chain). Downstream skills must fall back to `factors[].premises[].content` from the parent chain as the primary text source. Do not treat the 404-style outcome as grounds to delete the premise node.
+Premise ids listed inside `evidence_chains[].factors[].premises[]` may **not** resolve as standalone `GET /claims/{premise_id}/evidence` targets (`claim not found` or `total_chains == 0` despite full content being recoverable from the parent chain's `factors[].premises[].content`). This is a property of the API: the embedded id is not always indexed as a standalone claim.

@@ -45,7 +45,7 @@ Walk every numerical anchor on every reasoning node and try to find it inside th
 
 - **Located** → record the anchor cell and move on.
 - **Not located, but consistent with related premises** → mark `anchor not locatable in chain payload`. Leave the node and value in place; do not delete, do not substitute. Chain payloads are sometimes incomplete and this row simply records that fact.
-- **Located, but contradicted** by another premise / step / claim in the same payload → real error. Fix the node (re-read the contradicting premise) before publishing.
+- **Located, but contradicted** by another premise / step / claim in the same payload → real error. Fix the node (re-read the contradicting premise) before publishing. This is payload-internal source consistency checking, not the Gaia contradiction-admission rule defined for LKM-to-Gaia packages.
 
 The goal is no fabrication — not exhaustive coverage. A graph with a few `anchor not locatable` rows is still chain-bounded; a graph with one undeclared synthetic node is not.
 

@@ -1,56 +1,48 @@
-# Gaia LKM Skills
+# gaia-lkm-skills
 
-Agent skills for working with Gaia/LKM-style claim graphs, evidence chains, dependency subgraphs, and scholarly syntheses.
+LKM-side agent skills for building Gaia knowledge packages from LKM evidence chains.
 
-The repository is organized so the same skill bodies can be used by Codex, Claude-style plugin loaders, and Cursor-style rule/plugin workflows. The canonical skills live in `skills/`.
+The repo ships a family of atomic skills plus a thin orchestrator that classifies an incoming prompt and routes it to the right SOP or atomic skill. Two primary flows are maintained: **LKM → Gaia package** via `$lkm-api` and `$lkm-explorer`, and **Paper → Gaia package** via `$formalize` — both emit packages conforming to the `$gaia-package` contract. `$evidence-subgraph` and `$scholarly-synthesis` are independent optional branches; `$gaia-cli` is the toolchain reference consulted when running quality gates; `$gaia-review-lite` is the lightweight prompt-driven audit template for a compiled package.
 
-## Skills
+## Entry point
 
-- `lkm-api`: query LKM search/evidence APIs, preserve raw retrieval artifacts, and run **premise-driven search bundles** to find **prior papers’ conclusion-type claims** that may support each premise **on content** (not verbatim).
-- `evidence-subgraph`: build graphs **rooted on a chain-backed user conclusion** (`evidence` → `total_chains>0`); treat **native** premises as a **worklist item** (including **empty-text** premises anchored on **`steps`**); classify every edge into exactly **three semantic classes** — *chain support*, *background*, *verification support* (locale-rendered); render Graphviz/Mermaid with **locale-aware human labels**, **publication-style (premium) colors**, and chain-payload-anchored audit tables (see `references/source-ground-truth.md`, `references/graph-output.md`).
-- `scholarly-synthesis`: write standalone academic syntheses from audited evidence structures, including **prior-result → premise → conclusion** narration when applicable.
-- `lkm-to-gaia`: convert LKM evidence-chain payloads directly into a Gaia DSL knowledge package. Agent reads raw LKM evidence JSON + discovery flag files, performs semantic analysis (shared-premise dedup, equivalence vs merge decisions, contradiction promotion, warrant-prior assignment), and writes Gaia DSL source. No intermediate JSON format. Two modes: `batch` (fresh `<name>-gaia/` package) and `incremental` (Python source fragment to merge into an existing `plan.gaia.py`).
-- `evidence-graph-synthesis`: orchestrator for the default pipeline: **chain-backed conclusion (`total_chains>0`) → native premises → per-premise upstream retrieval → audited graph → {synthesis | Gaia knowledge package}** (chain-less synthetic mode only with explicit waiver).
+`skills/orchestrator/SKILL.md` is the single front door. Any agent handling an LKM-related prompt routes through it first. The orchestrator does not retrieve evidence, write Gaia DSL, build graphs, or write synthesis prose — it picks the right SOP / atomic skill and hands off.
 
-## Plugin Manifests
+## Skill family
 
-The repo includes lightweight manifests for different agent runtimes:
+Atomic skills + one thin orchestrator. Full contracts live in each skill's `SKILL.md`; one-line purpose each:
 
-- `.claude-plugin/plugin.json`
-- `.codex-plugin/plugin.json`
-- `.cursor-plugin/plugin.json`
+- **`skills/orchestrator/`** — thin router. Classifies the user request and points to the right atomic skill or SOP. Routing paths: LKM → Gaia package, Paper → Gaia package, raw LKM API task, evidence graph only, scholarly synthesis, visualization (no local skill — use Gaia CLI).
+- **`skills/lkm-api/`** — Bohrium LKM HTTP client (search / match / evidence / variables verbs; `accessKey` auth; raw JSON pass-through).
+- **`skills/gaia-package/`** — references-only contract atomic. Defines the unified `<name>-gaia/` package shape (layout + file templates), the generic emit-mapping rules (claim/deduction/support/contradiction/equivalence body discipline + metadata kwargs), and the `graph_growth_log.jsonl` v1 audit schema. Consumed by every Gaia-emitting skill.
+- **`skills/lkm-explorer/`** — contract-driven LKM exploration → Gaia knowledge package per `$gaia-package`. Maps raw LKM match/evidence/source payloads into Gaia DSL via a five-step contradiction-driven workflow. Two modes: `batch` (fresh package) and `refresh` (extend or repair an existing package in place). Owns the `lkm-discovery/` audit dir and the LKM-specific `retrieval_log.jsonl`.
+- **`skills/formalize/`** — paper-driven sibling to `$lkm-explorer`. Reads a single physics paper Markdown and emits a Gaia knowledge package per `$gaia-package` via a four-phase analytical workflow (extract conclusions → reconstruct reasoning chain → audit weak points → emit DSL). Phase 1b cross-grounds the paper against LKM's existing graph via `$lkm-api`'s `/search` reverse trace (best-effort; skips silently when the paper isn't in the corpus). Audit dir is `artifacts/paper-extract/`.
+- **`skills/gaia-cli/`** — Gaia CLI toolchain reference (`init`, `compile`, `check`, `infer`, `render`, `register`, `add`). Pure documentation atomic; consulted by callers running quality gates after package emission.
+- **`skills/gaia-review-lite/`** — lightweight ("flash") scientific audit prompt template for a compiled Gaia package. Claim+contradiction-centric quick review producing `docs/scientific_story.md` and `docs/open_questions_review.md`. References-only documentation atomic; covers ~30-40% of named IR primitive types (see its `## Coverage` section). `$gaia-review-deep` is the planned full-IR follow-up.
+- **`skills/evidence-subgraph/`** — build / audit / render an evidence graph from LKM chain payloads (factor diamonds, three-class edge taxonomy, chain-bounded discipline). Optional graph-only branch; not an upstream dependency of `$lkm-explorer`.
+- **`skills/scholarly-synthesis/`** — *optional / future-work*: write a domain-vocabulary scholarly synthesis from an audited evidence graph + bibliographic metadata. Not part of the LKM/Paper → Gaia package loop.
 
-They all point to the shared `skills/` directory. Cursor users can also use `.cursor/rules/gaia-lkm-skills.mdc`.
+## Routing paths (full recipes in `skills/orchestrator/SKILL.md`)
 
-## Installation (agent-agnostic)
+1. **LKM → Gaia Package** — the maintained LKM-driven flow. Read `references/lkm-explorer-sop.md`, then `$lkm-api/SKILL.md` before any API calls, then `$lkm-explorer/SKILL.md` once selected payloads are ready. `$lkm-explorer` runs its own progressive five-step workflow and creates its session todo. Support search, contradiction / open-question search, duplicate cleanup, and iterative root-claim frontier expansion are all channels inside this SOP — there is no separate expansion SOP. SOP-defined Gaia quality gates (per `$gaia-cli`) close the turn.
+2. **Paper → Gaia Package** — the maintained paper-driven flow. Read `$formalize/SKILL.md`, then run its four-phase workflow: extract conclusions → reconstruct reasoning chain → audit weak points → emit package. Phase 1b cross-grounds the paper against LKM's existing graph via `$lkm-api`'s `/search` reverse trace (best-effort; skips when the paper isn't in the corpus). Emit conforms to `$gaia-package`. Run Gaia quality gates (per `$gaia-cli`: `gaia compile`, `gaia check --hole`, `gaia infer`) after emission.
+3. **Raw LKM API Task** — `$lkm-api` directly when the user only wants raw API output, no Gaia formalization.
+4. **Evidence Graph Only** — `$evidence-subgraph` only when the user explicitly asks for a closure-chain or evidence graph without Gaia formalization. Root must be chain-backed (`total_chains > 0`).
+5. **Scholarly Synthesis** — `$scholarly-synthesis` only on explicit request. Requires audited evidence graph + audit table + `data.papers`. Kept separate from package construction.
+6. **Visualization** — no project-local render skill. Use the package's own Gaia CLI render commands (see `$gaia-cli`) after `gaia compile` / `gaia infer`.
+7. **Lite Scientific Review** — `$gaia-review-lite` for a quick claim+contradiction-centric audit of a compiled Gaia package. Produces `docs/scientific_story.md` plus `docs/open_questions_review.md`. Use when a full IR audit is overkill; check its `## Coverage` section before routing here. `$gaia-review-deep` (TBD) is the planned full-IR follow-up.
 
-These skills are plain directories of Markdown — they are not tied to any single runtime. Any agent that supports a "skill" or "rule" concept can register them. Hand the steps below to your agent verbatim and it will install the skills into whatever location its host runtime uses.
+## How an agent uses this repo
 
-**Step 1 — clone the repo.**
+1. Clone the repo.
+2. Read `skills/orchestrator/SKILL.md` first; follow its `$lkm-api`, `$lkm-explorer`, `$formalize`, `$gaia-cli`, `$evidence-subgraph`, `$scholarly-synthesis` references on demand.
+3. Each `skills/<name>/SKILL.md` is the contract for that skill. Per-skill `references/` directories carry on-demand supporting material (SOPs, palettes, templates).
+4. Skills are plain Markdown directories — runtime-agnostic. Any host that supports a "skill" or "rule" surface can register them by pointing at `skills/`.
 
-```bash
-git clone https://github.com/SiliconEinstein/gaia-lkm-skills.git
-```
+## Design boundary
 
-**Step 2 — locate the skills.** Every skill lives under `skills/<skill-name>/` and contains:
+The skills are intentionally field-neutral. LKM is a retrieval / evidence-chain backend, not a discipline-specific ontology. The graph, formalization, and synthesis skills work for physics, chemistry, materials, biology, ML, climate, astrophysics, etc. — any domain where propositions, premises, contexts, and source evidence must be audited.
 
-- `SKILL.md` — frontmatter (`name`, `description`) plus the body the agent reads to learn the skill's role and workflow.
-- `references/` (optional) — supporting reference files the SKILL.md links to; load them on demand.
-- `agents/` (optional) — runtime-specific manifests (e.g. `openai.yaml`); read only if your runtime consumes them.
+## Contributing
 
-The five skills are: `lkm-api`, `evidence-subgraph`, `scholarly-synthesis`, `lkm-to-gaia`, `evidence-graph-synthesis`. Note: `lkm-to-gaia` has no scripts or `agents/` directory — the agent writes Gaia DSL directly.
-
-**Step 3 — read each `SKILL.md`** so the agent understands the skill's purpose, its inputs, and how it hands off to the others. Start with `evidence-graph-synthesis` (the orchestrator entry point) and follow its `$lkm-api`, `$evidence-subgraph`, `$scholarly-synthesis`, `$lkm-to-gaia` references.
-
-**Step 4 — register the skill directories verbatim into the host runtime's skill location.** Do not modify the skill contents. The registration mechanism is runtime-specific:
-
-- **Claude Code** — copy or symlink each skill directory into `~/.claude/skills/` (user scope) or `.claude/skills/` (project scope), or install the whole repo as a plugin via the `.claude-plugin/plugin.json` manifest already in this repo.
-- **Codex** — copy or symlink each skill directory into `~/.codex/skills/`. The `.codex-plugin/plugin.json` manifest in this repo can also be used by plugin-capable Codex builds.
-- **Cursor** — point Cursor at this repo as a plugin via `.cursor-plugin/plugin.json`, or load the rule file `.cursor/rules/gaia-lkm-skills.mdc` directly into your project's `.cursor/rules/` directory.
-- **OpenClaw** — copy or symlink each skill directory into OpenClaw's configured skill root (consult your OpenClaw docs for the exact path). The plain SKILL.md format is consumed without modification.
-
-For any other runtime, follow the same pattern: clone the repo, point the runtime at `skills/` (or symlink each subdirectory into the runtime's skill location), and let the agent read the SKILL.md files from there.
-
-## Design Boundary
-
-The skills are intentionally field-neutral. LKM is treated as a retrieval/evidence-chain backend, not as a discipline-specific ontology. The graph and synthesis skills can be used with any domain where propositions, premises, contexts, and source evidence must be audited.
+See `AGENTS.md` for the collaboration contract and skill authoring conventions.
