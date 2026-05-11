@@ -136,6 +136,36 @@ Backslash-newline-substitution intent (`\\` meaning a LaTeX line break)
 still works: in an `r"..."` string `r"\\"` produces the literal two
 characters `\\`, which is what LaTeX expects.
 
+Non-LaTeX bodies — typical in clinical, social-science, or systems
+papers — follow the same self-containment discipline but do not need
+math delimiters or a raw-string prefix:
+
+```python
+<label> = claim(
+    "Faricimab administered as 6.0 mg intravitreal injections every 16 "
+    "weeks after a four-monthly loading phase produces a mean change "
+    "from baseline best-corrected visual acuity (BCVA) of +11.4 ETDRS "
+    "letters at week 52 in the study eye, with a mean of 6.2 injections "
+    "through week 52, in treatment-naive participants with neovascular "
+    "age-related macular degeneration; BCVA is reported as ETDRS letter "
+    "score change from baseline where higher positive values indicate "
+    "improved visual acuity.",
+    claim_kind="conclusion",
+    source_paper="<reference_key>",
+    provenance_source="paper_extract",
+    review_prior=0.82,
+)
+```
+
+The body inlines the regimen, the outcome metric, the population, the
+follow-up duration, and the metric direction — a reader unfamiliar with
+the paper can identify all of these from the body alone, exactly as the
+self-containment rule demands. The same shape applies whether the body
+is heavy in LaTeX (theoretical / experimental physics, math, signal
+processing) or pure prose (clinical RCTs, behavioral experiments,
+qualitative case studies); only the LaTeX-handling convention above
+differs.
+
 ## `paper_<key>.py` template
 
 ```python

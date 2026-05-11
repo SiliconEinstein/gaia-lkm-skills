@@ -1,13 +1,13 @@
 ---
 name: paper-to-gaia
-description: Convert a single physics academic paper (Markdown) directly into a standalone Gaia knowledge package. The agent reads the paper itself and performs the four analytical passes — extract conclusions, reconstruct reasoning chains, audit weak points and highlights, and refine for self-containment — all in-context, then emits Gaia DSL source files (`claim`, `deduction`, `priors`) instead of XML. Use this skill whenever the user asks to "formalize a paper into Gaia", "produce a Gaia package from this paper", "turn this paper into a knowledge package", or any variant where the upstream is a single paper and the requested output is Gaia DSL or a Gaia knowledge package — even if the user does not explicitly mention Gaia DSL syntax.
+description: Convert a single academic paper (Markdown) directly into a standalone Gaia knowledge package. The agent reads the paper itself and performs the four phases — extract conclusions, reconstruct reasoning chains, audit weak points and highlights, and emit the package — all in-context, producing Gaia DSL source files (`claim`, `deduction`, `priors`) instead of XML. Use this skill whenever the user asks to "formalize a paper into Gaia", "produce a Gaia package from this paper", "turn this paper into a knowledge package", or any variant where the upstream is a single paper and the requested output is Gaia DSL or a Gaia knowledge package — even if the user does not explicitly mention Gaia DSL syntax.
 ---
 
 # Paper-to-Gaia
 
 ## Mission
 
-Read a single physics paper in Markdown form, audit it as a scientific reasoning
+Read a single academic paper in Markdown form, audit it as a scientific reasoning
 reviewer would, and emit a standalone Gaia knowledge package that compiles via
 `gaia compile` and propagates beliefs via `gaia infer`. The agent running this
 skill does the analytical work itself; it does not orchestrate a separate
@@ -99,11 +99,15 @@ paragraph. Do not invent contributions to fill the gap.
   A reasoning step is not a claim; it is text that lives inside a
   `deduction(...)` `reason=` field.
 - **One epistemic question per conclusion.** Each `claim_kind="conclusion"`
-  body answers exactly one citable question — "what is the new bound /
-  relation / procedure / value / agreement?" — not several. A paragraph
-  that bundles a procedure, the value it produced, and the benchmark it
-  passed is three conclusions, not one. See `phase-1-extract-conclusions.md`
-  for the split test and common under-splitting traps.
+  body answers exactly one citable question — what is the new bound /
+  relation / procedure / measured value / comparison outcome / causal
+  estimate / generalization result / classification / mechanism — not
+  several. A paragraph that bundles a procedure, the value it produced,
+  and the benchmark it passed is three conclusions, not one. The split is
+  field-agnostic; the same discipline applies to a theorem, a clinical
+  endpoint, an ML benchmark, a causal estimate, or a physical measurement.
+  See `phase-1-extract-conclusions.md` for the split test and common
+  under-splitting traps.
 - **One deduction per derived conclusion.** Each conclusion that has at least
   one upstream conclusion or one weak point becomes the conclusion of exactly
   one `deduction([premises], conclusion, reason=..., prior=...)`. Premises are
