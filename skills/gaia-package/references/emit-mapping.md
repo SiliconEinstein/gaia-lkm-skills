@@ -42,7 +42,7 @@ by paper-extract.
 
 ### Paper-extracted-claim kwargs
 
-Used by paper-extract emitters (e.g., the upcoming `$formalize`). Extensions,
+Used by paper-extract emitters (e.g., `$formalize`). Extensions,
 not conflicts; the LKM consumer simply sees additional dictionary entries on
 `Knowledge.metadata` and ignores them. Each is valid on both
 `claim_kind="conclusion"` and `claim_kind="weak_point"` unless noted.
