@@ -53,36 +53,80 @@ It is **not**:
 
 ### Atomicity
 
-Each conclusion must answer **exactly one** of the following epistemic
-questions about the paper. If a candidate body answers two, split it into
-two conclusions.
+Each conclusion must answer **exactly one** citable epistemic question
+about the paper — one new bound, one new relation, one new procedure, one
+new measured value, one new comparison outcome, one new causal attribution,
+one new generalization result, etc. If a candidate body answers two,
+split it into two conclusions.
 
-| Question                                                              | Conclusion type        | Argument pattern (Phase 3 §`weak_types`) |
-|-----------------------------------------------------------------------|------------------------|------------------------------------------|
-| "What is the new bound, condition, or regime?"                        | regime / scope         | `model`                                  |
-| "What is the new formal relation or theorem?"                         | analytical             | `formal`                                 |
-| "What is the new procedure / algorithm / experimental protocol?"      | methodological         | `computational`                          |
-| "What is the new measured / computed value or scaling?"               | empirical              | `measurement`                            |
-| "What does the new procedure agree with under independent comparison?"| comparative / validation| `comparative`                            |
+This rule is **field-agnostic**: the same one-question-per-conclusion
+discipline applies whether the paper is a theorem in pure math, a
+clinical-trial endpoint in medicine, a benchmark result in ML, a causal
+estimate in social science, or a measurement in experimental physics.
+
+Do **not** pre-classify a conclusion by "type" (analytical / empirical /
+methodological / etc.) here, and do **not** pre-assign it a Phase 3
+`weak_types` pattern. The nine `weak_types` keys describe *threats to a
+conclusion's derivation*, not *what kind of conclusion it is*; a single
+conclusion typically rests on several patterns simultaneously, and the
+pattern assignment happens per weak point in Phase 3, not per conclusion
+here. Phase 1's only job for atomicity is to enforce the
+one-question-per-conclusion split.
 
 **Common under-splitting traps to avoid:**
+
+Each trap is illustrated with examples from different fields to make
+clear that the trap is structural, not domain-specific.
 
 - **Definition + headline result.** A new bound (e.g., "the scheme is
   parametrically valid when $\omega_D \ll E_F$, $\omega_c^2 \ll \omega_p^2$,
   $T \ll \omega_c$") and the downstream result that uses it are *two*
   conclusions, not one — the bound is a citable regime claim on its own.
-- **Procedure + the value it produced.** "Cluster-DiagMC achieves γ~$10^5$
-  at $n=6$ and reproduces $P(0,0)=0.0504(3)$" is two conclusions: the
-  algorithm's measured speedup, and the agreement with the polarization
-  baseline. Each has different evidence and different weak points.
+  Outside physics, the same trap appears in a clinical RCT that introduces
+  a new operational criterion alongside its prevalence: "the protocol's
+  prespecified no-disease-activity criterion at week 24 (combining OCT
+  central-subfield thickness, BCVA, hemorrhage status, and investigator
+  judgment) is met by 65% of treated participants" is two conclusions —
+  the criterion is a methodological contribution citable by anyone
+  designing a similar extended-dosing regimen, separate from the
+  empirical prevalence it yielded in this particular cohort.
+- **Procedure + the value it produced.** "Cluster-DiagMC achieves
+  γ~$10^5$ at $n=6$ and reproduces $P(0,0)=0.0504(3)$" is two
+  conclusions: the algorithm's measured speedup, and the agreement with
+  the polarization baseline. Each has different evidence and different
+  weak points. Outside physics, the same trap appears in a clinical RCT
+  conclusion that bundles regimen with outcome: "faricimab dosed every
+  16 weeks after a four-monthly loading phase produces +11.4 ETDRS
+  letters at week 52 with a mean of 6.2 injections" is two — the dosing
+  regimen is a methodological contribution that downstream trials could
+  reuse for a different outcome, and the measured BCVA change is an
+  empirical efficacy result that a different regimen could equally have
+  produced.
 - **Theorem + worked example.** A general formal claim and the explicit
   worked-example calculation that motivates it (e.g., "the third-order
   four-diagram cancellation drops by $\sim 3.48 \times 10^{-3}$") are two
   conclusions when the worked example is a separate quantitative finding.
+  Outside physics, the same trap appears in causal-inference methodology
+  papers that bundle theory with demonstration: a new identifiability
+  theorem for an estimand under stated assumptions, and a worked example
+  applying the resulting estimator to a specific competing-events dataset
+  to produce a numerical estimate, are two conclusions — the theorem is
+  a formal contribution citable by anyone working with that estimand
+  class, and the worked example is an empirical instantiation citable
+  only by people analyzing that specific data.
 - **Mechanism + benchmark.** "The downfolded Migdal–Eliashberg equation
   reproduces the toy-model $T_c$ to within $0.2\%$" — the mechanism (the
   equation) is one conclusion (analytical); the benchmark agreement is
-  another (comparative).
+  another (comparative). Outside physics, the same trap appears in
+  algorithmic system papers that bundle a method with its benchmark:
+  "DVL pre-integration is linearized in the rotation update, avoiding
+  full re-integration inside the nonlinear solver, and AQUA-SLAM
+  achieves lower translation RMSE than five baselines on the WaveTank
+  dataset" is two — the linearization mechanism is a methodological
+  contribution that downstream SLAM systems could adopt with a different
+  baseline set, and the WaveTank RMSE comparison is an empirical
+  benchmark result that could come from a different underlying
+  algorithmic choice.
 
 **Split test.** After writing a candidate body, ask: *if I deleted any one
 clause, would I lose an answer to a distinct citable question?* If yes,
