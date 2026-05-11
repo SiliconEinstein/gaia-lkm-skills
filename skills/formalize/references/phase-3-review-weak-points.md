@@ -192,6 +192,117 @@ The audit fields (`weakness_reason`, `failure_mode` for weak points;
 `credit` for highlights) are reviewer commentary written **about** the body
 and live in `mapping_audit.md`, not inside the body itself.
 
+## Reviewer-Field Writing Rules (`weakness_reason` / `failure_mode` / `credit`)
+
+These three fields are where Phase 3's analytical value materializes for a
+human reviewer downstream. Gaia's BP propagation only consumes the numeric
+`prior_probability` / `p1` / `p2`; the textual reasoning behind those
+numbers — what makes a weak point worth surfacing, what would break if it
+failed, why a highlight underwrites the conclusion — lives only in these
+fields, surfaced in `mapping_audit.md`. Sloppy writing here means the audit
+log is useless even when the numbers are right.
+
+All three are read alongside the `body` they annotate and may freely refer
+to its contents — they do **not** need to restate the body's setup, and
+they are **not** self-standing on their own.
+
+### `weakness_reason` — critique, not description
+
+`weakness_reason` is the reviewer's **critical judgment of why the claim
+in `body` is uncertain on its own merits**. It is a critique, not a
+description of what the paper does.
+
+Substantive critique draws on (any of):
+
+- the alternative formulations the body's claim rules out;
+- known counter-cases or competing conventions in the field;
+- evidence that the choice was made for tractability or convention rather
+  than empirical grounding;
+- the specific kind of derivation or evidence that would be needed to
+  establish the claim, which the paper does not provide.
+
+Paper-structure references (Section / Eq / Fig / footnote) are permitted
+only as supplementary citations attached to the critique; they must not
+carry the reasoning. A `weakness_reason` whose content reduces to
+describing where in the paper the claim is made, or how the paper sets it
+up, is paper-description, not critique, and must be rewritten.
+
+**Judgment test (self-check).** Strip every paper-structure reference out
+of the field and read what remains. If what remains is substantive
+reasoning about why the claim is dubious on its own merits, the field is
+correctly written. If what remains is empty or vacuous, the field must be
+rewritten.
+
+### `failure_mode` — concrete counterfactual, not hedging
+
+`failure_mode` is the reviewer's **counterfactual reasoning about what
+breaks in the threatened conclusion if the claim in `body` turns out to
+be false or weaker**.
+
+It must contain all four of:
+
+1. **An explicit counterfactual premise** — "If [body claim] fails in
+   way W, ...", stating the specific form of failure (not just negation
+   of the claim).
+2. **An identifiable downstream consequence in the conclusion** — a
+   specific quantitative figure, a qualitative regime, a comparative
+   ranking, or an interpretive attribution that breaks, narrows, flips,
+   or becomes unsupported.
+3. **The mechanism** — the intermediate step in the derivation that
+   stops working, linking "body false" to "conclusion damaged".
+4. **The scope of damage** — full invalidation / narrowing of valid
+   regime / quantitative shift / alternative-mechanism substitution.
+
+**What is not a `failure_mode`:**
+
+- restating the `body` claim in the future tense;
+- generic hedges ("the conclusion would be weakened", "results may be
+  affected");
+- re-describing the paper's conclusion without saying what fails in it;
+- re-iterating why the claim is dubious (that is `weakness_reason`, not
+  here).
+
+**Diagnostic.** If you cannot write a concrete, specific consequence
+under all four requirements above, the candidate is probably not
+load-bearing — go back and remove it from the weak-point list rather
+than fill `failure_mode` with hedging to get past this phase.
+
+### `credit` — integrated underwriting argument, not praise
+
+`credit` is the reviewer's **integrated argument for the role this
+strength plays in the conclusion's derivation**. A single coherent piece
+of reasoning (not a multi-field decomposition) that conveys three things
+together:
+
+1. **Which specific failure mode in the derivation it guards against** —
+   what concrete failure (a particular alternative explanation, a
+   particular extrapolation, a particular numerical artifact, a
+   particular confounder, etc.) the conclusion would have been
+   vulnerable to without this element.
+2. **Which layer of the conclusion's credibility it underwrites** —
+   qualitative direction, quantitative magnitude, mechanism /
+   attribution, generalization / extrapolation scope, or error /
+   uncertainty quantification.
+3. **The scope of credit** — full underwriting of the conclusion /
+   quantitative tightening / regime-bounded support / ruling out of a
+   specific alternative explanation / extension of the conclusion's
+   regime of validity.
+
+State these as one integrated argument, not as labelled sub-fields.
+
+**What is not a `credit`:**
+
+- generic praise ("the conclusion is well supported", "this is good
+  practice", "the paper is rigorous");
+- a `credit` whose content reduces to "the paper does X" without
+  naming a concrete failure preempted or a specific layer
+  underwritten — that is description, not reasoning, and must be
+  rewritten.
+
+Paper-structure references (Section / Eq / Fig) are permitted only as
+supplementary citations attached to the reasoning; they must not carry
+the reasoning.
+
 ## Probability Calibration
 
 Each weak point carries three numbers in `[0, 1]`. Use the full range; do
@@ -207,12 +318,14 @@ not default everything to 0.7–0.8.
     assumption that has not been rigorously verified for the specific
     system, dataset, regime, or parameter range under study.
   - **0.40–0.60** — heuristic / extrapolative / single-anchor: assertions
-    of asymptotic form supported by 1–6 data points, single-parameter-point
-    validations being generalized to other regimes, cited results applied
-    outside their stated regime, qualitative arguments substituting for a
-    derivation. **The single biggest calibration mistake is to put these
-    at 0.80** because the claim "feels reasonable" — they are exactly the
-    load-bearing uncertainties this phase is meant to surface.
+    of asymptotic / functional form fit to a small number of anchor
+    points, validations performed at a single parameter setting / dataset
+    / subgroup / regime being generalized to other settings, cited
+    results applied outside their stated regime, qualitative arguments
+    substituting for a derivation, mechanistic interpretation of a single
+    observed correlation. **The single biggest calibration mistake is to
+    put these at 0.80** because the claim "feels reasonable" — they are
+    exactly the load-bearing uncertainties this phase is meant to surface.
   - **0.20–0.40** — actively doubtful: contradicted by available evidence,
     internally inconsistent, or relying on a step the field has flagged
     elsewhere.
@@ -330,7 +443,8 @@ quick distributional sanity check **before** the phase-completion gate:
   belongs in the 0.40–0.60 band. Re-read each weak point against the
   bands above; specifically check whether you are giving 0.80+ to a
   claim that the paper itself only supports by extrapolation, asymptotic
-  fit, single-parameter-point validation, or qualitative argument.
+  fit, validation at a single parameter setting / dataset / subgroup,
+  or qualitative argument.
 - The opposite failure (every weak point ≤ 0.40) is also miscalibration:
   if the derivation really had that many actively doubtful steps, the
   conclusion would not be defensible at all. Re-read for whether each
@@ -471,6 +585,15 @@ Before moving to Phase 4:
 - Each weak point has `prior_probability`, `p1`, `p2`, `weakness_reason`,
   `failure_mode`.
 - Each highlight has `credit`.
+- Every `weakness_reason` passes its judgment test (strip paper-structure
+  references; substantive critique remains).
+- Every `failure_mode` carries all four components (counterfactual
+  premise, downstream consequence, mechanism, scope of damage) and is not
+  one of the listed non-`failure_mode` shapes. Weak points whose
+  `failure_mode` cannot be made concrete are removed, not hedged.
+- Every `credit` integrates the three aspects (failure preempted, layer
+  underwritten, scope of credit) and is not generic praise or
+  paper-description.
 - Each conclusion has a synthesis (`prior_probability` + `narrative`).
 - Phase 1b LKM reverse-trace has either run (results captured in
   `mapping_audit.md` Phase 1b table; `lkm_id` joins recorded for Phase 4)
