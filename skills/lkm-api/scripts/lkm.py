@@ -1,9 +1,15 @@
 #!/usr/bin/env python3
 """CLI helper for the Bohrium LKM HTTP API.
 
-Mirrors the four public verbs (search / match / evidence / variables) plus
-a DEBUG-only papers-ocr verb. Standard library only — no `requests` or other
-third-party deps. Reads the access key from the `LKM_ACCESS_KEY` env var.
+Mirrors the four public verbs (search / match / evidence / variables).
+Standard library only — no `requests` or other third-party deps. Reads
+the access key from the `LKM_ACCESS_KEY` env var.
+
+The canonical request/response spec is the apifox shared doc:
+    https://s.apifox.cn/58766e3c-d581-407f-a78e-7f84c35ad330
+This script is an agent-facing distillation — when it disagrees with
+apifox, apifox wins; bring the script (and `references/api-contract.md`)
+back into sync.
 
 Each invocation also forks a detached async subprocess that pings the
 upstream GitHub repo for a newer CalVer release tag (best-effort, silent on
@@ -201,18 +207,50 @@ def run_version_check() -> int:
 # ---- verbs ---------------------------------------------------------------
 
 
+VALID_SCOPES = {"action", "claim", "question", "setting"}
+VALID_RETRIEVAL_MODES = {"lexical", "semantic", "hybrid"}
+
+
 def cmd_search(args: argparse.Namespace) -> None:
     if not args.query:
         raise RuntimeError("Missing --query")
+    body: dict[str, Any] = {
+        "query": args.query,
+        "top_k": args.top_k,
+        "filters": {"visibility": "public"},
+    }
+    scopes: list[str] | None = None
+    if args.scopes:
+        scopes = [s.strip() for s in args.scopes.split(",") if s.strip()]
+        unknown = [s for s in scopes if s not in VALID_SCOPES]
+        if unknown:
+            raise RuntimeError(
+                f"Unknown scope(s) {unknown!r}. Valid values: "
+                f"{sorted(VALID_SCOPES)}"
+            )
+        body["scopes"] = scopes
+    if args.retrieval_mode:
+        if args.retrieval_mode not in VALID_RETRIEVAL_MODES:
+            raise RuntimeError(
+                f"Unknown --retrieval-mode {args.retrieval_mode!r}. "
+                f"Valid values: {sorted(VALID_RETRIEVAL_MODES)}"
+            )
+        body["retrieval_mode"] = args.retrieval_mode
+    if args.evidence_only:
+        # Server constraint: evidence_only=true requires scopes omitted or
+        # exactly ["claim"]. Reject other combinations client-side so the
+        # caller gets a clear error before the round-trip.
+        if scopes is not None and scopes != ["claim"]:
+            raise RuntimeError(
+                "--evidence-only requires --scopes either omitted or "
+                f"set to exactly 'claim'; got {scopes!r}"
+            )
+        body["evidence_only"] = True
     result = fetch_json(
         f"{BASE_URL}/search",
         method="POST",
         headers=auth_headers({"content-type": "application/json"}),
-        body={
-            "query": args.query,
-            "top_k": args.top_k,
-            "filters": {"visibility": "public"},
-        },
+        body=body,
     )
     write_result(result, args.out)
 
@@ -259,19 +297,6 @@ def cmd_variables(args: argparse.Namespace) -> None:
     write_result(result, args.out)
 
 
-def cmd_papers_ocr(args: argparse.Namespace) -> None:
-    if not args.paper_ids:
-        raise RuntimeError("Missing --paper-ids (comma-separated)")
-    paper_ids = [s.strip() for s in args.paper_ids.split(",")]
-    result = fetch_json(
-        f"{BASE_URL}/papers/ocr/batch",
-        method="POST",
-        headers=auth_headers({"content-type": "application/json"}),
-        body={"paper_ids": paper_ids},
-    )
-    write_result(result, args.out)
-
-
 # ---- argparse plumbing ---------------------------------------------------
 
 
@@ -290,6 +315,22 @@ def build_parser() -> argparse.ArgumentParser:
     p_search = sub.add_parser("search", help="POST /search")
     p_search.add_argument("--query", required=False)
     p_search.add_argument("--top-k", type=int, default=10)
+    p_search.add_argument(
+        "--scopes",
+        help=(
+            "comma-separated subset of "
+            "[action, claim, question, setting]"
+        ),
+    )
+    p_search.add_argument(
+        "--retrieval-mode",
+        choices=sorted(VALID_RETRIEVAL_MODES),
+    )
+    p_search.add_argument(
+        "--evidence-only",
+        action="store_true",
+        help="restrict to variables with at least one evidence chain",
+    )
     p_search.add_argument("--out")
     p_search.set_defaults(func=cmd_search)
 
@@ -310,14 +351,6 @@ def build_parser() -> argparse.ArgumentParser:
     p_variables.add_argument("--ids", required=False)
     p_variables.add_argument("--out")
     p_variables.set_defaults(func=cmd_variables)
-
-    if DEBUG:
-        p_ocr = sub.add_parser(
-            "papers-ocr", help="POST /papers/ocr/batch (DEBUG only)"
-        )
-        p_ocr.add_argument("--paper-ids", required=False)
-        p_ocr.add_argument("--out")
-        p_ocr.set_defaults(func=cmd_papers_ocr)
 
     return parser
 

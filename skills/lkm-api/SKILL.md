@@ -1,6 +1,6 @@
 ---
 name: lkm-api
-description: Query the Bohrium Large Knowledge Model (LKM) HTTP API. Covers the four endpoints (`POST /search`, `POST /claims/match`, `GET /claims/{id}/evidence`, `POST /variables/batch`), the `accessKey` auth contract, request/response shapes, the `data.papers` paper-metadata block, and known API quirks (`code=290001` transient, `code=290002` validation, id-only-with-empty-content premises, premise ids that may not round-trip standalone). Atomic: this skill is the API surface only — it does not prescribe retrieval methodology, root-selection policy, or downstream handoffs.
+description: Query the Bohrium Large Knowledge Model (LKM) HTTP API. Covers the four endpoints (`POST /search`, `POST /claims/match`, `GET /claims/{id}/evidence`, `POST /variables/batch`), the `accessKey` auth contract, request/response shapes, the `data.papers` paper-metadata block, the `/search` v2 features (server-side `scopes`, `retrieval_mode`, `evidence_only`, plus the new `type:"question"` variable rows and `has_evidence` / `content_hash` response fields), and the two error-code families (gateway `code=2000` HTTP 401, and the LKM `code=2900xx` family at HTTP 200). Atomic: this skill is the API surface only — it does not prescribe retrieval methodology, root-selection policy, or downstream handoffs.
 ---
 
 # LKM API
@@ -11,15 +11,19 @@ Talk to the Bohrium LKM HTTP API. This skill describes the endpoints, auth, requ
 
 Preserve raw responses verbatim — every field (claim ids, source packages, factors, premises, `total_chains`, `data.papers`, `trace_id`) is potentially load-bearing for the caller's audit.
 
+## Canonical spec
+
+The authoritative LKM HTTP API specification is the apifox shared doc: <https://s.apifox.cn/58766e3c-d581-407f-a78e-7f84c35ad330>. Confirmed by 邹志勇 (LKM service owner) on 2026-05-12 in the Feishu group "gaia lkm 文档 skills 讨论". When this skill (SKILL.md, references/, scripts/) disagrees with apifox, **apifox wins** — open an issue or PR to bring this skill back into sync rather than working around it.
+
 ## Default endpoint (production)
 
-Use **`https://open.bohrium.com/openapi/v1/lkm`** as the base URL. Do not point the skill at any non-production deployment.
+Use **`https://open.bohrium.com/openapi/v1/lkm`** as the base URL. As of 2026-05-12 this is the unified internal+external base — do not point the skill at the legacy internal address (`https://lkm.bohrium.com/api/v1`) or any non-production deployment. The gateway already strips the `/api/v1/` prefix that the apifox spec shows on individual operations: append only `/search`, `/claims/match`, etc. — adding `/api/v1/...` returns 404 from this gateway.
 
 Four endpoints (all on this base):
 
 - search: `POST /search`
-- match: `POST /claims/match`
-- evidence: `GET /claims/{id}/evidence`
+- match: `POST /claims/match` (kept alive for back-compat; new callers should prefer `/search`)
+- evidence: `GET /claims/{id}/evidence` (claim ids only — feeding a `type:"question"` id returns `code=290004`)
 - variables: `POST /variables/batch`
 
 Every request requires an `accessKey: <AK>` header (Bohrium access key). See **Authentication** below.
@@ -30,6 +34,8 @@ The `match` endpoint is currently understood as BM25-like free-text retrieval.
 Callers should send concise domain keywords or anchor phrases in `text`; this
 skill does not prescribe query-count, root-selection, or downstream mapping
 policy.
+
+`/search` exposes additional v2 controls — `scopes` (server-side enum `[action, claim, question, setting]`; `action` and `setting` are reserved placeholders with no data), `retrieval_mode` (`lexical` | `semantic` | `hybrid`), and `evidence_only`. See `references/api-contract.md` → "Search (public retrieval)" for the full schema.
 
 ## Authentication (access key)
 
@@ -100,19 +106,31 @@ Both `/claims/match` and `/claims/{id}/evidence` return a `data.papers` map keye
 
 `data.papers` is the API's authoritative paper-id → bibliographic-metadata map. Each chain's `source_package` (`paper:<id>`) resolves to an entry in this map. If `data.papers` is empty or missing a key the chain references, the only id available is `evidence_chains[].source_package` itself — the API does not hydrate further.
 
-## Known transient: `code=290001`
+## Error-code surface
 
-Sometimes the first call after a quiet period returns:
+Two distinct error families share the wire — easy to mix up. **`HTTP 200` does not mean "success"**: the LKM service signals failure inside the body, while the openapi gateway uses HTTP status codes. See `references/api-contract.md` → "Error-code surface" for the full table.
+
+### Gateway errors (`code=2000`, HTTP 401)
+
+Auth failures from the Bohrium openapi gateway, before the request reaches LKM:
 
 ```json
-{ "code": 290001, "error": { "msg": "hydrate provenance failed: batch get global variables failed: ... context deadline exceeded" } }
+{ "code": 2000, "message": "AccessKey is required",
+  "error_detail": { "reference": "https://open.bohrium.com/docs", ... } }
 ```
 
-This is a transient downstream timeout in the variable-hydration sub-call. **Retry once after a short delay (1–3 s).** If it persists across multiple retries, it is a server-side issue.
+`message` is `"AccessKey is required"` (header missing) or `"Invalid AccessKey"` (header rejected). Do not retry blindly — surface to the user and re-confirm the key. This family also has `error_detail` and `timestamp`, distinguishing it from the LKM `2900xx` family below.
 
-## Known validation error: `code=290002`
+### LKM-service errors (`code=2900xx`, HTTP 200)
 
-`POST /claims/match` rejects the request body if the required field `text` is missing. The historical field name `query` is rejected with `code=290002` (`Field validation for 'Text' failed on the 'required' tag`). Always send `text`.
+| Code | Meaning | Recovery |
+|---|---|---|
+| `0` | success | — |
+| `290001` | transient downstream timeout (variable-hydration sub-call, multi-scope `/search` fan-out, …) | Retry once after 1–3 s; persistent across retries → escalate. |
+| `290002` | request validation. Examples: missing `query` (`/search`) or `text` (`/claims/match`); unknown scope (`invalid scope: "<x>", valid values: [action, claim, question, setting]`). | Fix the request body; do not retry as-is. |
+| `290004` | `claim not found`. Fires for unknown claim ids, **and** for `type:"question"` ids fed to `GET /claims/{id}/evidence` (the evidence endpoint is claim-only). | Treat as terminal for that id. |
+
+Keep the response `trace_id` in any failure log — the LKM team uses it for diagnosis.
 
 ## Known temporary: premises with id-only, no content
 
@@ -132,9 +150,17 @@ Use `scripts/lkm.py` for deterministic API calls. The helper reads the access ke
 export LKM_ACCESS_KEY=<bohrium-access-key>   # set once per session
 
 python skills/lkm-api/scripts/lkm.py search    --query "your query" --top-k 10 --out search.json
-python skills/lkm-api/scripts/lkm.py match     --text "your query" --top-k 10 --out match.json
-python skills/lkm-api/scripts/lkm.py evidence  --id gcn_xxx --max-chains 10 --out evidence.json
-python skills/lkm-api/scripts/lkm.py variables --ids var1,var2 --out variables.json
+python skills/lkm-api/scripts/lkm.py search    --query "your query" --scopes claim,question --retrieval-mode semantic --out search.json
+python skills/lkm-api/scripts/lkm.py search    --query "your query" --scopes claim --evidence-only --out search.json
+python skills/lkm-api/scripts/lkm.py match     --text  "your query" --top-k 10 --out match.json
+python skills/lkm-api/scripts/lkm.py evidence  --id    gcn_xxx --max-chains 10 --out evidence.json
+python skills/lkm-api/scripts/lkm.py variables --ids   var1,var2 --out variables.json
 ```
 
 Verbs: `search`, `match`, `evidence`, `variables`. The helper is Python stdlib only (no `pip install` step) — it uses `urllib.request` for HTTP and writes JSON to stdout, or to the file given by `--out`. See `references/api-contract.md` for field-level details.
+
+`search`-specific flags:
+
+- `--scopes` — comma-separated subset of `[action, claim, question, setting]`. Omit to let the server pick the default scope mix; valid scopes only — anything else is rejected with `code=290002`.
+- `--retrieval-mode` — `lexical` | `semantic` | `hybrid`. Omit to keep the server default.
+- `--evidence-only` — boolean flag; when set, the response is restricted to variables that already have at least one evidence chain (response items carry `has_evidence: true`). **Constraint** (enforced both client-side and server-side): `--evidence-only` may only be combined with `--scopes` *omitted entirely* or *set to exactly `claim`*. Any other scope combination is rejected by the server with `code=290002 invalid evidence_only constraint: evidence_only=true requires scopes=["claim"]`.

@@ -1,5 +1,9 @@
 # API Contract
 
+> **Canonical spec.** The authoritative request/response specification for the LKM HTTP API is the apifox shared doc: <https://s.apifox.cn/58766e3c-d581-407f-a78e-7f84c35ad330>. Confirmed by 邹志勇 (LKM service owner) on 2026-05-12 in the Feishu group "gaia lkm 文档 skills 讨论" as the latest source. This file is a curated, agent-facing distillation — when it disagrees with apifox, apifox wins; bring this file back into sync.
+
+> **Internal vs. external base URL.** Internal (`https://lkm.bohrium.com/api/v1`) and external (`https://open.bohrium.com/openapi/v1/lkm`) callers were unified to a single open gateway base on 2026-05-12 (邹志勇 / 黄远 in the same thread): every consumer should hit `https://open.bohrium.com/openapi/v1/lkm`, never the internal address. The gateway already strips any `/api/v1/` prefix the apifox doc shows on individual operations, so endpoint paths under this base are *just* `/search`, `/claims/match`, etc. — appending `/api/v1/search` returns 404.
+
 Production base URL: **`https://open.bohrium.com/openapi/v1/lkm`**. Every endpoint below requires the header `accessKey: <bohrium-access-key>` (see `SKILL.md` → "Authentication" for the agent flow that obtains and persists the key).
 
 ## Search (public retrieval)
@@ -23,13 +27,31 @@ Default body:
 {
   "query": "search terms",
   "top_k": 10,
+  "scopes": ["claim"],
   "filters": {
     "visibility": "public"
-  }
+  },
+  "retrieval_mode": "hybrid",
+  "evidence_only": false
 }
 ```
 
-Body field name is **`query`** (required) — distinct from `/claims/match`, which uses `text`. Optional fields: `scopes` (string array), `filters` (object; commonly `visibility`, `role`), `top_k` (integer; server default applies if omitted).
+Body field name is **`query`** (required) — distinct from `/claims/match`, which uses `text`. Empty or missing `query` → `code=290002` (`'Query' failed on the 'required' tag`).
+
+Optional fields:
+
+- `top_k` (integer): if omitted or `0`, the server returns its default (currently 20). Larger values (50, 100) work without complaint.
+- `scopes` (string array — note plural; the singular `scope` is silently ignored): server-side enum is **fixed** as `[action, claim, question, setting]`. The error message itself enumerates this — sending any other value yields `code=290002 invalid scope: "<x>", valid values: [action, claim, question, setting]`.
+  - `claim` returns `type:"claim"` rows (the historical shape).
+  - `question` returns `type:"question"` rows. **This is a new variable type.** A question id does **not** resolve through `GET /claims/{id}/evidence` (the evidence endpoint is claim-only — feeding a question id returns `code=290004 claim not found`).
+  - `action`, `setting` are reserved scopes — both production and test corpora currently return `data.variables: []` for them. Treat them as placeholders; do not build retrieval logic that depends on either having data.
+- `filters.visibility` (string): defaults to `public` even when the entire `filters` block is omitted.
+- `filters.role` (string): `premise` | `conclusion`. Filters `data.variables[]` to that role only.
+- `retrieval_mode` (string): `lexical` | `semantic` | `hybrid`. Different scoring distributions:
+  - `lexical` — BM25-like, scores in `[0, 1]`, top hits frequently `≈1.0`.
+  - `semantic` — embedding-cosine-like distribution; scores spread more broadly.
+  - `hybrid` — fused (default-shaped score magnitudes when `retrieval_mode` is omitted entirely).
+- `evidence_only` (bool): if `true`, every returned variable carries `has_evidence: true` (i.e. at least one chain exists for it). **Constraint:** the server only accepts `evidence_only=true` together with `scopes` either *omitted entirely* or *equal to `["claim"]`* — combining it with `["question"]`, `["action"]`, `["setting"]`, or any multi-scope mix is rejected with `code=290002 invalid evidence_only constraint: evidence_only=true requires scopes=["claim"] only, got <…>`. Setting `evidence_only=false` (or omitting it) lifts the constraint.
 
 Apifox names this surface "公开检索" (public retrieval). Both `/search` and `/claims/match` return per-entry results in `data.variables[]` keyed by the same paper provenance, but they are separate endpoints with distinct request bodies — keep `query` (search) and `text` (match) straight.
 
@@ -42,10 +64,12 @@ Response shape:
     "variables": [
       {
         "id": "gcn_…",
-        "type": "claim",
+        "type": "claim" | "question",
         "role": "premise" | "conclusion",
         "content": "...",
+        "content_hash": "…",
         "score": 0.0,
+        "has_evidence": true,
         "provenance": {
           "source_packages": ["paper:<id>"],
           "representative_lcn": { "local_id": "...", "package_id": "...", "version": "..." }
@@ -61,7 +85,14 @@ Response shape:
 }
 ```
 
-Per-entry structure in `data.variables[]` matches `/claims/match`: `id`, `type`, `role`, `content`, `score`, `provenance`, `visibility`. The `data.papers` map follows the same shape used elsewhere in this contract — see "Paper metadata block (`data.papers`)" below for the full schema; do not redefine inline.
+Per-entry fields:
+
+- `id`, `role`, `content`, `score`, `provenance`, `visibility` — same shape as `/claims/match`.
+- `type` — `"claim"` for the historical conclusion/premise rows; `"question"` for question-scope rows (new).
+- `content_hash` — stable hex digest of `content`, useful for deduping across calls.
+- `has_evidence` — present (and `true`) on rows that the API knows have at least one evidence chain. Driven by `evidence_only` filtering or by intrinsic indexing — its absence does not strictly imply "no evidence", only "not flagged".
+
+The `data.papers` map follows the shape used elsewhere in this contract — see "Paper metadata block (`data.papers`)" below for the full schema; do not redefine inline.
 
 ## Match (claim retrieval by free text)
 
@@ -244,15 +275,49 @@ Response shape:
 
 Call only when a chain step references a `var_*` id. If no `var_*` ids appear in the chain, skip this endpoint.
 
-## Known transient: `code=290001`
+## Error-code surface
 
-Sometimes the first call after a quiet period returns:
+Two distinct error families share the wire — easy to mix up. **Don't equate `HTTP 200` with success**: the LKM service signals failure inside the body, while the openapi gateway uses HTTP status codes.
+
+### Gateway errors (`code: 2000`, HTTP 401)
+
+Auth/transport failures handled by the Bohrium openapi gateway *before* the request reaches LKM. Body schema differs from the LKM family — `message` (top level) plus `error_detail` with a Bohrium-docs `reference`:
+
+```json
+{
+  "code": 2000,
+  "message": "AccessKey is required",   /* or "Invalid AccessKey" */
+  "error_detail": {
+    "code": 2000,
+    "message": "未授权访问",
+    "en_message": "Unauthorized",
+    "description": "请求需要身份验证，但未提供有效的认证信息",
+    "solution": "请在请求头中提供有效的accessKey",
+    "reference": "https://open.bohrium.com/docs"
+  },
+  "trace_id": "...",
+  "timestamp": 1778583083
+}
+```
+
+If you see `code=2000`, do not retry blindly — the `accessKey` header is missing or invalid. Surface the failure to the user and ask whether the key is current.
+
+### LKM-service errors (`code: 2900xx`, HTTP 200)
+
+The HTTP status is `200` even when these fire. Inspect `code` + `error.msg`:
 
 ```json
 { "code": 290001, "error": { "msg": "hydrate provenance failed: batch get global variables failed: ... context deadline exceeded" } }
 ```
 
-Transient downstream timeout in the variable-hydration sub-call. Retry once after 1–3 s. If it persists across multiple retries, escalate as a server-side issue — do not work around it.
+| Code | Meaning | Recovery |
+|---|---|---|
+| `0` | success | — |
+| `290001` | transient downstream timeout in variable-hydration / scope fan-out (e.g. multi-scope `/search`) | Retry once after 1–3 s. Persistent across multiple retries → escalate as a server-side issue, do not work around it. |
+| `290002` | request validation. Examples: `'Query' failed on the 'required' tag` (missing `query` on `/search`), `'Text' failed on the 'required' tag` (missing `text` on `/claims/match`), `invalid scope: "<x>", valid values: [action, claim, question, setting]`. | Fix the request body; do not retry as-is. |
+| `290004` | `claim not found`. Fires for unknown claim ids on `GET /claims/{id}/evidence`, and also when feeding a `type:"question"` id to that endpoint (the evidence endpoint is claim-only). | Treat as terminal for that id; do not retry. |
+
+Keep the `trace_id` in any failure log — the service team uses it for diagnosis.
 
 ## Known temporary: id-only premises
 
