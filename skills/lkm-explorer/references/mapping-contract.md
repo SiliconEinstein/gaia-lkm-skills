@@ -3,10 +3,11 @@
 > Generic Gaia knowledge package emission rules — claim/deduction body
 > discipline, package layout, audit log schema — are owned by
 > [`$gaia-package`](../../gaia-package/). This file covers ONLY rules specific
-> to contradiction-driven LKM exploration: the LKM evidence-status vocabulary,
-> no-chain source-claim handling, root-claim frontier supports, the
-> open-question-first contradiction policy, and the timeline emission
-> requirement for LKM-driven package work.
+> to obligation-driven LKM exploration: the LKM evidence-status vocabulary,
+> no-chain source-claim handling, per-target supports, the
+> open-question-first contradiction policy (with paired
+> `gaia inquiry obligation add`), and the timeline emission requirement for
+> LKM-driven package work.
 
 ## 0. Evidence-status vocabulary
 
@@ -14,7 +15,7 @@
 - **LKM source claim**: LKM returned claim content and provenance, but `total_chains = 0`. After cold start, emit it as a leaf/source `claim(...)`; do not invent premises or deductions.
 - **Search lead**: insufficient content or provenance for a self-contained claim outside an accepted chain-backed factor. Keep only in audit/search notes.
 
-`total_chains > 0` is required for cold-start root selection. It is not a global admissibility rule for post-cold-start frontier expansion or conflict-channel candidates.
+`total_chains > 0` is required for cold-start root selection. It is not a global admissibility rule for post-cold-start obligation-driven expansion or conflict-channel candidates.
 
 ## 1. LKM-specific claim handling
 
@@ -39,11 +40,13 @@ The rules below are LKM-specific.
   chain** are **search leads**, not placeholder claims. Record them in audit
   files only.
 
-## 3. Root-claim frontier supports
+## 3. Per-target supports
 
-During root-claim frontier expansion, the agent searches LKM for content that
-can directly support each frontier claim. A single target claim may have
-**multiple** accepted upstream supports. Use the real Gaia DSL strategy:
+During obligation-driven expansion, the agent searches LKM for content that
+can directly support the **current target claim** (the qid driven by the
+obligation popped this round; in cold start, the user-selected root). A
+single target claim may have **multiple** accepted upstream supports. Use
+the real Gaia DSL strategy:
 
 ```python
 support([U_1], target, reason="<what U_1 says and why it supports target>", prior=<float>)
@@ -61,7 +64,7 @@ support([U_1, U_2], target, reason="<joint support rationale>", prior=<float>)
 soft deduction over a directed implication. Higher `p` means the support warrant
 is stronger; `p` close to 1 means `a` nearly determines `b`.
 
-Search effort for each frontier target:
+Search effort for each current target claim:
 - Run at least 2 distinct support-channel LKM match queries.
 - Use `top_k=10` for each query.
 - Preserve raw match/evidence payloads.
@@ -120,14 +123,16 @@ open problem they raise. The open problem belongs in
 `artifacts/lkm-discovery/contradictions.md`, `mapping_audit.md`, and, when it
 may drive later work, `.gaia/inquiry/` as a hypothesis.
 
-During root-claim frontier expansion, run an open-question/conflict channel for every
-frontier claim. Minimum effort is 5 distinct LKM match queries with `top_k=10`.
-Prioritize theory-vs-experiment or experiment-vs-theory candidates first: if the
-frontier claim is theoretical/computational, look first for experimental
-observations or measurements that disagree with or qualify it; if the frontier
-claim is experimental, look first for theoretical/computational results that
-disagree with or reinterpret it. Then search same-system different-method,
-boundary-condition, approximation/regime, and adjacent hypothesis candidates.
+During obligation-driven expansion, run an open-question/conflict channel
+for the **current target claim** (the obligation target this round).
+Minimum effort is 5 distinct LKM match queries with `top_k=10`. Prioritize
+theory-vs-experiment or experiment-vs-theory candidates first: if the
+target claim is theoretical/computational, look first for experimental
+observations or measurements that disagree with or qualify it; if the
+target claim is experimental, look first for theoretical/computational
+results that disagree with or reinterpret it. Then search same-system
+different-method, boundary-condition, approximation/regime, and adjacent
+hypothesis candidates.
 If no candidate satisfies the hypothesis or contradiction standard, record the
 queries and rejection rationales as `conflict_not_found`.
 
@@ -183,6 +188,22 @@ relation_type: scientific_inconsistency
 contradictions under this workflow. It is not the Gaia node label. Avoid
 `paradox` as a formal relation type; it may be used only in synthesis prose when
 appropriate for the field.
+
+### Required obligation pairing
+
+Every accepted scientific contradiction MUST be paired with both an inquiry
+hypothesis and an inquiry obligation:
+
+```bash
+gaia inquiry hypothesis add "<open problem>" --scope <namespace>::<op_label>
+gaia inquiry obligation add <op_label> -c "resolve contradiction: <open problem>"
+```
+
+The obligation entry is what makes this workflow obligation-driven: every
+accepted `contradiction(...)` feeds the next-target queue popped by the
+orchestrator's Stage 2 Obligation Rule. Both CLI calls must have paired
+graph-growth events (`hypothesis_added` and `obligation_added`). Hypotheses
+are advisory; only obligations drive next-round target selection.
 
 ### Promotion signals
 

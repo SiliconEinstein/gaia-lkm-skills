@@ -77,9 +77,10 @@ Before handoff:
   inquiry events required by `timeline-log-contract.md` have been emitted when
   applicable.
 
-## Caller Quality Gate
+## Caller Quality Gate (Final Gate)
 
-The orchestrator/caller accepts the emitted source only after running:
+The orchestrator/caller accepts the emitted source only after running the
+**final** gate exactly once at hand-off:
 
 ```bash
 gaia compile .
@@ -89,12 +90,19 @@ gaia infer .
 gaia inquiry review --strict .
 ```
 
+This is the **only** place in the iteration loop where `gaia infer .` is
+required to run. Intermediate per-round gates (see
+`$orchestrator/references/lkm-explorer-sop.md` Quality Gates → Intermediate
+Gate) deliberately skip `gaia infer .` because belief propagation is
+expensive and this workflow does not consume beliefs to pick the next
+target — `gaia inquiry obligation list` does.
+
 If `gaia check --hole .` reports missing priors, fill `priors.py` and rerun the
 gate. If inquiry review reports unreviewed warrants or duplicates, log or
 resolve them according to Step 4 and rerun the gate.
 After each quality-gate attempt, append a `quality_gate_result` event to
-`graph_growth_log.jsonl` with an empty `graph_delta` unless the gate-triggered
-repair actually changed nodes or edges.
+`graph_growth_log.jsonl` with `gate_flavor="final"` and an empty `graph_delta`
+unless the gate-triggered repair actually changed nodes or edges.
 
 ## Hand-Off Report
 
@@ -109,7 +117,10 @@ Return:
   hypothesis-only open problems added,
 - priors added or still needed,
 - inquiry obligations/hypotheses opened or closed,
-- commands the caller ran and pass/fail status,
+- obligation-list-remaining: size at hand-off and top items (so the user
+  knows what an immediate refresh round would tackle next),
+- commands the caller ran and pass/fail status, including the final
+  `quality_gate_result.infer_pass=true/false`,
 - deviations from the mapping contract, if any.
 
 ## What This Skill Is Not

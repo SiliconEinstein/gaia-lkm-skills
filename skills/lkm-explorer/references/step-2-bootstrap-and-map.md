@@ -136,5 +136,9 @@ Before moving to Step 3:
   and a populated `graph_delta` block. For emitted claims and deductions,
   `graph_delta.nodes_added` and `graph_delta.edges_added` contain frontend-ready
   ids, kinds, labels, priors when applicable, and content/reason excerpts.
+- Running `gaia compile .` after Step 2 emit is allowed and encouraged as a
+  smoke check. Do **not** run `gaia infer .` here — `gaia infer .` runs only
+  at the final caller gate (see `step-5-emit-and-handoff.md` and
+  `$orchestrator/references/lkm-explorer-sop.md` Quality Gates).
 - Mark Step 2 complete, mark Step 3 in progress, then load
   `step-3-contradictions-and-open-questions.md`.

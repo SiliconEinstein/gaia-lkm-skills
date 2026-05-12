@@ -32,9 +32,10 @@ The checklist is ephemeral and is not written to the package.
   `data.papers`.
 - Orchestrator discovery/selection files: `candidates.md`,
   `contradictions.md`, `equivalences.md` when available.
-- Root-claim frontier expansion records from the orchestrator when in refresh mode:
-  frontier claim labels, support-channel query payloads,
-  open-question/conflict-channel query payloads, and candidate classifications.
+- Obligation-driven expansion records from the orchestrator when in refresh
+  mode: popped obligation ids, current target claim labels, support-channel
+  query payloads, open-question/conflict-channel query payloads, and
+  candidate classifications.
 - Existing package path for refresh work, including `artifacts/lkm-discovery/`,
   `.gaia/inquiry/`, and prior source files.
 - Timeline replay files for LKM-explorer work:

@@ -21,8 +21,9 @@ user request
   -> cold start: user selects one chain-backed root claim
   -> $lkm-explorer maps accepted payloads to Gaia DSL
   -> graph_growth_log.jsonl records source/audit graph growth
-  -> Gaia quality gates produce .gaia/ir.json
-  -> later rounds expand from the cold-start root frontier
+  -> intermediate gates compile/check/review (no infer)
+  -> later rounds pop the next target from `gaia inquiry obligation list`
+  -> final caller gate runs `gaia infer .` exactly once before hand-off
 ```
 
 `$evidence-subgraph` is not part of this path. It is a separate graph-only branch
@@ -101,37 +102,69 @@ Use this stage when no package exists yet or the user asks for a fresh package.
     `round_open` for `round_0000` with the selected root as `frontier_in`.
 11. Read `$lkm-explorer/SKILL.md` and run its progressive five-step workflow in
     batch mode. Every emitted growth event must include `graph_delta`.
-12. Run the Quality Gates, append `quality_gate_result`, then append
-    `round_close` for `round_0000`. Record the user-selected root claim as the
-    expansion seed; this root claim is the only default starting point for later
-    graph growth.
+12. Run the Intermediate Quality Gates, append `quality_gate_result`, then
+    append `round_close` for `round_0000`. The user-selected root claim seeds
+    cold start, but later rounds do not re-pick it as a frontier; later rounds
+    are obligation-driven (Stage 2). Before closing `round_0000`, confirm the
+    `gaia inquiry obligation list` is non-empty: Step 3 contradictions and
+    Step 4 weak-premise flags should already have populated it. If it is
+    empty, the agent must add at least one explicit obligation against the
+    root claim or one of its premises (e.g. `gaia inquiry obligation add
+    <root_qid> -c "verify <specific concern>"`); otherwise the next round has
+    no target and must close immediately as `exhausted=true`.
 
-## Stage 2 — Root-Claim Frontier Expansion
+## Stage 2 — Obligation-Driven Expansion
 
 Use this stage for all later graph growth, including requests phrased as
 "continue expanding", "find supports", "find contradictions", "explore open
 questions", or "grow the graph".
 
-### Frontier Rule
+### Obligation Rule
 
-Round 0 frontier is the cold-start root claim selected by the user.
+Round 0 frontier is the cold-start root claim selected by the user. From
+`round_0001` onward, the agent picks the next target by **popping one item
+from `gaia inquiry obligation list`** — the obligation list is the canonical
+TODO queue for this workflow. Pick the most interesting unresolved obligation
+as an intentional choice. **Never** mechanically pick the lowest-belief
+claim, the most-cited claim, the most graph-central claim, or any side of an
+existing contradiction; obligations carry the agent's intentional exploration
+decisions, beliefs/centrality are diagnostics only.
 
-After a completed expansion round, the next frontier is every newly admitted,
-LKM-grounded **science claim** added in that round. Do not expand generated
-helper claims from `support(...)`, `deduction(...)`, or `contradiction(...)`, and
-do not re-expand claims already recorded in the visited frontier log.
+The obligation list is populated by:
+
+- Step 3 in `$lkm-explorer`: every accepted `contradiction(A, B)` MUST pair
+  with `gaia inquiry obligation add <op_label> -c "resolve contradiction:
+  <open_problem>"`.
+- Step 4 in `$lkm-explorer`: every flagged weak premise / unreliable
+  reasoning chain MUST pair with `gaia inquiry obligation add
+  <claim_or_strategy_qid> -c "<concern>"`.
+- Quality-gate output: `gaia check --hole .` priors not yet reviewed,
+  `gaia inquiry review --strict .` unreviewed warrants — agent transcribes
+  these into obligations when they require extra LKM retrieval.
 
 At the start of each expansion round, append `stage_transition` when entering
-`frontier_expansion`, then append `round_open` with `frontier_in` and
+`frontier_expansion`, then append `round_open` with `frontier_in` carrying
+the obligation target's qid (and the `obligation_id` it was popped from) plus
 `frontier_visited_so_far`. At the end, append `round_close` with
-`decisions_summary`, `next_frontier`, and `exhausted`.
+`decisions_summary` (including `next_obligations` — the ids of obligations
+newly added during this round — and `obligation_list_remaining` size),
+`next_frontier`, and `exhausted`.
 
-If a round adds no new science claims, stop and report that the current frontier
-is exhausted; the `round_close` event must set `exhausted=true`.
+A round must close as `exhausted=true` when **all** of:
 
-### Per-Claim Search Contract
+- `obligation_list_empty=true` (after popping this round's target and adding
+  any new obligations from Step 3 / Step 4),
+- `open_holes=0` (`gaia check --hole .` passes),
+- `unreviewed_warrants=0` (`gaia inquiry review --strict .` passes).
 
-For each frontier claim, extract a scope tuple before searching:
+If a round runs against the popped obligation but admits no new science
+claims and resolves the obligation, the round still completes normally; the
+loop only terminates when the three conditions above hold simultaneously.
+
+### Per-Target Search Contract
+
+For the **current obligation target claim**, extract a scope tuple before
+searching:
 
 ```text
 system/material | quantity/effect | asserted value/sign/direction |
@@ -139,7 +172,7 @@ method/model/measurement | theory/experiment/computation role |
 conditions/regime | source paper/LKM id
 ```
 
-Run both channels for **every** frontier claim:
+Run both channels against the current obligation target claim:
 
 - Support channel: at least **2 distinct LKM match queries**, each with
   `top_k=10`.
@@ -156,8 +189,8 @@ Preserve every raw match/evidence response verbatim under
 
 ### Support Channel
 
-Goal: find LKM-grounded content that can directly support the frontier claim in
-real Gaia DSL.
+Goal: find LKM-grounded content that can directly support the current target
+claim in real Gaia DSL.
 
 - Fetch evidence for promising support candidates whenever possible.
 - Chain-backed candidates may add `claim(...)` nodes and factor-derived
@@ -185,15 +218,15 @@ satisfy the mapping contract. If no candidate satisfies the standard, record
 ### Open-Question / Conflict Channel
 
 Goal: find LKM-grounded content that raises a scientifically meaningful open
-question against or around the frontier claim.
+question against or around the current target claim.
 
 Priority order:
 
-1. Theory-vs-experiment or experiment-vs-theory. If the frontier claim is
-   theoretical/computational, first search for experimental observations or
-   measurements that disagree with, qualify, or fail to confirm it. If the
-   frontier claim is experimental, first search for theoretical/computational
-   results that disagree with or reinterpret it.
+1. Theory-vs-experiment or experiment-vs-theory. If the current target claim
+   is theoretical/computational, first search for experimental observations
+   or measurements that disagree with, qualify, or fail to confirm it. If
+   the current target claim is experimental, first search for
+   theoretical/computational results that disagree with or reinterpret it.
 2. Computation-vs-experiment or measurement-vs-model comparisons not covered by
    the first category.
 3. Same-system different-method conflicts.
@@ -218,6 +251,11 @@ standard and use direct Gaia DSL:
 )
 ```
 
+Every accepted contradiction in this channel MUST be paired with a
+`gaia inquiry obligation add <op_label> -c "resolve contradiction:
+<open_problem>"` call (and the matching `obligation_added` graph-growth
+event), so the next-target queue is fed automatically.
+
 If no candidate satisfies the hypothesis or contradiction standards, record
 `conflict_not_found` with the queries checked and rejection rationales.
 
@@ -231,7 +269,8 @@ not-found decisions. Before any terminal candidate decision, append a
 `candidate_considered` event for every candidate that entered scope comparison.
 Each row should include:
 
-- frontier claim label and LKM id when available,
+- current target claim label and LKM id (and the `obligation_id` driving this
+  round) when available,
 - channel: `support` or `open_question_conflict`,
 - query text and `top_k`,
 - candidate LKM id and evidence status (`chain-backed`, `lkm_no_chain`, or
@@ -271,7 +310,30 @@ quality gates or review identify issues.
 
 ## Quality Gates
 
-Run before accepting any package state:
+The workflow runs **two flavors** of quality gate. Intermediate gates run
+between rounds; the final gate runs only once at hand-off.
+
+### Intermediate Gate (every round)
+
+Run before closing each round and before declaring an intermediate state
+acceptable:
+
+```bash
+gaia compile .
+gaia check --brief .
+gaia check --hole .
+gaia inquiry review --strict .
+```
+
+`gaia infer .` is **deliberately omitted** from the intermediate gate.
+Belief propagation is expensive, and this workflow does not consume beliefs
+to pick the next target — `gaia inquiry obligation list` does. Do not run
+`gaia infer` between rounds unless the user explicitly asks.
+
+### Final Gate (caller, once at hand-off)
+
+Run exactly once at the end of the iteration loop, before returning the
+package to the user:
 
 ```bash
 gaia compile .
@@ -281,18 +343,26 @@ gaia infer .
 gaia inquiry review --strict .
 ```
 
-Before running the gate, append `stage_transition` to `quality_gate`. After the
-gate, append `stage_transition` back to `mapping`, `frontier_expansion`, or
-`repair` as appropriate for the next action.
+This is the **only** place in the loop where `gaia infer .` is required to
+run. The final gate is also the place where Step 5 in `$lkm-explorer`
+performs hand-off (see
+`$lkm-explorer/references/step-5-emit-and-handoff.md`).
+
+### Common rules (both gates)
+
+Before running either gate, append `stage_transition` to `quality_gate`.
+After the gate, append `stage_transition` back to `mapping`,
+`frontier_expansion`, or `repair` as appropriate for the next action.
 
 If holes appear, fill `priors.py` and rerun. If review reports duplicates,
 unreviewed warrants, or unresolved obligations/hypotheses, log or resolve them
 and rerun.
 
 Append a `quality_gate_result` event to `graph_growth_log.jsonl` after each gate
-attempt, including command pass/fail status and a short failure summary when
-applicable. The event must include an empty `graph_delta` unless the gate-driven
-repair changed nodes or edges; repair passes get separate `repair` events.
+attempt, including command pass/fail status, the gate flavor
+(`intermediate` or `final`), and a short failure summary when applicable.
+The event must include an empty `graph_delta` unless the gate-driven repair
+changed nodes or edges; repair passes get separate `repair` events.
 
 ## Audit-Trail Invariants
 
@@ -304,10 +374,17 @@ repair changed nodes or edges; repair passes get separate `repair` events.
   (`total_chains > 0`).
 - After cold start, LKM source claims with `total_chains = 0` may enter
   `$lkm-explorer` as leaf/source claims when content and provenance are clear.
-- Iterative graph growth after cold start follows root-claim frontier expansion
-  from the user-selected root claim. Do not substitute a graph-centrality,
-  belief-based, contradiction-side, or arbitrary frontier policy unless the user
-  explicitly asks for a different workflow.
+- Iterative graph growth after cold start is **obligation-driven**: each
+  round pops one target from `gaia inquiry obligation list`. Do not
+  substitute belief-ranking, graph-centrality, contradiction-side, or
+  arbitrary frontier policy unless the user explicitly asks for a different
+  workflow. Every accepted `contradiction(...)` and every flagged weak
+  premise / unreliable reasoning chain MUST pair with `gaia inquiry
+  obligation add` so the next-target queue is fed automatically.
+- Intermediate round gates run `gaia compile .`, `gaia check --brief .`,
+  `gaia check --hole .`, and `gaia inquiry review --strict .` only;
+  `gaia infer .` runs exactly once at the final caller gate (Step 5
+  hand-off) and not between rounds.
 - `artifacts/lkm-discovery/input/` is append-only for raw retrievals.
 - `retrieval_log.jsonl` and `graph_growth_log.jsonl` are append-only
   chronological replay indexes for LKM-explorer package work only.

@@ -5,10 +5,10 @@ leaves, double counting, and untracked weak premises.
 
 ## Upstream Support
 
-For root-claim frontier expansion, every frontier claim receives a
-support-channel LKM search. Search for upstream LKM-grounded conclusions relevant to the target
-claim. A single target may have multiple upstream supports; each can get its own
-directional `support(...)`:
+For obligation-driven expansion, the current obligation target claim receives
+a support-channel LKM search. Search for upstream LKM-grounded conclusions
+relevant to the target claim. A single target may have multiple upstream
+supports; each can get its own directional `support(...)`:
 
 ```python
 support([U_1], P, reason="<what U_1 says and why it supports P>", prior=<float>)
@@ -26,7 +26,7 @@ support([U_1, U_2], P, reason="<joint support rationale>", prior=<float>)
 determines `b`. This is true Gaia DSL syntax for the current `gaia.lang`
 support strategy.
 
-Minimum support-channel effort per frontier claim:
+Minimum support-channel effort per current obligation target claim:
 
 - run at least 2 distinct LKM match queries,
 - use `top_k=10` for each query,
@@ -103,15 +103,32 @@ Append a `prior_added` graph-growth event for each prior batch.
 
 ## Inquiry Obligations
 
+`gaia inquiry obligation list` is the **canonical next-target queue** for
+this workflow. The orchestrator pops one item from it per round to drive
+Stage 2 (see `$orchestrator/references/lkm-explorer-sop.md` Stage 2
+Obligation Rule). This step is the primary place that feeds the queue.
+
 Mark unreliable reasoning chains or weak premises:
 
 ```bash
 gaia inquiry obligation add <claim_or_strategy_qid> -c "<concern>"
 ```
 
-Use `gaia inquiry obligation list` as the exploration TODO list. Do not
-mechanically pick the lowest-belief claim; obligations carry intentional
-exploration choices, while beliefs are diagnostics.
+Required occasions for `gaia inquiry obligation add` in this step:
+
+- every reasoning chain whose `reason` body looks under-specified, ambiguous,
+  or only partially traced to LKM steps;
+- every weak premise (low evidence, scope mismatch, missing method/condition)
+  that landed in `priors.py` with a low prior;
+- every leaf claim flagged by `gaia check --hole .` that is not trivially
+  fillable from existing payloads;
+- every unreviewed warrant flagged by `gaia inquiry review --strict .`.
+
+Pick the most interesting unresolved obligation as the next round target.
+**Never** mechanically pick the lowest-belief claim, the most graph-central
+claim, or any side of an existing contradiction; obligations carry
+intentional exploration choices, while beliefs/centrality are diagnostics
+only.
 
 Every `gaia inquiry obligation add` call must be paired with an
 `obligation_added` graph-growth event containing the CLI command, scope, text,
@@ -124,7 +141,8 @@ gaia inquiry hypothesis add "<open question>" --scope <namespace>::<label>
 ```
 
 If this step registers a hypothesis, pair it with a `hypothesis_added`
-graph-growth event.
+graph-growth event. Hypotheses are advisory; only obligations drive next-round
+target selection.
 
 ## Duplicate Controls
 
@@ -145,18 +163,25 @@ Before moving to Step 5:
 
 - Relevant upstream supports have been searched and mapped or explicitly not
   found.
-- Root-claim frontier claims have completed the required support-channel search
-  or recorded `support_not_found`.
+- The current obligation target claim has completed the required
+  support-channel search (≥2 distinct LKM match queries, `top_k=10`) or
+  recorded `support_not_found`.
 - Every support candidate that entered scope comparison has a
   `candidate_considered` event before its final verdict.
 - Shared-factor and duplicate risks have audit decisions.
 - Leaf-prior candidates are ready for `priors.py`.
-- Inquiry obligations/hypotheses are registered or queued.
+- Inquiry obligations/hypotheses are registered or queued. Every weak premise,
+  unreliable reasoning chain, low-prior leaf, and unreviewed warrant
+  identified in this step has a paired `gaia inquiry obligation add` call.
 - Every inquiry CLI call in this step has a paired `hypothesis_added` or
   `obligation_added` event.
 - Support, duplicate, merge, and prior decisions have corresponding
   graph-growth events, including `support_not_found` no-op decisions.
 - Applicable events fill structured `scope_tuple`, `scope_diff`,
   `rejection_reason`, `warrant_prior`, and `graph_delta`.
+- The end-of-round obligation list snapshot (size and top-3 ids by
+  agent-judged interest) has been recorded so `round_close.decisions_summary`
+  can carry `next_obligations` and `obligation_list_remaining` per the SOP
+  Obligation Rule.
 - Mark Step 4 complete, mark Step 5 in progress, then load
   `step-5-emit-and-handoff.md`.

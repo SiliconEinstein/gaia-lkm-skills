@@ -62,6 +62,7 @@ Minimum schema:
     "label": "gcn_example",
     "lkm_id": "gcn_example"
   },
+  "obligation_id": "obl-2026-05-05-0007",
   "channel": "support",
   "endpoint": "match",
   "request": {
@@ -89,7 +90,17 @@ Minimum schema:
 
 Field rules:
 
-- `frontier_claim` is `null` during broad cold-start search before a root exists.
+- `frontier_claim` is the **current obligation target claim** for the round
+  (the claim whose qid the orchestrator pinned this round when it popped an
+  obligation from `gaia inquiry obligation list`). It is `null` during
+  broad cold-start search before a root exists. In `round_0000` it carries
+  the user-selected cold-start root; from `round_0001` onward it carries
+  the obligation target.
+- `obligation_id` is the id of the obligation popped to drive the round (when
+  applicable). It is `null` in `round_0000` (cold start has no obligation
+  pop) and during pre-package discovery. Together with `frontier_claim` it
+  lets a replay UI show "this round was driven by obligation X targeting
+  claim Y".
 - `channel` is one of `root_discovery`, `support`,
   `open_question_conflict`, `evidence_hydration`, `variables_hydration`,
   `duplicate_review`, `quality_repair`, or `other`.
@@ -115,22 +126,37 @@ that preserve the actual call order as accurately as available.
 `$lkm-explorer` emits the full canonical `graph_growth_log.jsonl` schema; the
 LKM-specific decisions/no-ops that this skill is responsible for emitting are:
 
-- `support_not_found` — no candidate satisfied the support standard for a
-  frontier claim after the support-channel queries were run.
+- `support_not_found` — no candidate satisfied the support standard for the
+  current target claim after the support-channel queries were run.
 - `conflict_not_found` — no candidate satisfied the hypothesis or contradiction
-  standard for a frontier claim after the open-question/conflict-channel
+  standard for the current target claim after the open-question/conflict-channel
   queries were run.
 - LKM-specific `accepted_*` decisions tied back to retrieval events:
   `retrieval_event_ids` MUST point at the LKM `retrieval_log.jsonl` events
   whose raw payloads grounded the decision.
 - Round-lifecycle events (`round_open`, `round_close`, `stage_transition`)
-  during cold-start root discovery and post-cold-start frontier-expansion
-  rounds — generic event format in `$gaia-package`, but the LKM-explorer
-  workflow guarantees one round per cold-start selection plus one per
-  frontier-expansion round.
+  during cold-start root discovery and post-cold-start obligation-driven
+  expansion rounds — generic event format in `$gaia-package`, but the
+  LKM-explorer workflow guarantees one round per cold-start selection plus
+  one per obligation pop. Specifically:
+  - `round_open.frontier_in` carries the obligation target's claim qid; in
+    `round_0001+` `round_open.payload.obligation_id` carries the popped
+    obligation's id.
+  - `round_close.decisions_summary.next_obligations` lists the ids of
+    obligations newly added during this round (typically by Step 3
+    accepted contradictions and Step 4 weak-premise flags), and
+    `decisions_summary.obligation_list_remaining` carries the post-round
+    queue size.
+  - `round_close.exhausted=true` MUST hold if and only if
+    `obligation_list_empty=true ∧ open_holes=0 ∧ unreviewed_warrants=0`
+    after this round.
 - `package_initialized`, `user_selection_checkpoint_opened`, and
   `user_selection_checkpoint_closed` during cold start so the replay UI can
   show the package creation and human root-selection pause.
+- `quality_gate_result` events MUST carry `payload.gate_flavor`, one of
+  `intermediate` or `final`. `gate_flavor="final"` MUST appear exactly once
+  per package run (Step 5 caller gate) and is the only gate where
+  `gaia infer .` ran; intermediate gates report `infer_pass=null`.
 
 All other generic decision values (`accepted_claim`, `accepted_deduction`,
 `accepted_support`, `accepted_contradiction`, `equivalence`, `hypothesis_only`,
@@ -138,7 +164,7 @@ All other generic decision values (`accepted_claim`, `accepted_deduction`,
 `obligation_added`, `quality_gate_result`, `repair`) follow the canonical
 schema unchanged.
 
-## Frontier replay
+## Replay questions
 
 The two logs together must be sufficient to answer:
 
@@ -146,15 +172,22 @@ The two logs together must be sufficient to answer:
 2. Which stages were entered and left?
 3. Which root-selection checkpoint opened and which root closed it?
 4. Which root was selected and when?
-5. For each round, which frontier entered and which frontier left?
-6. For each frontier claim, which support-channel queries were run?
-7. For each frontier claim, which open-question/conflict queries were run?
+5. For each round, which obligation was popped and which target claim it
+   pinned, and what were the round's `next_obligations` /
+   `obligation_list_remaining` at close?
+6. For the round's current target claim, which support-channel queries were
+   run?
+7. For the round's current target claim, which open-question/conflict
+   queries were run?
 8. Which raw payload files came from each query or evidence call?
 9. Which candidates were considered, admitted, dismissed, or left as search
    leads?
 10. Which Gaia nodes and edges were added or removed by each decision?
-11. Which inquiry hypotheses/obligations were added?
-12. Which quality gates ran after each growth round and what happened?
+11. Which inquiry hypotheses/obligations were added (and which accepted
+    `contradiction(...)` ops fed which `obligation_added` event)?
+12. Which intermediate quality gates ran after each growth round and what
+    happened, and which single `final` quality gate ran `gaia infer .` at
+    hand-off?
 
 Human-readable audit files (`mapping_audit.md`, `contradictions.md`,
 `equivalences.md`, `merge_audit.md`, and `merge_decisions.todo`) remain the

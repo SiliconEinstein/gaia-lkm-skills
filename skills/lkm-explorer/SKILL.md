@@ -10,9 +10,10 @@ description: Contract-driven LKM exploration in service of populating a Gaia kno
 Use LKM as the source of truth to explore evidence and build or update a
 standalone Gaia knowledge package. This skill turns raw LKM payloads,
 exploration/audit state, and package requirements into executable, auditable,
-and iteratively extensible Gaia DSL through contradiction-driven frontier
-expansion. It also maintains the package's chronological retrieval and
-graph-growth logs so the full search-to-DSL history can be replayed later.
+and iteratively extensible Gaia DSL through **obligation-driven graph
+expansion** (with within-round contradiction/open-question screening). It
+also maintains the package's chronological retrieval and graph-growth logs
+so the full search-to-DSL history can be replayed later.
 
 It is not only a one-shot converter. During mapping it may continue focused
 LKM-grounded checks for claim-driven supports, open questions, contradictions,
@@ -52,9 +53,10 @@ from LKM evidence.
   prior labels, priors, raw inputs, and audit verdicts.
 
 Broad topic discovery, root candidate ranking, user-selection checkpoints, and
-claim-driven frontier iteration are organized by the LKM-explorer SOP through
-`$orchestrator` and `$lkm-api`. Once a mapping run starts, this skill may
-request focused LKM retrievals needed to complete its five-step workflow.
+obligation-driven round iteration are organized by the LKM-explorer SOP
+through `$orchestrator` and `$lkm-api`. Once a mapping run starts, this
+skill may request focused LKM retrievals needed to complete its five-step
+workflow.
 
 ## Progressive Workflow
 
@@ -90,9 +92,13 @@ obligations, start a new five-step iteration with the new target.
   `source_paper` when available.
 - No `prior` kwarg on `claim(...)`; leaf priors live in `priors.py` (see
   `$gaia-package/references/package-shape.md`).
-- Post-cold-start expansion follows the cold-start root frontier selected by the
-  user. For every frontier science claim, the orchestrator runs both support and
-  open-question/conflict LKM channels; this skill maps accepted candidates.
+- Post-cold-start expansion is **obligation-driven**: the orchestrator picks
+  the next round's target by popping from `gaia inquiry obligation list`,
+  and this skill maps accepted candidates against that target. Step 3
+  contradictions and Step 4 weak-premise / unreliable-reasoning flags MUST
+  pair with `gaia inquiry obligation add` so the next-target queue is fed
+  automatically. Do not substitute belief-ranking, graph-centrality, or
+  contradiction-side based selection.
 - Support handling follows `mapping-contract.md` §3: real Gaia
   `support([premises], conclusion, reason=..., prior=...)` syntax, LKM-grounded
   endpoints, no synthetic bridge facts, and duplicate/shared-factor controls.
@@ -120,8 +126,8 @@ obligations, start a new five-step iteration with the new target.
   and the `graph_growth_log.jsonl` audit schema.
 - `$lkm-explorer` owns LKM-driven exploration, the `lkm-discovery/` audit dir,
   the `retrieval_log.jsonl`, and LKM-specific mapping rules (evidence-status
-  vocabulary, no-chain source claims, frontier supports, open-question-first
-  contradiction handling).
+  vocabulary, no-chain source claims, per-target supports,
+  open-question-first contradiction handling, obligation pairing).
 - Evidence-graph rendering, scholarly prose synthesis, external host
   integration, and final scientific review are separate responsibilities.
 
@@ -131,8 +137,8 @@ LKM-explorer-specific (in this skill):
 
 - [`references/mapping-contract.md`](references/mapping-contract.md) —
   LKM-specific mapping rules: evidence-status vocabulary, no-chain source
-  claims, root-claim frontier supports, open-question-first contradiction
-  handling, timeline emission requirement.
+  claims, per-target supports, open-question-first contradiction handling
+  (with paired `gaia inquiry obligation add`), timeline emission requirement.
 - [`references/package-skeleton.md`](references/package-skeleton.md) —
   `artifacts/lkm-discovery/` audit dir contents and `mapping_audit.md` LKM
   table conventions.

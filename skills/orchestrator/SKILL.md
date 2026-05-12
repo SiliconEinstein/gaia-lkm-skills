@@ -53,7 +53,7 @@ Use this for prompts such as "build a Gaia package", "formalize this LKM claim
 into Gaia", "extend the package", "clean duplicate claims", or "continue
 growing this graph". This is the only maintained LKM-explorer workflow; support
 search, contradiction/open-question search, duplicate cleanup, and iterative
-root-claim frontier expansion all route through the same SOP.
+obligation-driven expansion all route through the same SOP.
 
 1. Read `references/lkm-explorer-sop.md`.
 2. Read `$lkm-api/SKILL.md` before any API calls.

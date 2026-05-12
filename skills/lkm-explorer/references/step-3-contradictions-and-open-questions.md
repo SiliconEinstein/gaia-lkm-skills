@@ -1,9 +1,9 @@
 # Step 3 — Screen Contradictions And Open Questions
 
 Load this file only after Step 2 is complete. This step is mandatory for every
-new claim. In root-claim frontier expansion it is also the mapping-time
-open-question/conflict channel for each frontier claim selected by the
-orchestrator.
+new claim. In obligation-driven expansion it is also the mapping-time
+open-question/conflict channel for the current target claim popped from
+`gaia inquiry obligation list` by the orchestrator.
 
 ## Canonical Policy
 
@@ -34,16 +34,17 @@ every new raw payload under `artifacts/lkm-discovery/input/` and append a
 matching retrieval event to `retrieval_log.jsonl`. Do not use external PDFs or
 web summaries as evidence unless the user explicitly changes the rule.
 
-For root-claim frontier expansion, each frontier claim must run at least 5 distinct LKM
-match queries with `top_k=10` for this conflict channel unless the audit trail
-records why that lower bound could not be met.
+For obligation-driven expansion, the current target claim (the obligation
+target popped this round) must run at least 5 distinct LKM match queries with
+`top_k=10` for this conflict channel unless the audit trail records why that
+lower bound could not be met.
 
 Priority order for conflict queries:
 
 1. Theory-vs-experiment or experiment-vs-theory. For a theoretical/computational
-   frontier claim, first search for experimental observations or measurements
+   target claim, first search for experimental observations or measurements
    that disagree with, qualify, or fail to confirm it. For an experimental
-   frontier claim, first search for theoretical/computational results that
+   target claim, first search for theoretical/computational results that
    disagree with or reinterpret it.
 2. Computation-vs-experiment or measurement-vs-model comparisons not covered by
    the first category.
@@ -63,8 +64,10 @@ cases that produce no Gaia operator.
 
 Before any terminal verdict, append a `candidate_considered` event for every
 candidate that enters scope comparison. Its payload must include
-`frontier_claim`, `candidate_lkm_id`, `source_query_event_id`, `scope_tuple`,
-`scope_diff`, `evidence_status`, and `preliminary_verdict`.
+`frontier_claim` (the qid of the current obligation target this round),
+`obligation_id` (the obligation popped to drive the round, when applicable),
+`candidate_lkm_id`, `source_query_event_id`, `scope_tuple`, `scope_diff`,
+`evidence_status`, and `preliminary_verdict`.
 
 Record:
 
@@ -117,15 +120,23 @@ decision: accepted_contradiction
 relation_type: scientific_inconsistency
 ```
 
-Register the same open problem:
+Register the same open problem **and** queue a follow-up obligation so the
+next round has a target to work on:
 
 ```bash
 gaia inquiry hypothesis add "<open problem>" --scope <namespace>::<op_label>
+gaia inquiry obligation add <op_label> -c "resolve contradiction: <open problem>"
 ```
+
+Both calls are **required** for every `accepted_contradiction`. The
+`obligation add` is what makes the workflow obligation-driven: each accepted
+contradiction must feed the next-target queue, otherwise expansion can drift
+or stall.
 
 Every `gaia inquiry hypothesis add` call must be paired with a
 `hypothesis_added` graph-growth event containing the CLI command, scope, text,
-and `graph_delta`.
+and `graph_delta`. Every `gaia inquiry obligation add` call must be paired
+with an `obligation_added` graph-growth event with the same fields.
 
 Warrant prior ranges for accepted contradiction operators:
 
@@ -156,14 +167,19 @@ Before moving to Step 4:
 
 - Every new claim has completed baseline screening against available package and
   audit context.
-- Root-claim frontier claims have completed the required conflict-channel
-  search or recorded `conflict_not_found` with query/candidate rationales.
+- The current obligation target claim has completed the required
+  conflict-channel search (≥5 distinct LKM match queries, `top_k=10`) or
+  recorded `conflict_not_found` with query/candidate rationales.
 - Every conflict candidate that entered scope comparison has a
   `candidate_considered` event before its final verdict.
 - Accepted contradictions have direct `contradiction(A, B)` operators whose
   labels identify both sides with the `xx_vs_yy` convention, with an
   `open_problem:` reason, high operator prior, and audit
   `relation_type: scientific_inconsistency`.
+- Every accepted `contradiction(...)` has a paired `gaia inquiry obligation
+  add <op_label> -c "resolve contradiction: <open problem>"` call and a
+  corresponding `obligation_added` graph-growth event, so the next-target
+  queue is fed.
 - Non-promoted but useful tensions are preserved as hypothesis/audit-only rows.
 - Every inquiry hypothesis CLI call has a paired `hypothesis_added` event.
 - False alarms are logged or dismissed with reason.
