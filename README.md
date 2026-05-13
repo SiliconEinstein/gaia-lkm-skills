@@ -4,6 +4,12 @@ LKM-side agent skills for building Gaia knowledge packages from LKM evidence cha
 
 The repo ships a family of atomic skills plus a thin orchestrator that classifies an incoming prompt and routes it to the right SOP or atomic skill. Two primary flows are maintained: **LKM → Gaia package** via `$lkm-api` and `$lkm-explorer`, and **Paper → Gaia package** via `$formalize` — both emit packages conforming to the `$gaia-package` contract. `$evidence-subgraph` and `$scholarly-synthesis` are independent optional branches; `$gaia-cli` is the toolchain reference consulted when running quality gates; `$gaia-review-lite` is the lightweight prompt-driven audit template for a compiled package.
 
+## Documentation
+
+- **[User Guide](docs/user-guide.md)** — Comprehensive guide for using Gaia with LKM (installation, authentication, workflows, best practices)
+- **[Quick Start](docs/user-guide.md#1-快速开始)** — Get started in 5 minutes
+- **[Agent Usage](docs/user-guide.md#14-agent-使用指南)** — How AI agents should use this repo
+
 ## Entry point
 
 `skills/orchestrator/SKILL.md` is the single front door. Any agent handling an LKM-related prompt routes through it first. The orchestrator does not retrieve evidence, write Gaia DSL, build graphs, or write synthesis prose — it picks the right SOP / atomic skill and hands off.
