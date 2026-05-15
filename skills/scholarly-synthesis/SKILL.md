@@ -1,6 +1,6 @@
 ---
 name: scholarly-synthesis
-description: Write a domain-vocabulary scholarly synthesis centered on one chain-backed quantitative claim about a system or setting (any field — physics, chemistry, materials, biology, ML, climate, astrophysics, etc.). Section structure traces the closure chain from observational / experimental anchors → theoretical or computational inputs → derivation / inversion / fitting → cross-method comparison → open problems. Heavy on equations, units, and named author–year references resolved via a supplied `data.papers` bibliographic metadata block. When source-paper figures or data tables are appropriate to quote, the agent does so on a best-effort basis with `Adapted from <author–year>` attribution; when such material is not recoverable from the input payload, the agent surfaces the missing-material list to the user instead of fabricating. Banned-phrase audit (no system / pipeline vocabulary in main narrative). **Mandatory inputs:** an audited evidence graph (source + rendered raster), an audit table with payload anchors, and the `data.papers` bibliographic metadata. If the graph is not provided, stop and instruct the user to supply one.
+description: Use when writing a scholarly synthesis from an audited LKM evidence graph, audit table, and paper metadata.
 ---
 
 # Scholarly Synthesis
