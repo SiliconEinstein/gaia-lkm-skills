@@ -1,9 +1,9 @@
 # LKM-Explorer-Specific Contract
 
 > Generic Gaia knowledge package emission rules — `claim` / `deduction` /
-> `support` / `contradiction` / `equivalence` body discipline, package layout,
-> and the `graph_growth_log.jsonl` audit-log schema — are owned upstream by
-> `SiliconEinstein/Gaia` (see `docs/for-users/language-reference.md` and
+> `support` / `contradiction` / `equivalence` body discipline and package
+> layout — are owned upstream by `SiliconEinstein/Gaia` (see
+> `docs/for-users/language-reference.md` and
 > `docs/for-users/quick-start.md`). This file covers ONLY rules specific
 > to contradiction-driven LKM exploration: the LKM evidence-status vocabulary,
 > no-chain source-claim handling, root-claim frontier supports, the
@@ -21,9 +21,8 @@
 ## 1. LKM-specific claim handling
 
 Generic `claim(...)` body rules — label discipline, self-contained check, no
-`prior` kwarg, metadata kwarg taxonomy — are owned upstream (see
-`SiliconEinstein/Gaia` `docs/for-users/language-reference.md`). The rules
-below are LKM-specific.
+`prior` kwarg — are owned upstream (see `SiliconEinstein/Gaia`
+`docs/for-users/language-reference.md`). The rules below are LKM-specific.
 
 - **No-chain LKM source claims.** If `total_chains = 0`, use
   `provenance_source="lkm_no_chain"`, preserve `lkm_id`, `lkm_original`, and
@@ -227,12 +226,13 @@ and what query or evidence would be needed to promote it later.
 
 For LKM-explorer package work, every emitted claim, deduction, support,
 contradiction, equivalence, merge, dismissal, inquiry update, and no-op search
-verdict must be indexed in `graph_growth_log.jsonl` per the canonical v1
-schema owned upstream by `SiliconEinstein/Gaia` (see `docs/for-users/`),
-with links back to the LKM retrieval events and raw input files that grounded
-the decision. Each growth event must include a structured `graph_delta` block
-containing added/removed nodes and edges, so a frontend can replay the starmap
-without parsing Python source.
+verdict must be indexed in `graph_growth_log.jsonl` (current shape:
+transitional, pending LKM-side refresh; see
+[`timeline-log-contract.md`](timeline-log-contract.md) for the events this
+skill emits), with links back to the LKM retrieval events and raw input
+files that grounded the decision. Each growth event must include a
+structured `graph_delta` block containing added/removed nodes and edges, so
+a frontend can replay the starmap without parsing Python source.
 
 In addition, this skill emits an LKM-specific `retrieval_log.jsonl` whose
 schema is documented in
@@ -246,16 +246,15 @@ They do not apply to the raw `$lkm-api` skill or sibling graph/synthesis skills.
 ## 9. What this contract does NOT cover
 
 - Generic claim/deduction/support/contradiction/equivalence emission rules,
-  the metadata-kwarg taxonomy (`provenance_source`, `claim_kind`, `weak_types`,
-  `p1`/`p2`/`review_prior`, `refs` whitelist), label discipline, and module
-  placement — all owned upstream (`SiliconEinstein/Gaia`
-  `docs/for-users/language-reference.md`).
+  label discipline, and module placement — owned upstream
+  (`SiliconEinstein/Gaia` `docs/for-users/language-reference.md`).
 - Package layout and templates (`pyproject.toml`, `__init__.py`,
   `paper_<key>.py`, `cross_paper.py`, `priors.py`, `references.json`) — owned
   upstream (`docs/for-users/quick-start.md`).
-- The `graph_growth_log.jsonl` v1 schema (event identity, decision
-  vocabulary, `graph_delta` block, append-only / `supersedes_event_id`) —
-  owned upstream (`SiliconEinstein/Gaia` `docs/for-users/`).
+- LKM-side metadata kwargs (`provenance_source`, `claim_kind`, `weak_types`,
+  `p1` / `p2` / `review_prior`, `refs` whitelist, `lkm_id` / `lkm_original`)
+  and the `graph_growth_log.jsonl` event shape — emitted by this skill;
+  transitional, pending LKM-side refresh.
 - The full `priors.py` shape — follow current package examples and verify with
   `gaia check --hole`.
 - The shape of `pyproject.toml` — follow current package examples and verify

@@ -2,13 +2,11 @@
 
 This contract covers the LKM-specific timeline logs emitted by `$lkm-explorer`.
 
-> **The canonical `graph_growth_log.jsonl` schema is owned upstream by
-> `SiliconEinstein/Gaia` (see `docs/for-users/`).** This file documents only
-> the LKM-specific `retrieval_log.jsonl` schema and the LKM-only event subset
-> of `graph_growth_log.jsonl`. `$lkm-explorer` emits the full canonical
-> `graph_growth_log.jsonl` per the upstream Gaia spec, plus this sibling
-> `retrieval_log.jsonl` that ties graph events back to the LKM API calls that
-> grounded them.
+> This file documents the LKM-specific `retrieval_log.jsonl` schema and the
+> `graph_growth_log.jsonl` events `$lkm-explorer` emits. `$lkm-explorer`
+> emits `graph_growth_log.jsonl` chronologically alongside the sibling
+> `retrieval_log.jsonl` that ties graph events back to the LKM API calls
+> that grounded them.
 
 The goal is frontend replayability. A static web UI should be able to read
 both logs and replay the Gaia starmap from `t=0` without calling LKM again or
@@ -25,7 +23,7 @@ Every LKM-explorer package stores two append-only chronological logs under
 artifacts/lkm-discovery/
 ├── input/
 ├── retrieval_log.jsonl     # LKM-specific (this file)
-└── graph_growth_log.jsonl  # canonical v1 schema owned upstream (SiliconEinstein/Gaia docs/for-users/)
+└── graph_growth_log.jsonl  # append-only chronological growth log emitted by $lkm-explorer
 ```
 
 `retrieval_log.jsonl` records LKM API calls and their raw payload files.
@@ -38,8 +36,8 @@ events to fix interpretation; append a later correction event with
 `supersedes_event_id` when needed. Schema-versioning, event-identity rules
 (`schema_version`, `event_id`, `timestamp_utc`, `stage`, `round_id`, `actor`,
 `actor_id`, `seq`), `graph_delta` requirements, decision vocabulary, round
-lifecycle, and structured rationale fields all follow the canonical schema
-owned upstream by `SiliconEinstein/Gaia` (see `docs/for-users/`).
+lifecycle, and structured rationale fields are emitted per `$lkm-explorer`'s
+current convention (transitional, pending LKM-side refresh).
 
 ## Retrieval events (LKM-specific)
 
@@ -112,8 +110,7 @@ that preserve the actual call order as accurately as available.
 
 ## LKM-specific graph-growth event subset
 
-`$lkm-explorer` emits the full canonical `graph_growth_log.jsonl` schema; the
-LKM-specific decisions/no-ops that this skill is responsible for emitting are:
+`$lkm-explorer` emits the following decisions/no-ops in `graph_growth_log.jsonl`:
 
 - `support_not_found` — no candidate satisfied the support standard for a
   frontier claim after the support-channel queries were run.
@@ -125,18 +122,17 @@ LKM-specific decisions/no-ops that this skill is responsible for emitting are:
   whose raw payloads grounded the decision.
 - Round-lifecycle events (`round_open`, `round_close`, `stage_transition`)
   during cold-start root discovery and post-cold-start frontier-expansion
-  rounds — generic event format owned upstream (`SiliconEinstein/Gaia`
-  `docs/for-users/`), but the LKM-explorer workflow guarantees one round
-  per cold-start selection plus one per frontier-expansion round.
+  rounds — the LKM-explorer workflow guarantees one round per cold-start
+  selection plus one per frontier-expansion round.
 - `package_initialized`, `user_selection_checkpoint_opened`, and
   `user_selection_checkpoint_closed` during cold start so the replay UI can
   show the package creation and human root-selection pause.
 
-All other generic decision values (`accepted_claim`, `accepted_deduction`,
-`accepted_support`, `accepted_contradiction`, `equivalence`, `hypothesis_only`,
-`dismissed`, `merge`, `keep_distinct`, `prior_added`, `hypothesis_added`,
-`obligation_added`, `quality_gate_result`, `repair`) follow the canonical
-schema unchanged.
+Other decision values emitted by this skill: `accepted_claim`,
+`accepted_deduction`, `accepted_support`, `accepted_contradiction`,
+`equivalence`, `hypothesis_only`, `dismissed`, `merge`, `keep_distinct`,
+`prior_added`, `hypothesis_added`, `obligation_added`,
+`quality_gate_result`, `repair`.
 
 ## Frontier replay
 

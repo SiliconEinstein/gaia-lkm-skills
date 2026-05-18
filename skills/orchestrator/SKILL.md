@@ -11,11 +11,11 @@ This is the lightweight front door for project-local LKM/Gaia work. It does not
 retrieve evidence, write Gaia DSL, build graphs, or write synthesis prose. It
 routes the task and loads the right SOP or atomic skill.
 
-Gaia DSL primitives, package layout, the `graph_growth_log.jsonl` audit-log
-schema, and CLI command reference are owned by upstream `SiliconEinstein/Gaia`
-— see `docs/for-users/language-reference.md`, `docs/for-users/quick-start.md`,
-and `docs/for-users/cli-commands.md`. This orchestrator is LKM-side only and
-points at upstream for any DSL/CLI/package-layout teaching.
+Gaia DSL primitives, package layout, and CLI command reference are owned by
+upstream `SiliconEinstein/Gaia` — see `docs/for-users/language-reference.md`,
+`docs/for-users/quick-start.md`, and `docs/for-users/cli-commands.md`. This
+orchestrator is LKM-side only and points at upstream for any
+DSL/CLI/package-layout teaching.
 
 ## Atomic Skills
 

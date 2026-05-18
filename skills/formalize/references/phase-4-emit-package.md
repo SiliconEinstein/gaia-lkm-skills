@@ -9,7 +9,7 @@ knowledge package on disk.
 Produce a `<name>-gaia/` package on disk per the upstream Gaia
 knowledge-package spec (file layout: `SiliconEinstein/Gaia`
 `docs/for-users/quick-start.md`; `claim` / `deduction` / `question` body
-discipline, metadata kwargs, label rules, `__all__` rules:
+discipline, label rules, `__all__` rules:
 `docs/for-users/language-reference.md`). After emission, the package must be
 ready for `gaia compile` and `gaia check --hole .` (see upstream
 `docs/for-users/cli-commands.md`).
@@ -57,10 +57,8 @@ audit log in Step 5 needs both columns.
 - Copy the input paper Markdown verbatim to
   `artifacts/paper-extract/input/<paper>.md`.
 - Initialize `artifacts/paper-extract/graph_growth_log.jsonl` and append a
-  `package_initialized` event (event-identity and required-event-sequence
-  rules are owned upstream — see `SiliconEinstein/Gaia` `docs/for-users/`).
-  Establish your `actor_id` (e.g. `formalize-<short-uuid>`) and `seq`
-  counter starting at 1.
+  `package_initialized` event. Establish your `actor_id`
+  (e.g. `formalize-<short-uuid>`) and `seq` counter starting at 1.
 
 ## Step 3 — Write `references.json`
 
@@ -83,9 +81,9 @@ Emit in this order:
 3. **Motivation as `question(...)`** — one `question(...)` for Phase 1's
    motivation block, labeled `<key>_problem`. Aligns `$formalize` with
    pipeline B (XML→LKM), where `<problem>` from `select_conclusion.xml`
-   becomes a `LocalVariableNode(type="question")`. Motivation /
-   open-question → `question(...)` rules are owned upstream — see
-   `SiliconEinstein/Gaia` `docs/for-users/language-reference.md`.
+   becomes a `LocalVariableNode(type="question")`. `question(...)` DSL
+   is upstream — see `SiliconEinstein/Gaia`
+   `docs/for-users/language-reference.md`.
 4. **Conclusions section** — one `claim(...)` per Phase 1 conclusion with
    `claim_kind="conclusion"`, in topological order. Each conclusion claim
    carries `review_prior=<float>` from Phase 3's per-conclusion synthesis
@@ -99,9 +97,7 @@ Emit in this order:
    defined exactly once in this file and appears as a premise in exactly
    one deduction (its target conclusion's). It is NOT shared across
    deductions; cross-conclusion uncertainty propagates through the logic
-   graph instead (weak point ↔ one conclusion (strict) discipline is
-   owned upstream — see `SiliconEinstein/Gaia`
-   `docs/for-users/language-reference.md`).
+   graph instead (weak point ↔ one conclusion (strict) discipline).
 6. **Deductions section** — one `deduction(...)` per derived conclusion.
    The premises list is the union of upstream conclusion labels (from
    Phase 1's logic graph) and weak-point labels (from Phase 3). The
@@ -117,9 +113,7 @@ discipline and the Phase 3 body-writing rule already satisfy what the legacy
 step-4 prompt enforced; this phase only relabels and emits.
 
 For each deduction's warrant `prior=` (a warrant strength, **not** the
-conclusion's posterior — deduction warrant calibration is owned upstream;
-see `SiliconEinstein/Gaia` `docs/for-users/language-reference.md`), follow
-the additive scheme:
+conclusion's posterior), follow the additive scheme:
 
 - Default 0.95.
 - **+0.02 to +0.04** for each Phase 3 highlight that specifically underwrites
@@ -156,27 +150,24 @@ them) but **not** added to `__all__`.
 
 ### 5a. `artifacts/paper-extract/mapping_audit.md`
 
-Use the upstream `mapping_audit.md` table conventions (owned by
-`SiliconEinstein/Gaia` — see `docs/for-users/`). Populate every section:
+Populate every section of `mapping_audit.md`:
 
 - Phase summary table.
 - Conclusions table — one row per conclusion, with the working-note id,
   the final label, upstream labels, weak-point labels (only the ones
-  bound to this conclusion per the upstream weak-point ↔ one-conclusion
-  (strict) discipline — see `SiliconEinstein/Gaia`
-  `docs/for-users/language-reference.md`),
-  `deduction_prior` (warrant strength on the deduction), `review_prior`
-  (Phase 3 conclusion-synthesis posterior; same value as the
-  `review_prior=` metadata kwarg on the conclusion claim), and free-text
-  notes (e.g., per-highlight +0.02/+0.04 adjustments and per-gap
-  −0.05/−0.10 adjustments to the deduction prior).
+  bound to this conclusion per the weak-point ↔ one-conclusion (strict)
+  discipline), `deduction_prior` (warrant strength on the deduction),
+  `review_prior` (Phase 3 conclusion-synthesis posterior; same value as
+  the `review_prior=` metadata kwarg on the conclusion claim), and
+  free-text notes (e.g., per-highlight +0.02/+0.04 adjustments and
+  per-gap −0.05/−0.10 adjustments to the deduction prior).
 - Weak points table — one row per weak-point label, with label, the single
   threatened `conclusion_id`, `also_threatens` (comma-separated audit-only
   list of independent conclusion ids the same scientific assumption also
-  affects but which are **not** wired into BP — per the upstream
-  weak-point ↔ one-conclusion (strict) discipline),
-  weak_types, prior, p1, p2, full `weakness_reason` text, full
-  `failure_mode` text. Default for `also_threatens` is `(none)`.
+  affects but which are **not** wired into BP — per the weak-point ↔
+  one-conclusion (strict) discipline), weak_types, prior, p1, p2, full
+  `weakness_reason` text, full `failure_mode` text. Default for
+  `also_threatens` is `(none)`.
 - Highlights table — one row per highlight with id, conclusion_id,
   strength_types, full `credit` text, and notes (especially: did this
   highlight raise a deduction prior, and by how much).
@@ -194,10 +185,7 @@ DSL claim bodies.
 ### 5b. `artifacts/paper-extract/graph_growth_log.jsonl`
 
 Append one event per emitted DSL element, in emission order. Each line is
-one JSON object following the canonical `graph_growth_log.jsonl` v1 schema
-owned upstream (`SiliconEinstein/Gaia` `docs/for-users/`) — event identity,
-decision vocabulary, the `graph_delta` block, and the required event
-sequence (paper-extract example) all live there. Required event sequence:
+one JSON object. Required event sequence (paper-extract):
 
 1. **`package_initialized`** (already emitted in Step 2 above) — first
    event, with payload `{"package": "<name>-gaia", "source_paper":

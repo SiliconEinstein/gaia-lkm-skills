@@ -1,6 +1,6 @@
 ---
 name: lkm-explorer
-description: Contract-driven LKM exploration in service of populating a Gaia knowledge package per the upstream Gaia spec. Maps LKM evidence/source payloads (raw match/evidence/variables JSON) into Gaia DSL via a progressive five-step workflow with contradiction-driven graph expansion. Modes are `batch` (create a fresh `<name>-gaia/` package) and `refresh` (extend or repair an existing package in place). Owns the LKM-driven `lkm-discovery/` audit dir (retrieval log + LKM-specific decisions). Generic claim/deduction/support emission rules, package layout, and the `graph_growth_log.jsonl` schema are owned upstream (see upstream `SiliconEinstein/Gaia` docs `docs/for-users/`). Domain-agnostic.
+description: Contract-driven LKM exploration in service of populating a Gaia knowledge package per the upstream Gaia spec. Maps LKM evidence/source payloads (raw match/evidence/variables JSON) into Gaia DSL via a progressive five-step workflow with contradiction-driven graph expansion. Modes are `batch` (create a fresh `<name>-gaia/` package) and `refresh` (extend or repair an existing package in place). Owns the LKM-driven `lkm-discovery/` audit dir (retrieval log + LKM-specific decisions) and the `graph_growth_log.jsonl` chronological growth log. Generic claim/deduction/support emission rules and package layout are owned upstream (see upstream `SiliconEinstein/Gaia` docs `docs/for-users/`). Domain-agnostic.
 ---
 
 # LKM-Explorer
@@ -25,14 +25,15 @@ via `gaia infer`, and carries LKM provenance into `**metadata` kwargs of every
 claim.
 
 > **Contract ownership.** Gaia knowledge-package shape (`<name>-gaia/` layout,
-> file templates), generic emit-mapping rules (claim/deduction/support body
-> discipline, `provenance_source` enum, `claim_kind`, `weak_types`, `p1`/`p2`/
-> `review_prior`, `refs` whitelist, label rules, module placement), and the
-> `graph_growth_log.jsonl` v1 audit schema are owned upstream by
-> `SiliconEinstein/Gaia` — see `docs/for-users/language-reference.md` and
+> file templates), `claim` / `deduction` / `support` body discipline, label
+> rules, and module placement are owned upstream by `SiliconEinstein/Gaia` —
+> see `docs/for-users/language-reference.md` and
 > `docs/for-users/quick-start.md`. This skill adds the LKM-specific
-> exploration workflow, the `lkm-discovery/` audit dir, the `retrieval_log.jsonl`,
-> and LKM-only mapping rules on top.
+> exploration workflow, the `lkm-discovery/` audit dir, the
+> `retrieval_log.jsonl`, the `graph_growth_log.jsonl` chronological growth
+> log, and LKM-side metadata kwargs (`provenance_source`, `claim_kind`,
+> `weak_types`, `p1` / `p2` / `review_prior`, `refs` whitelist, `lkm_id` /
+> `lkm_original`) — all currently transitional, pending LKM-side refresh.
 
 ```
 $lkm-api raw JSON + orchestrator flag files
@@ -107,9 +108,9 @@ obligations, start a new five-step iteration with the new target.
   verdicts.
 - `retrieval_log.jsonl` is append-only and LKM-specific (see
   `references/timeline-log-contract.md` for the LKM-only event subset).
-- `graph_growth_log.jsonl` is append-only and follows the canonical v1 schema
-  owned upstream (see `SiliconEinstein/Gaia` `docs/for-users/`). This logging
-  contract applies only to LKM-driven Gaia package work, not to sibling skills.
+- `graph_growth_log.jsonl` is append-only and emitted by this skill (current
+  shape: transitional, pending LKM-side refresh). This logging contract
+  applies only to LKM-driven Gaia package work, not to sibling skills.
 - Package-level quality gates are run by the orchestrator/caller after source
   emission.
 
@@ -119,8 +120,8 @@ obligations, start a new five-step iteration with the new target.
   sibling-skill routing, and final quality-gate acceptance.
 - `$lkm-api` owns endpoint mechanics and raw API contract details.
 - Upstream `SiliconEinstein/Gaia` owns the unified Gaia knowledge-package
-  shape, generic emit-mapping rules, and the `graph_growth_log.jsonl` audit
-  schema (see `docs/for-users/language-reference.md` and
+  shape and generic DSL body discipline (see
+  `docs/for-users/language-reference.md` and
   `docs/for-users/quick-start.md`).
 - `$lkm-explorer` owns LKM-driven exploration, the `lkm-discovery/` audit dir,
   the `retrieval_log.jsonl`, and LKM-specific mapping rules (evidence-status
@@ -141,9 +142,8 @@ LKM-explorer-specific (in this skill):
   `artifacts/lkm-discovery/` audit dir contents and `mapping_audit.md` LKM
   table conventions.
 - [`references/timeline-log-contract.md`](references/timeline-log-contract.md)
-  — LKM-specific `retrieval_log.jsonl` schema and pointer to canonical
-  `graph_growth_log.jsonl` schema owned upstream (`SiliconEinstein/Gaia`
-  `docs/for-users/`).
+  — LKM-specific `retrieval_log.jsonl` schema and the `graph_growth_log.jsonl`
+  events this skill emits.
 - [`references/step-1-inputs-and-scope.md`](references/step-1-inputs-and-scope.md)
   — progressive workflow Step 1.
 - [`references/step-2-bootstrap-and-map.md`](references/step-2-bootstrap-and-map.md)
@@ -162,11 +162,9 @@ read-only pointer targets; do not duplicate locally):
   workflow (directory layout, file templates, package initialization).
 - `docs/for-users/language-reference.md` — DSL primitives
   (`claim` / `deduction` / `support` / `contradiction` / `equivalence`),
-  metadata kwarg taxonomy, label discipline, module placement.
+  label discipline, module placement.
 - `docs/for-users/cli-commands.md` — full CLI reference
   (`gaia compile` / `check` / `infer` / `run render` / etc.).
 - `docs/for-users/hole-bridge-tutorial.md` — prior calibration tutorial.
 
-`mapping_audit.md` table conventions and `graph_growth_log.jsonl` v1 schema
-(decision vocabulary, append-only / `supersedes_event_id` rules) are also
-owned upstream; for runtime help prefer `gaia <group> <cmd> --help`.
+For runtime help, prefer `gaia <group> <cmd> --help`.

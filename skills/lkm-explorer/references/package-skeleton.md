@@ -2,8 +2,7 @@
 
 > Generic Gaia knowledge-package layout, naming conventions, and file
 > templates (`pyproject.toml`, `__init__.py`, `paper_<key>.py`,
-> `cross_paper.py`, `priors.py`, `references.json`), plus the generic
-> `mapping_audit.md` table conventions, are owned upstream by
+> `cross_paper.py`, `priors.py`, `references.json`) are owned upstream by
 > `SiliconEinstein/Gaia` — see `docs/for-users/quick-start.md` and
 > `docs/for-users/language-reference.md`. This file documents ONLY the
 > `artifacts/lkm-discovery/` audit directory specific to LKM-driven
@@ -12,15 +11,15 @@
 ## Audit-dir layout
 
 `$lkm-explorer` writes its audit dir under
-`artifacts/lkm-discovery/` (the audit-dir name itself is fixed by this skill;
-the generic audit-dir-under-package layout is owned upstream):
+`artifacts/lkm-discovery/` (the audit-dir name and its contents are fixed by
+this skill):
 
 ```
 <name>-gaia/
   artifacts/
     lkm-discovery/
       retrieval_log.jsonl     # append-only chronological LKM API call log (LKM-specific)
-      graph_growth_log.jsonl  # append-only chronological Gaia growth/decision log (canonical v1 schema owned upstream in SiliconEinstein/Gaia docs/for-users/)
+      graph_growth_log.jsonl  # append-only chronological Gaia growth/decision log
       merge_audit.md          # dedup decisions
       mapping_audit.md        # per-claim and per-pair transformation log
       merge_decisions.todo    # surfaced ambiguous pairs (if any)
@@ -35,8 +34,7 @@ the generic audit-dir-under-package layout is owned upstream):
 
 - `merge_audit.md` — every shared-premise dedup decision
 - `mapping_audit.md` — per-claim and per-pair transformation log; LKM table
-  conventions documented below; canonical generic conventions owned upstream
-  (`SiliconEinstein/Gaia` `docs/for-users/`).
+  conventions documented below.
 - `merge_decisions.todo` — surfaced ambiguous pairs (agent couldn't decide
   merge vs keep)
 - `retrieval_log.jsonl` — ordered index of LKM match/evidence/variables calls,
@@ -45,8 +43,7 @@ the generic audit-dir-under-package layout is owned upstream):
   [`timeline-log-contract.md`](timeline-log-contract.md)
 - `graph_growth_log.jsonl` — ordered index of selected roots, admitted claims,
   deductions, supports, contradictions, equivalences, dismissals, priors,
-  repairs, and quality-gate results. Canonical schema owned upstream
-  (`SiliconEinstein/Gaia` `docs/for-users/`).
+  repairs, and quality-gate results.
 - `input/` — verbatim copy of all input files (raw evidence JSON,
   `contradictions.md`, `equivalences.md`, `candidates.md`)
 - `dismissed/` — candidate tension pairs the agent dismissed as false alarms,
@@ -90,8 +87,5 @@ LKM-explorer-specific table format. A flat decision log:
 This audit log is the reviewer's first stop after `gaia infer .` returns
 surprising beliefs.
 
-The shared "Factors -> deductions / Equivalences / Contradictions / Dismissed"
-section structure is part of the LKM-explorer convention; the broader
-`mapping_audit.md` table conventions (column names, decision vocabulary,
-multi-emitter compatibility) are owned upstream (`SiliconEinstein/Gaia`
-`docs/for-users/`).
+The "Factors -> deductions / Equivalences / Contradictions / Dismissed"
+section structure is the LKM-explorer convention for `mapping_audit.md`.

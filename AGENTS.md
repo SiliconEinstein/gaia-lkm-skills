@@ -45,7 +45,7 @@ Each atomic skill does **one thing** and exposes a clean contract:
 - **`$evidence-subgraph`** — graph build / audit / render only. Consumes `$lkm-api` JSON. Independent optional branch — not an upstream dependency of `$lkm-explorer`.
 - **`$scholarly-synthesis`** — audited graph → article only. Independent optional branch.
 
-Gaia DSL primitives, package layout, the `graph_growth_log.jsonl` audit schema, and CLI command reference are owned by upstream `SiliconEinstein/Gaia` — see `docs/for-users/language-reference.md`, `docs/for-users/quick-start.md`, and `docs/for-users/cli-commands.md`. This repo is LKM-side only and does not duplicate upstream teaching.
+Gaia DSL primitives, package layout, and CLI command reference are owned by upstream `SiliconEinstein/Gaia` — see `docs/for-users/language-reference.md`, `docs/for-users/quick-start.md`, and `docs/for-users/cli-commands.md`. This repo is LKM-side only and does not duplicate upstream teaching.
 
 There is no project-local render skill. For visualization of a compiled Gaia package, use the upstream `gaia run render` command (see upstream `docs/for-users/cli-commands.md`).
 
@@ -70,7 +70,7 @@ Any skill that writes to a `<domain>-gaia/` package MUST preserve the audit trai
 - Prior verdicts are honoured. A pair already merged stays merged; a candidate already dismissed is not re-introduced silently.
 - Raw LKM payloads are preserved verbatim before any classification or DSL emission.
 
-The exact file shapes (verdict files, dismissed/, todo files, inquiry state) are owned by the active SOP and the `$lkm-explorer` workflow — refer to those documents for ground truth. The Gaia knowledge-package `graph_growth_log.jsonl` audit-log schema itself is owned upstream (see `SiliconEinstein/Gaia` `docs/for-users/`).
+The exact file shapes (verdict files, dismissed/, todo files, inquiry state) are owned by the active SOP and the `$lkm-explorer` workflow — refer to those documents for ground truth.
 
 ## Field-neutrality
 

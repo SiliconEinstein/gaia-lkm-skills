@@ -71,12 +71,10 @@ Before committing to a weak point, it must pass all five:
   Phase 1 id. Every weak point is bound to a single conclusion — the one
   whose derivation it directly undermines. If the underlying scientific
   uncertainty seems to threaten several conclusions, apply the
-  weak-point ↔ one-conclusion (strict) discipline owned upstream (see
-  `SiliconEinstein/Gaia` `docs/for-users/language-reference.md`): pick the
-  conclusion with the most catastrophic failure mode (tie-break by smaller
-  id), and let cross-conclusion influence propagate through the logic
-  graph (`W → C2 → C4` if C2 is upstream of C4) rather than re-binding W
-  to C4. For independent conclusions that share a foundational assumption
+  weak-point ↔ one-conclusion (strict) discipline: pick the conclusion
+  with the most catastrophic failure mode (tie-break by smaller id), and
+  let cross-conclusion influence propagate through the logic graph
+  (`W → C2 → C4` if C2 is upstream of C4) rather than re-binding W to C4. For independent conclusions that share a foundational assumption
   with no logic-graph link, the BP-invisible effect on the other
   conclusion(s) is recorded in `mapping_audit.md` as `also_threatens`,
   audit-only.
@@ -539,10 +537,8 @@ key)".
 - **`lkm_id=` metadata on Phase 1 conclusion claims.** Whenever a
   matched `gcn_id` corresponds to a Phase 1 conclusion (mapped by content
   similarity in working notes), record the join so Phase 4 can emit
-  `lkm_id="gcn_..."` on that conclusion's `claim(...)`. The metadata
-  schema for this join (LKM-extracted-claim kwargs) is owned upstream —
-  see `SiliconEinstein/Gaia` `docs/for-users/language-reference.md`;
-  paper-extract emitters reuse `lkm_id` purely as a provenance join.
+  `lkm_id="gcn_..."` on that conclusion's `claim(...)`. Paper-extract
+  emitters reuse `lkm_id` purely as a provenance join.
 - **Audit-weight bump on cross-paper-fanout weak points.** When a Phase
   3 weak point threatens a conclusion whose matched `gcn_id` has
   `cross_paper_chains > 0`, add a `notes` annotation in `mapping_audit.md`

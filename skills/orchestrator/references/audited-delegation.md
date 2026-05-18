@@ -24,8 +24,8 @@ Default loop:
    package's chosen artifact directory. For LKM-explorer package work only,
    also preserve the chronological `retrieval_log.jsonl` and
    `graph_growth_log.jsonl` entries (the former per
-   `$lkm-explorer/references/timeline-log-contract.md`, the latter per the
-   canonical schema owned upstream in `SiliconEinstein/Gaia` `docs/for-users/`).
+   `$lkm-explorer/references/timeline-log-contract.md`; the latter as the
+   chronological growth log emitted by `$lkm-explorer`).
 
 ## Turn-specific defaults
 
