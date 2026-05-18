@@ -7,8 +7,8 @@ The repo ships a family of atomic skills plus a thin orchestrator that classifie
 ## Documentation
 
 - **[User Guide](docs/user-guide.md)** — LKM-side companion guide (installation, authentication, LKM workflows). Assumes the reader already knows Gaia from upstream `SiliconEinstein/Gaia` docs `docs/for-users/`.
-- **[Quick Start](docs/user-guide.md#1-快速开始)** — Get started in 5 minutes
-- **[Agent Usage](docs/user-guide.md#14-agent-使用指南)** — How AI agents should use this repo
+- **[Environment Setup](docs/user-guide.md#0-环境准备)** — install Gaia, install gaia-lkm-skills, configure LKM accessKey
+- **[Agent Usage](docs/user-guide.md#1-agent-使用指南)** — how AI agents should use this repo
 
 ## Entry point
 
