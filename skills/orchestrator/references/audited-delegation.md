@@ -25,7 +25,7 @@ Default loop:
    also preserve the chronological `retrieval_log.jsonl` and
    `graph_growth_log.jsonl` entries (the former per
    `$lkm-explorer/references/timeline-log-contract.md`, the latter per the
-   canonical schema in `$gaia-package/references/audit-log.md`).
+   canonical schema owned upstream in `SiliconEinstein/Gaia` `docs/for-users/`).
 
 ## Turn-specific defaults
 

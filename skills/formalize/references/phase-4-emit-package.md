@@ -6,12 +6,13 @@ knowledge package on disk.
 
 ## Goal
 
-Produce a `<name>-gaia/` package on disk with all files specified in
-[`$gaia-package/references/package-shape.md`](../../gaia-package/references/package-shape.md),
-populated according to
-[`$gaia-package/references/emit-mapping.md`](../../gaia-package/references/emit-mapping.md).
-After emission, the package must be ready for `gaia compile` and
-`gaia check --hole .`.
+Produce a `<name>-gaia/` package on disk per the upstream Gaia
+knowledge-package spec (file layout: `SiliconEinstein/Gaia`
+`docs/for-users/quick-start.md`; `claim` / `deduction` / `question` body
+discipline, metadata kwargs, label rules, `__all__` rules:
+`docs/for-users/language-reference.md`). After emission, the package must be
+ready for `gaia compile` and `gaia check --hole .` (see upstream
+`docs/for-users/cli-commands.md`).
 
 ## Step 0 — Decide the package name and import name
 
@@ -38,9 +39,8 @@ For every Phase 3 weak point, mint a label of the form
 `<key>_c<id>_wp_<semantic_suffix>`, where the suffix is 1–4 tokens drawn
 from the weak point's title.
 
-Label rules (recap from
-[`$gaia-package/references/emit-mapping.md`](../../gaia-package/references/emit-mapping.md)
-§1 "Label rules"):
+Label rules (recap; canonical rules owned upstream — see
+`SiliconEinstein/Gaia` `docs/for-users/language-reference.md` "label rules"):
 
 - Valid Gaia QID: `[a-z_][a-z0-9_]*`. Lowercase letters, digits, underscores.
 - No hyphens, no dots, no uppercase, no diacritics.
@@ -51,17 +51,16 @@ audit log in Step 5 needs both columns.
 
 ## Step 2 — Create the package directory and copy the input
 
-- Create `<name>-gaia/` and the subdirectories listed in
-  [`$gaia-package/references/package-shape.md`](../../gaia-package/references/package-shape.md)
-  ("Single-paper layout").
+- Create `<name>-gaia/` and the subdirectories per the upstream Gaia
+  single-paper package layout (see `SiliconEinstein/Gaia`
+  `docs/for-users/quick-start.md`).
 - Copy the input paper Markdown verbatim to
   `artifacts/paper-extract/input/<paper>.md`.
 - Initialize `artifacts/paper-extract/graph_growth_log.jsonl` and append a
-  `package_initialized` event (see
-  [`$gaia-package/references/audit-log.md`](../../gaia-package/references/audit-log.md)
-  §3 "Event identity" and §8 "Required event sequence"). Establish your
-  `actor_id` (e.g. `formalize-<short-uuid>`) and `seq` counter starting
-  at 1.
+  `package_initialized` event (event-identity and required-event-sequence
+  rules are owned upstream — see `SiliconEinstein/Gaia` `docs/for-users/`).
+  Establish your `actor_id` (e.g. `formalize-<short-uuid>`) and `seq`
+  counter starting at 1.
 
 ## Step 3 — Write `references.json`
 
@@ -84,9 +83,9 @@ Emit in this order:
 3. **Motivation as `question(...)`** — one `question(...)` for Phase 1's
    motivation block, labeled `<key>_problem`. Aligns `$formalize` with
    pipeline B (XML→LKM), where `<problem>` from `select_conclusion.xml`
-   becomes a `LocalVariableNode(type="question")`. See
-   [`$gaia-package/references/emit-mapping.md`](../../gaia-package/references/emit-mapping.md)
-   §7 "Motivations and open questions → `question(...)`".
+   becomes a `LocalVariableNode(type="question")`. Motivation /
+   open-question → `question(...)` rules are owned upstream — see
+   `SiliconEinstein/Gaia` `docs/for-users/language-reference.md`.
 4. **Conclusions section** — one `claim(...)` per Phase 1 conclusion with
    `claim_kind="conclusion"`, in topological order. Each conclusion claim
    carries `review_prior=<float>` from Phase 3's per-conclusion synthesis
@@ -100,9 +99,9 @@ Emit in this order:
    defined exactly once in this file and appears as a premise in exactly
    one deduction (its target conclusion's). It is NOT shared across
    deductions; cross-conclusion uncertainty propagates through the logic
-   graph instead — see
-   [`$gaia-package/references/emit-mapping.md`](../../gaia-package/references/emit-mapping.md)
-   §2a "Weak point ↔ one conclusion (strict)".
+   graph instead (weak point ↔ one conclusion (strict) discipline is
+   owned upstream — see `SiliconEinstein/Gaia`
+   `docs/for-users/language-reference.md`).
 6. **Deductions section** — one `deduction(...)` per derived conclusion.
    The premises list is the union of upstream conclusion labels (from
    Phase 1's logic graph) and weak-point labels (from Phase 3). The
@@ -118,10 +117,9 @@ discipline and the Phase 3 body-writing rule already satisfy what the legacy
 step-4 prompt enforced; this phase only relabels and emits.
 
 For each deduction's warrant `prior=` (a warrant strength, **not** the
-conclusion's posterior — see
-[`$gaia-package/references/emit-mapping.md`](../../gaia-package/references/emit-mapping.md)
-§3 "Deductions → `deduction(...)`" → "Warrant calibration"), follow the
-additive scheme:
+conclusion's posterior — deduction warrant calibration is owned upstream;
+see `SiliconEinstein/Gaia` `docs/for-users/language-reference.md`), follow
+the additive scheme:
 
 - Default 0.95.
 - **+0.02 to +0.04** for each Phase 3 highlight that specifically underwrites
@@ -158,16 +156,15 @@ them) but **not** added to `__all__`.
 
 ### 5a. `artifacts/paper-extract/mapping_audit.md`
 
-Use the template from
-[`$gaia-package/references/audit-log.md`](../../gaia-package/references/audit-log.md)
-§16 "`mapping_audit.md` table conventions". Populate every section:
+Use the upstream `mapping_audit.md` table conventions (owned by
+`SiliconEinstein/Gaia` — see `docs/for-users/`). Populate every section:
 
 - Phase summary table.
 - Conclusions table — one row per conclusion, with the working-note id,
   the final label, upstream labels, weak-point labels (only the ones
-  bound to this conclusion — see
-  [`$gaia-package/references/emit-mapping.md`](../../gaia-package/references/emit-mapping.md)
-  §2a),
+  bound to this conclusion per the upstream weak-point ↔ one-conclusion
+  (strict) discipline — see `SiliconEinstein/Gaia`
+  `docs/for-users/language-reference.md`),
   `deduction_prior` (warrant strength on the deduction), `review_prior`
   (Phase 3 conclusion-synthesis posterior; same value as the
   `review_prior=` metadata kwarg on the conclusion claim), and free-text
@@ -176,9 +173,9 @@ Use the template from
 - Weak points table — one row per weak-point label, with label, the single
   threatened `conclusion_id`, `also_threatens` (comma-separated audit-only
   list of independent conclusion ids the same scientific assumption also
-  affects but which are **not** wired into BP — see
-  [`$gaia-package/references/emit-mapping.md`](../../gaia-package/references/emit-mapping.md)
-  §2a), weak_types, prior, p1, p2, full `weakness_reason` text, full
+  affects but which are **not** wired into BP — per the upstream
+  weak-point ↔ one-conclusion (strict) discipline),
+  weak_types, prior, p1, p2, full `weakness_reason` text, full
   `failure_mode` text. Default for `also_threatens` is `(none)`.
 - Highlights table — one row per highlight with id, conclusion_id,
   strength_types, full `credit` text, and notes (especially: did this
@@ -197,11 +194,10 @@ DSL claim bodies.
 ### 5b. `artifacts/paper-extract/graph_growth_log.jsonl`
 
 Append one event per emitted DSL element, in emission order. Each line is
-one JSON object following the schema in
-[`$gaia-package/references/audit-log.md`](../../gaia-package/references/audit-log.md)
-(§3 "Event identity", §4 "Decision vocabulary", §5 "The `graph_delta`
-block", §8 "Required event sequence (paper-extract example)"). Required
-event sequence:
+one JSON object following the canonical `graph_growth_log.jsonl` v1 schema
+owned upstream (`SiliconEinstein/Gaia` `docs/for-users/`) — event identity,
+decision vocabulary, the `graph_delta` block, and the required event
+sequence (paper-extract example) all live there. Required event sequence:
 
 1. **`package_initialized`** (already emitted in Step 2 above) — first
    event, with payload `{"package": "<name>-gaia", "source_paper":
@@ -242,9 +238,8 @@ event with `supersedes_event_id` pointing at the original.
 
 ## Step 6 — Write `pyproject.toml`
 
-Use the template from
-[`$gaia-package/references/package-shape.md`](../../gaia-package/references/package-shape.md)
-("`pyproject.toml` template"). Fields:
+Use the upstream `pyproject.toml` template (`SiliconEinstein/Gaia`
+`docs/for-users/quick-start.md`). Fields:
 
 - `name`: the kebab-case package name.
 - `[tool.gaia].uuid`: a freshly minted UUID4.

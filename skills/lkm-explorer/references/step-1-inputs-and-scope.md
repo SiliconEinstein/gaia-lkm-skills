@@ -40,8 +40,8 @@ The checklist is ephemeral and is not written to the package.
 - Timeline replay files for LKM-explorer work:
   `artifacts/lkm-discovery/retrieval_log.jsonl` (schema in
   `timeline-log-contract.md`) and
-  `artifacts/lkm-discovery/graph_growth_log.jsonl` (canonical v1 schema in
-  `$gaia-package/references/audit-log.md`).
+  `artifacts/lkm-discovery/graph_growth_log.jsonl` (canonical v1 schema owned
+  upstream in `SiliconEinstein/Gaia` `docs/for-users/`).
 
 These are loose files. `$lkm-explorer` reads raw LKM payloads directly and does
 not use an intermediate graph artifact.

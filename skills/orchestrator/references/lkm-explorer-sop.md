@@ -6,10 +6,12 @@ separate expansion SOP: support search and open-question/conflict search are two
 channels inside this SOP.
 
 The package shape, generic emit-mapping rules, and the
-`graph_growth_log.jsonl` audit schema referenced below are owned by
-[`$gaia-package`](../../gaia-package/). LKM-driven exploration, the
-`lkm-discovery/` audit dir, the `retrieval_log.jsonl`, and LKM-only mapping
-rules are owned by [`$lkm-explorer`](../../lkm-explorer/).
+`graph_growth_log.jsonl` audit schema referenced below are owned by upstream
+`SiliconEinstein/Gaia` (see `docs/for-users/language-reference.md` for DSL
+primitives and package layout, `docs/for-users/quick-start.md` for the
+end-to-end workflow). LKM-driven exploration, the `lkm-discovery/` audit dir,
+the `retrieval_log.jsonl`, and LKM-only mapping rules are owned by
+[`$lkm-explorer`](../../lkm-explorer/).
 
 ## Primary Path
 
@@ -313,8 +315,9 @@ repair changed nodes or edges; repair passes get separate `repair` events.
   chronological replay indexes for LKM-explorer package work only.
   `retrieval_log.jsonl` schema lives in
   `$lkm-explorer/references/timeline-log-contract.md`;
-  `graph_growth_log.jsonl` v1 schema lives in
-  `$gaia-package/references/audit-log.md`.
+  `graph_growth_log.jsonl` v1 schema is owned upstream (see upstream
+  `SiliconEinstein/Gaia` `docs/for-users/` — package layout and audit-log
+  shape).
 - `merge_audit.md`, `mapping_audit.md`, `merge_decisions.todo`, `dismissed/`,
   and `.gaia/inquiry/` preserve prior decisions across rounds.
 - `contradictions.md` and `equivalences.md` are discovery/audit flag files, not

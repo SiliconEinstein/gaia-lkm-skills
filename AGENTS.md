@@ -40,12 +40,14 @@ The `description` is what an agent reads to decide whether to invoke the skill. 
 Each atomic skill does **one thing** and exposes a clean contract:
 
 - **`$lkm-api`** — HTTP I/O against LKM only. No graph logic, no DSL emission.
-- **`$gaia-package`** — references-only contract atomic. Defines the unified `<name>-gaia/` knowledge package shape (layout + file templates), the generic emit-mapping rules (claim/deduction/support/contradiction/equivalence body discipline, metadata kwargs), and the `graph_growth_log.jsonl` v1 audit schema. Consumed by every Gaia-emitting skill. No scripts, no runtime workflow.
-- **`$lkm-explorer`** — contract-driven LKM exploration → Gaia knowledge package per `$gaia-package`. LKM evidence → Gaia DSL via a five-step contradiction-driven workflow. Owns the `lkm-discovery/` audit dir and the LKM-specific `retrieval_log.jsonl`. No HTTP, no rendering.
+- **`$lkm-explorer`** — contract-driven LKM exploration → Gaia knowledge package per the upstream Gaia spec. LKM evidence → Gaia DSL via a five-step contradiction-driven workflow. Owns the `lkm-discovery/` audit dir and the LKM-specific `retrieval_log.jsonl`. No HTTP, no rendering.
+- **`$formalize`** — paper-driven sibling to `$lkm-explorer`. Reads a single paper Markdown and emits a Gaia knowledge package per the upstream Gaia spec via a four-phase analytical workflow. Owns the `artifacts/paper-extract/` audit dir.
 - **`$evidence-subgraph`** — graph build / audit / render only. Consumes `$lkm-api` JSON. Independent optional branch — not an upstream dependency of `$lkm-explorer`.
 - **`$scholarly-synthesis`** — audited graph → article only. Independent optional branch.
 
-There is no project-local render skill. For visualization of a compiled Gaia package, use the package's own Gaia CLI render commands.
+Gaia DSL primitives, package layout, the `graph_growth_log.jsonl` audit schema, and CLI command reference are owned by upstream `SiliconEinstein/Gaia` — see `docs/for-users/language-reference.md`, `docs/for-users/quick-start.md`, and `docs/for-users/cli-commands.md`. This repo is LKM-side only and does not duplicate upstream teaching.
+
+There is no project-local render skill. For visualization of a compiled Gaia package, use the upstream `gaia run render` command (see upstream `docs/for-users/cli-commands.md`).
 
 **No cross-skill orchestration is baked into atomic skills.** If a workflow needs two skills, that workflow lives in `skills/orchestrator/SKILL.md` (or, for narrow paths, in a sub-shape section there). Atomic skills must remain composable — invokable individually without the orchestrator.
 
@@ -68,7 +70,7 @@ Any skill that writes to a `<domain>-gaia/` package MUST preserve the audit trai
 - Prior verdicts are honoured. A pair already merged stays merged; a candidate already dismissed is not re-introduced silently.
 - Raw LKM payloads are preserved verbatim before any classification or DSL emission.
 
-The exact file shapes (verdict files, dismissed/, todo files, inquiry state) are owned by the active SOP and the `$lkm-explorer` workflow — refer to those documents for ground truth.
+The exact file shapes (verdict files, dismissed/, todo files, inquiry state) are owned by the active SOP and the `$lkm-explorer` workflow — refer to those documents for ground truth. The Gaia knowledge-package `graph_growth_log.jsonl` audit-log schema itself is owned upstream (see `SiliconEinstein/Gaia` `docs/for-users/`).
 
 ## Field-neutrality
 

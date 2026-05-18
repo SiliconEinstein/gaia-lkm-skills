@@ -1,6 +1,6 @@
 ---
 name: formalize
-description: Single-paper formalization — read one academic paper (Markdown preferred; plain-text or other readable formats also accepted) and emit a standalone Gaia knowledge package conforming to the `$gaia-package` contract. Runs a four-phase analytical workflow (Phase 1 extract conclusions / motivation / open questions / cross-conclusion logic graph; Phase 2 reconstruct each conclusion's reasoning chain; Phase 3 audit weak points and highlights, calibrate `prior_probability` / `p1` / `p2` / `review_prior`; Phase 4 emit Gaia DSL package files), gated by an upfront suitability check (skip review/survey/perspective papers and corrupted paper text). Surfaces 9 argument-pattern weak-point types (`measurement`, `causal`, `model`, `statistical`, `generalization`, `comparative`, `formal`, `computational`, `external`). Cross-grounds the paper against LKM's existing knowledge graph in Phase 1b via `$lkm-api`'s `/search` endpoint, filtering on `provenance.source_packages` and verifying evidence-chain closure. Sibling to `$lkm-explorer` (the LKM-driven exploratory workflow); both produce `<name>-gaia/` packages whose layout, emit-mapping rules, and `graph_growth_log.jsonl` audit schema are owned by `$gaia-package`. Audit dir is `artifacts/paper-extract/`. Use whenever the user asks to "formalize a paper into Gaia", "produce a Gaia package from this paper", "turn this paper into a knowledge package", or any variant where the upstream is a single paper text and the requested output is Gaia DSL — even if the user does not explicitly mention Gaia DSL syntax.
+description: Single-paper formalization — read one academic paper (Markdown preferred; plain-text or other readable formats also accepted) and emit a standalone Gaia knowledge package conforming to the upstream Gaia knowledge-package spec. Runs a four-phase analytical workflow (Phase 1 extract conclusions / motivation / open questions / cross-conclusion logic graph; Phase 2 reconstruct each conclusion's reasoning chain; Phase 3 audit weak points and highlights, calibrate `prior_probability` / `p1` / `p2` / `review_prior`; Phase 4 emit Gaia DSL package files), gated by an upfront suitability check (skip review/survey/perspective papers and corrupted paper text). Surfaces 9 argument-pattern weak-point types (`measurement`, `causal`, `model`, `statistical`, `generalization`, `comparative`, `formal`, `computational`, `external`). Cross-grounds the paper against LKM's existing knowledge graph in Phase 1b via `$lkm-api`'s `/search` endpoint, filtering on `provenance.source_packages` and verifying evidence-chain closure. Sibling to `$lkm-explorer` (the LKM-driven exploratory workflow); both produce `<name>-gaia/` packages whose layout, emit-mapping rules, and `graph_growth_log.jsonl` audit schema are owned upstream by `SiliconEinstein/Gaia` (see `docs/for-users/`). Audit dir is `artifacts/paper-extract/`. Use whenever the user asks to "formalize a paper into Gaia", "produce a Gaia package from this paper", "turn this paper into a knowledge package", or any variant where the upstream is a single paper text and the requested output is Gaia DSL — even if the user does not explicitly mention Gaia DSL syntax.
 ---
 
 # Formalize
@@ -15,10 +15,12 @@ agent running this skill does the analytical work itself; it does not
 orchestrate a separate extraction pipeline and does not produce intermediate
 XML artifacts.
 
-Package shape, emit mapping rules, and audit log schema are owned by
-[`$gaia-package`](../gaia-package/SKILL.md). This skill defines the
-paper-driven workflow that produces packages conforming to that contract.
-Every `claim(...)` carries `provenance_source="paper_extract"` and
+Gaia knowledge-package shape, generic emit-mapping rules, and the
+`graph_growth_log.jsonl` audit-log schema are owned upstream by
+`SiliconEinstein/Gaia` — see `docs/for-users/language-reference.md` and
+`docs/for-users/quick-start.md`. This skill defines the paper-driven workflow
+that produces packages conforming to that upstream spec. Every `claim(...)`
+carries `provenance_source="paper_extract"` and
 `source_paper="<reference_key>"` so a `$formalize` package and an
 `$lkm-explorer` package can coexist if a package is later refreshed from
 LKM data.
@@ -34,10 +36,10 @@ $formalize
 `$formalize` is the **paper-driven** sibling of
 [`$lkm-explorer`](../lkm-explorer/SKILL.md) — the **LKM-driven** workflow
 that grows a Gaia package from LKM evidence chains. The two skills produce
-package outputs of identical shape (the `$gaia-package` contract) but enter
-the graph from opposite directions: `$formalize` starts from one paper and
-audits its derivations; `$lkm-explorer` starts from LKM search and grows a
-frontier across many papers.
+package outputs of identical shape (per the upstream Gaia knowledge-package
+spec) but enter the graph from opposite directions: `$formalize` starts from
+one paper and audits its derivations; `$lkm-explorer` starts from LKM search
+and grows a frontier across many papers.
 
 ## Output Mode
 
@@ -142,18 +144,17 @@ paragraph. Do not invent contributions to fill the gap.
   that contradict the reviewer's calibration in your working notes.
 - **Provenance metadata is mandatory.** Every `claim(...)` carries
   `source_paper="<key>"` and `provenance_source="paper_extract"`. The
-  reference key matches an entry in `references.json`. See
-  [`$gaia-package/references/emit-mapping.md`](../gaia-package/references/emit-mapping.md)
-  for the unified metadata schema and the `provenance_source` enum.
+  reference key matches an entry in `references.json`. The unified metadata
+  schema and the `provenance_source` enum are owned upstream — see
+  `SiliconEinstein/Gaia` `docs/for-users/language-reference.md`.
 - **Every emitted node is audited and logged.** Phase 4 writes
   `mapping_audit.md` rows for every conclusion, deduction, weak-point claim,
   and highlight, **and** appends one structured event per emission to
-  `artifacts/paper-extract/graph_growth_log.jsonl` following the schema laid
-  out in
-  [`$gaia-package/references/audit-log.md`](../gaia-package/references/audit-log.md).
-  The audit table lets a reviewer reconstruct each Gaia node's provenance
-  and reviewer judgment; the JSONL log lets a frontend replay the Gaia
-  starmap from `t=0` without parsing Python source. (`$formalize` uses
+  `artifacts/paper-extract/graph_growth_log.jsonl` following the canonical
+  schema owned upstream (`SiliconEinstein/Gaia` `docs/for-users/`). The
+  audit table lets a reviewer reconstruct each Gaia node's provenance and
+  reviewer judgment; the JSONL log lets a frontend replay the Gaia starmap
+  from `t=0` without parsing Python source. (`$formalize` uses
   `artifacts/paper-extract/` as the audit-dir name to truthfully reflect
   the upstream — there is no LKM ingestion happening here, even when
   Phase 1b cross-grounds against LKM. The schema content, not the
@@ -166,7 +167,8 @@ paragraph. Do not invent contributions to fill the gap.
 - This skill owns the four analytical passes (plus the Phase 1b LKM
   reverse-trace audit) and the Gaia package emission.
 - It does not own package-shape, emit-mapping, or audit-log schema —
-  those live in `$gaia-package`. This skill consumes those rules and adds
+  those are owned upstream by `SiliconEinstein/Gaia` (see
+  `docs/for-users/`). This skill consumes those rules and adds
   paper-decomposition workflow on top.
 - It does not run `gaia compile` / `gaia infer` itself; the caller runs
   those quality gates after emission. Surfaced compile errors come back as
@@ -196,20 +198,30 @@ paragraph. Do not invent contributions to fill the gap.
 
 ### External (cross-referenced)
 
-- [`$gaia-package/references/package-shape.md`](../gaia-package/references/package-shape.md)
-  — single-paper package layout, naming conventions, file templates,
-  audit-dir layout.
-- [`$gaia-package/references/emit-mapping.md`](../gaia-package/references/emit-mapping.md)
-  — claim / deduction / question emission rules, `provenance_source` /
-  `claim_kind` / `weak_types` enums, `p1` / `p2` / `review_prior`
-  semantics, `refs` whitelist, deduction warrant calibration, label
-  rules, `references.json` (CSL-JSON) conventions, `__all__` rules.
-- [`$gaia-package/references/audit-log.md`](../gaia-package/references/audit-log.md)
-  — `graph_growth_log.jsonl` v1 schema, `mapping_audit.md` table
-  conventions, paper-extract subset semantics.
+Upstream Gaia knowledge-package contract (`SiliconEinstein/Gaia` —
+read-only pointer targets; do not duplicate locally):
+
+- `docs/for-users/quick-start.md` — end-to-end Gaia knowledge-package
+  workflow, including single-paper package layout, file templates,
+  and audit-dir layout.
+- `docs/for-users/language-reference.md` — `claim` / `deduction` /
+  `question` emission rules, `provenance_source` / `claim_kind` /
+  `weak_types` enums, `p1` / `p2` / `review_prior` semantics, `refs`
+  whitelist, deduction warrant calibration, label rules,
+  `references.json` (CSL-JSON) conventions, `__all__` rules.
+- `docs/for-users/cli-commands.md` — full CLI reference (`gaia compile`
+  / `check` / `infer` / `run render`).
+- `docs/for-users/hole-bridge-tutorial.md` — prior calibration tutorial.
+
+For runtime help, prefer `gaia <group> <cmd> --help`. The
+`graph_growth_log.jsonl` v1 schema, `mapping_audit.md` table conventions,
+and paper-extract subset semantics are also owned upstream.
+
+Sibling skills (this repo):
+
 - [`$lkm-api/SKILL.md`](../lkm-api/SKILL.md) — LKM HTTP API surface used
   by the Phase 1b reverse-provenance trace (`/search`,
   `/claims/{id}/evidence`).
 - [`$lkm-explorer/SKILL.md`](../lkm-explorer/SKILL.md) — sibling
-  LKM-driven exploration workflow producing the same `$gaia-package`
-  output shape from a different upstream.
+  LKM-driven exploration workflow producing the same Gaia
+  knowledge-package output shape from a different upstream.

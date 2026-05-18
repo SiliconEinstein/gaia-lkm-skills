@@ -165,9 +165,8 @@ the moment the conclusion is written, not as a post-hoc rewrite.
 
 For each conclusion, note the figures / tables / equations / external
 citations that primarily evidence it. These notes become the `refs`
-metadata on the `claim(...)` in Phase 4 (see
-[`$gaia-package/references/emit-mapping.md`](../../gaia-package/references/emit-mapping.md)
-§1a "The `refs` metadata field").
+metadata on the `claim(...)` in Phase 4 (the `refs` metadata field is owned
+upstream — see `SiliconEinstein/Gaia` `docs/for-users/language-reference.md`).
 
 Allowed pointer kinds — these are the **only three** that may end up in
 `refs`:

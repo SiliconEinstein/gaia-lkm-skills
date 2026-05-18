@@ -1,8 +1,10 @@
 # LKM-Explorer-Specific Contract
 
-> Generic Gaia knowledge package emission rules — claim/deduction body
-> discipline, package layout, audit log schema — are owned by
-> [`$gaia-package`](../../gaia-package/). This file covers ONLY rules specific
+> Generic Gaia knowledge package emission rules — `claim` / `deduction` /
+> `support` / `contradiction` / `equivalence` body discipline, package layout,
+> and the `graph_growth_log.jsonl` audit-log schema — are owned upstream by
+> `SiliconEinstein/Gaia` (see `docs/for-users/language-reference.md` and
+> `docs/for-users/quick-start.md`). This file covers ONLY rules specific
 > to contradiction-driven LKM exploration: the LKM evidence-status vocabulary,
 > no-chain source-claim handling, root-claim frontier supports, the
 > open-question-first contradiction policy, and the timeline emission
@@ -19,9 +21,9 @@
 ## 1. LKM-specific claim handling
 
 Generic `claim(...)` body rules — label discipline, self-contained check, no
-`prior` kwarg, metadata kwarg taxonomy — are in
-[`$gaia-package/references/emit-mapping.md`](../../gaia-package/references/emit-mapping.md).
-The rules below are LKM-specific.
+`prior` kwarg, metadata kwarg taxonomy — are owned upstream (see
+`SiliconEinstein/Gaia` `docs/for-users/language-reference.md`). The rules
+below are LKM-specific.
 
 - **No-chain LKM source claims.** If `total_chains = 0`, use
   `provenance_source="lkm_no_chain"`, preserve `lkm_id`, `lkm_original`, and
@@ -78,7 +80,8 @@ than an LKM `gfac_*` factor, but both endpoints must already be LKM-grounded
 Gaia claims.
 
 > Support reason discipline (no smuggling; on-the-fly premise claims are normal):
-> see [`$gaia-package/references/emit-mapping.md`](../../gaia-package/references/emit-mapping.md) §4.
+> see upstream `SiliconEinstein/Gaia` `docs/for-users/language-reference.md`
+> (`support` semantics).
 
 For cross-scope supports (different geometry, material, temperature, extraction
 method, approximation, or mass definition), use weak priors close to neutral
@@ -225,8 +228,7 @@ and what query or evidence would be needed to promote it later.
 For LKM-explorer package work, every emitted claim, deduction, support,
 contradiction, equivalence, merge, dismissal, inquiry update, and no-op search
 verdict must be indexed in `graph_growth_log.jsonl` per the canonical v1
-schema in
-[`$gaia-package/references/audit-log.md`](../../gaia-package/references/audit-log.md),
+schema owned upstream by `SiliconEinstein/Gaia` (see `docs/for-users/`),
 with links back to the LKM retrieval events and raw input files that grounded
 the decision. Each growth event must include a structured `graph_delta` block
 containing added/removed nodes and edges, so a frontend can replay the starmap
@@ -246,22 +248,22 @@ They do not apply to the raw `$lkm-api` skill or sibling graph/synthesis skills.
 - Generic claim/deduction/support/contradiction/equivalence emission rules,
   the metadata-kwarg taxonomy (`provenance_source`, `claim_kind`, `weak_types`,
   `p1`/`p2`/`review_prior`, `refs` whitelist), label discipline, and module
-  placement — all owned by
-  [`$gaia-package/references/emit-mapping.md`](../../gaia-package/references/emit-mapping.md).
+  placement — all owned upstream (`SiliconEinstein/Gaia`
+  `docs/for-users/language-reference.md`).
 - Package layout and templates (`pyproject.toml`, `__init__.py`,
   `paper_<key>.py`, `cross_paper.py`, `priors.py`, `references.json`) — owned
-  by
-  [`$gaia-package/references/package-shape.md`](../../gaia-package/references/package-shape.md).
+  upstream (`docs/for-users/quick-start.md`).
 - The `graph_growth_log.jsonl` v1 schema (event identity, decision
   vocabulary, `graph_delta` block, append-only / `supersedes_event_id`) —
-  owned by
-  [`$gaia-package/references/audit-log.md`](../../gaia-package/references/audit-log.md).
+  owned upstream (`SiliconEinstein/Gaia` `docs/for-users/`).
 - The full `priors.py` shape — follow current package examples and verify with
   `gaia check --hole`.
 - The shape of `pyproject.toml` — follow current package examples and verify
   with `gaia compile`.
 - BP interpretation and weakness analysis — handled by caller/user review after
   `gaia infer`.
-- Render-time choices — use `gaia render` or package-specific render commands
-  after compilation/inference.
-- The Gaia DSL grammar — governed by the installed Gaia library.
+- Render-time choices — use upstream `gaia run render` or package-specific
+  render commands after compilation/inference (see
+  `docs/for-users/cli-commands.md`).
+- The Gaia DSL grammar — governed by the installed Gaia library; see upstream
+  `docs/for-users/language-reference.md`.

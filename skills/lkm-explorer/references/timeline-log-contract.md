@@ -2,13 +2,13 @@
 
 This contract covers the LKM-specific timeline logs emitted by `$lkm-explorer`.
 
-> **Canonical `graph_growth_log.jsonl` schema lives in
-> [`$gaia-package/references/audit-log.md`](../../gaia-package/references/audit-log.md).**
-> This file documents only the LKM-specific `retrieval_log.jsonl` schema and
-> the LKM-only event subset of `graph_growth_log.jsonl`. `$lkm-explorer` emits
-> the full canonical `graph_growth_log.jsonl` per `$gaia-package`, plus this
-> sibling `retrieval_log.jsonl` that ties graph events back to the LKM API
-> calls that grounded them.
+> **The canonical `graph_growth_log.jsonl` schema is owned upstream by
+> `SiliconEinstein/Gaia` (see `docs/for-users/`).** This file documents only
+> the LKM-specific `retrieval_log.jsonl` schema and the LKM-only event subset
+> of `graph_growth_log.jsonl`. `$lkm-explorer` emits the full canonical
+> `graph_growth_log.jsonl` per the upstream Gaia spec, plus this sibling
+> `retrieval_log.jsonl` that ties graph events back to the LKM API calls that
+> grounded them.
 
 The goal is frontend replayability. A static web UI should be able to read
 both logs and replay the Gaia starmap from `t=0` without calling LKM again or
@@ -25,7 +25,7 @@ Every LKM-explorer package stores two append-only chronological logs under
 artifacts/lkm-discovery/
 ├── input/
 ├── retrieval_log.jsonl     # LKM-specific (this file)
-└── graph_growth_log.jsonl  # canonical v1 schema in $gaia-package/references/audit-log.md
+└── graph_growth_log.jsonl  # canonical v1 schema owned upstream (SiliconEinstein/Gaia docs/for-users/)
 ```
 
 `retrieval_log.jsonl` records LKM API calls and their raw payload files.
@@ -38,8 +38,8 @@ events to fix interpretation; append a later correction event with
 `supersedes_event_id` when needed. Schema-versioning, event-identity rules
 (`schema_version`, `event_id`, `timestamp_utc`, `stage`, `round_id`, `actor`,
 `actor_id`, `seq`), `graph_delta` requirements, decision vocabulary, round
-lifecycle, and structured rationale fields all follow the canonical schema in
-[`$gaia-package/references/audit-log.md`](../../gaia-package/references/audit-log.md).
+lifecycle, and structured rationale fields all follow the canonical schema
+owned upstream by `SiliconEinstein/Gaia` (see `docs/for-users/`).
 
 ## Retrieval events (LKM-specific)
 
@@ -125,9 +125,9 @@ LKM-specific decisions/no-ops that this skill is responsible for emitting are:
   whose raw payloads grounded the decision.
 - Round-lifecycle events (`round_open`, `round_close`, `stage_transition`)
   during cold-start root discovery and post-cold-start frontier-expansion
-  rounds — generic event format in `$gaia-package`, but the LKM-explorer
-  workflow guarantees one round per cold-start selection plus one per
-  frontier-expansion round.
+  rounds — generic event format owned upstream (`SiliconEinstein/Gaia`
+  `docs/for-users/`), but the LKM-explorer workflow guarantees one round
+  per cold-start selection plus one per frontier-expansion round.
 - `package_initialized`, `user_selection_checkpoint_opened`, and
   `user_selection_checkpoint_closed` during cold start so the replay UI can
   show the package creation and human root-selection pause.

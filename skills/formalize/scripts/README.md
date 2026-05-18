@@ -8,10 +8,11 @@ emitted `$formalize` package, by parsing `paper_<key>.py` + `priors.py` via AST.
 ### When to use
 
 Phase 4 of the `$formalize` workflow requires emitting the two audit files
-per the `$gaia-package` contract. Hand-authoring 4×(N+M) JSONL events for
-a package with N conclusions and M weak points is repetitive, drifts from
-the Python source over time, and (per group feedback from Tianhan) is the
-single biggest workflow friction at the 22+ knowledge node scale.
+per the upstream Gaia knowledge-package spec (see `SiliconEinstein/Gaia`
+`docs/for-users/`). Hand-authoring 4×(N+M) JSONL events for a package with
+N conclusions and M weak points is repetitive, drifts from the Python source
+over time, and (per group feedback from Tianhan) is the single biggest
+workflow friction at the 22+ knowledge node scale.
 
 This script extracts every claim / deduction / prior from the existing
 Python source so the audit is regenerated deterministically. Run it after
@@ -31,8 +32,9 @@ Produces:
 
 ### Schema compliance
 
-Events follow the `$gaia-package/references/audit-log.md` v1 paper-extract
-subset: `package_initialized`, `accepted_claim` (with `claim_kind`),
+Events follow the upstream canonical `graph_growth_log.jsonl` v1
+paper-extract subset (`SiliconEinstein/Gaia` `docs/for-users/`):
+`package_initialized`, `accepted_claim` (with `claim_kind`),
 `accepted_deduction`, `prior_added`. No candidate-handling events because
 formalize is single-pass.
 

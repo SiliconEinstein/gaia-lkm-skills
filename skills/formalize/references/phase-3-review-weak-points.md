@@ -70,16 +70,16 @@ Before committing to a weak point, it must pass all five:
 - **Which conclusion does it threaten?** — Name **one** conclusion by
   Phase 1 id. Every weak point is bound to a single conclusion — the one
   whose derivation it directly undermines. If the underlying scientific
-  uncertainty seems to threaten several conclusions, see
-  [`$gaia-package/references/emit-mapping.md`](../../gaia-package/references/emit-mapping.md)
-  §2a "Weak point ↔ one conclusion (strict)": pick the conclusion with the
-  most catastrophic failure mode (tie-break by smaller id), and let
-  cross-conclusion influence propagate
-  through the logic graph (`W → C2 → C4` if C2 is upstream of C4) rather
-  than re-binding W to C4. For independent conclusions that share a
-  foundational assumption with no logic-graph link, the BP-invisible
-  effect on the other conclusion(s) is recorded in `mapping_audit.md` as
-  `also_threatens`, audit-only.
+  uncertainty seems to threaten several conclusions, apply the
+  weak-point ↔ one-conclusion (strict) discipline owned upstream (see
+  `SiliconEinstein/Gaia` `docs/for-users/language-reference.md`): pick the
+  conclusion with the most catastrophic failure mode (tie-break by smaller
+  id), and let cross-conclusion influence propagate through the logic
+  graph (`W → C2 → C4` if C2 is upstream of C4) rather than re-binding W
+  to C4. For independent conclusions that share a foundational assumption
+  with no logic-graph link, the BP-invisible effect on the other
+  conclusion(s) is recorded in `mapping_audit.md` as `also_threatens`,
+  audit-only.
 - **Which part of that conclusion's derivation depends on it?** — Point to
   the specific argumentative move (a Phase 2 step, an experimental design
   choice, an assumption, a comparison).
@@ -352,15 +352,14 @@ synthesis for that conclusion:
   its weak points and highlights. This is **not** a mechanical function of
   the weak points' probabilities; it is informed by both findings. In Phase 4
   this number is emitted as `review_prior=<X>` metadata on the conclusion
-  `claim(...)` (capped at 0.9 — see
-  [`$gaia-package/references/emit-mapping.md`](../../gaia-package/references/emit-mapping.md)
-  §0 "Metadata schema and ecosystem alignment" → `review_prior` semantics
-  and §1 "Claims → `claim(...)`"); for isolated conclusions (no upstream,
-  no weak points → no `deduction(...)`) it is **also** used as the
-  conclusion's `priors.py` value because the conclusion is a leaf in that
-  case. The `deduction(...)` warrant prior is a different number — see
-  [`$gaia-package/references/emit-mapping.md`](../../gaia-package/references/emit-mapping.md)
-  §3 "Deductions → `deduction(...)`" → "Warrant calibration". Calibration:
+  `claim(...)` (capped at 0.9 — `review_prior` semantics are owned
+  upstream; see `SiliconEinstein/Gaia` `docs/for-users/language-reference.md`);
+  for isolated conclusions (no upstream, no weak points → no
+  `deduction(...)`) it is **also** used as the conclusion's `priors.py`
+  value because the conclusion is a leaf in that case. The `deduction(...)`
+  warrant prior is a different number — see upstream
+  `docs/for-users/language-reference.md` (deduction warrant calibration).
+  Calibration:
   - A conclusion with several high-`p2` weak points cannot have a high
     prior, even with highlights.
   - A conclusion with no load-bearing weak points and at least one
@@ -541,10 +540,9 @@ key)".
   matched `gcn_id` corresponds to a Phase 1 conclusion (mapped by content
   similarity in working notes), record the join so Phase 4 can emit
   `lkm_id="gcn_..."` on that conclusion's `claim(...)`. The metadata
-  schema for this join is documented in
-  [`$gaia-package/references/emit-mapping.md`](../../gaia-package/references/emit-mapping.md)
-  ("LKM-extracted-claim kwargs"); paper-extract emitters reuse
-  `lkm_id` purely as a provenance join.
+  schema for this join (LKM-extracted-claim kwargs) is owned upstream —
+  see `SiliconEinstein/Gaia` `docs/for-users/language-reference.md`;
+  paper-extract emitters reuse `lkm_id` purely as a provenance join.
 - **Audit-weight bump on cross-paper-fanout weak points.** When a Phase
   3 weak point threatens a conclusion whose matched `gcn_id` has
   `cross_paper_chains > 0`, add a `notes` annotation in `mapping_audit.md`
