@@ -1,26 +1,25 @@
 # LKM-Explorer Audit Dir
 
-> Generic package layout, naming conventions, and file templates
-> (`pyproject.toml`, `__init__.py`, `paper_<key>.py`, `cross_paper.py`,
-> `priors.py`, `references.json`) are in
-> [`$gaia-package/references/package-shape.md`](../../gaia-package/references/package-shape.md).
-> Generic `mapping_audit.md` table conventions are in
-> [`$gaia-package/references/audit-log.md`](../../gaia-package/references/audit-log.md).
-> This file documents ONLY the `artifacts/lkm-discovery/` audit directory
-> specific to LKM-driven exploration.
+> Generic Gaia knowledge-package layout, naming conventions, and file
+> templates (`pyproject.toml`, `__init__.py`, `paper_<key>.py`,
+> `cross_paper.py`, `priors.py`, `references.json`) are owned upstream by
+> `SiliconEinstein/Gaia` — see `docs/for-users/quick-start.md` and
+> `docs/for-users/language-reference.md`. This file documents ONLY the
+> `artifacts/lkm-discovery/` audit directory specific to LKM-driven
+> exploration.
 
 ## Audit-dir layout
 
 `$lkm-explorer` writes its audit dir under
-`artifacts/lkm-discovery/` (the audit-dir name itself is fixed by this skill;
-generic audit-dir-under-package layout is in `$gaia-package`):
+`artifacts/lkm-discovery/` (the audit-dir name and its contents are fixed by
+this skill):
 
 ```
 <name>-gaia/
   artifacts/
     lkm-discovery/
       retrieval_log.jsonl     # append-only chronological LKM API call log (LKM-specific)
-      graph_growth_log.jsonl  # append-only chronological Gaia growth/decision log (canonical v1 schema in $gaia-package)
+      graph_growth_log.jsonl  # append-only chronological Gaia growth/decision log
       merge_audit.md          # dedup decisions
       mapping_audit.md        # per-claim and per-pair transformation log
       merge_decisions.todo    # surfaced ambiguous pairs (if any)
@@ -35,8 +34,7 @@ generic audit-dir-under-package layout is in `$gaia-package`):
 
 - `merge_audit.md` — every shared-premise dedup decision
 - `mapping_audit.md` — per-claim and per-pair transformation log; LKM table
-  conventions documented below; canonical generic conventions in
-  [`$gaia-package/references/audit-log.md`](../../gaia-package/references/audit-log.md)
+  conventions documented below.
 - `merge_decisions.todo` — surfaced ambiguous pairs (agent couldn't decide
   merge vs keep)
 - `retrieval_log.jsonl` — ordered index of LKM match/evidence/variables calls,
@@ -45,8 +43,7 @@ generic audit-dir-under-package layout is in `$gaia-package`):
   [`timeline-log-contract.md`](timeline-log-contract.md)
 - `graph_growth_log.jsonl` — ordered index of selected roots, admitted claims,
   deductions, supports, contradictions, equivalences, dismissals, priors,
-  repairs, and quality-gate results. Canonical schema in
-  [`$gaia-package/references/audit-log.md`](../../gaia-package/references/audit-log.md)
+  repairs, and quality-gate results.
 - `input/` — verbatim copy of all input files (raw evidence JSON,
   `contradictions.md`, `equivalences.md`, `candidates.md`)
 - `dismissed/` — candidate tension pairs the agent dismissed as false alarms,
@@ -90,8 +87,5 @@ LKM-explorer-specific table format. A flat decision log:
 This audit log is the reviewer's first stop after `gaia infer .` returns
 surprising beliefs.
 
-The shared "Factors -> deductions / Equivalences / Contradictions / Dismissed"
-section structure is part of the LKM-explorer convention; the broader
-`mapping_audit.md` table conventions (column names, decision vocabulary,
-multi-emitter compatibility) are in
-[`$gaia-package/references/audit-log.md`](../../gaia-package/references/audit-log.md).
+The "Factors -> deductions / Equivalences / Contradictions / Dismissed"
+section structure is the LKM-explorer convention for `mapping_audit.md`.

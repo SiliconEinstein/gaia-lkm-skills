@@ -50,7 +50,8 @@ The `support(...)` edge may be a scientific-review judgment rather than an LKM
 factor, but both endpoint claims must already be LKM-grounded.
 
 > Support reason discipline (no smuggling; on-the-fly premise claims are normal):
-> see [`$gaia-package/references/emit-mapping.md`](../../gaia-package/references/emit-mapping.md) §4.
+> see upstream `SiliconEinstein/Gaia` `docs/for-users/language-reference.md`
+> (`support` semantics).
 
 For cross-scope supports involving different geometry, material, temperature,
 experimental extraction method, approximation, or mass definition, keep the

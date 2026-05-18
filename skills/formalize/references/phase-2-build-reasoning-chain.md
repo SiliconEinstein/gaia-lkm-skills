@@ -133,10 +133,8 @@ time. If a key cannot be derived from the paper's bibliography, use
 bracketed `[@unknown_n]` as an unresolvable strict reference; bare `@key`
 is opportunistic) and note the gap so Phase 4 can record it in
 `mapping_audit.md`. The full citation contract (allowed prose forms,
-`refs` whitelist, CSL-JSON conventions) lives in
-[`$gaia-package/references/emit-mapping.md`](../../gaia-package/references/emit-mapping.md)
-§3 "Citation form in `reason=` (and any claim body)" and §10
-"`data.papers` / paper bibliography → `references.json`".
+`refs` whitelist, CSL-JSON / `references.json` conventions) is owned
+upstream — see `SiliconEinstein/Gaia` `docs/for-users/language-reference.md`.
 
 ### 7. Authorial voice
 
