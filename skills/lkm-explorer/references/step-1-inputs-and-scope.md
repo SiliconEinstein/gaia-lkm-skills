@@ -6,7 +6,7 @@ task. Do not load later step files until this step is complete.
 ## Goal
 
 Establish the mapping mode, accepted inputs, evidence status for every selected
-claim, output target, and audit-trail location before writing Gaia DSL.
+claim, and output target before writing Gaia DSL.
 
 ## Required Session Todos
 
@@ -23,25 +23,19 @@ The checklist is ephemeral and is not written to the package.
 
 ## Inputs
 
-- Raw LKM evidence JSON from `$lkm-api` for each selected chain-backed claim:
-  `GET /claims/{id}/evidence`, with `data.claim`,
-  `data.evidence_chains[].factors[]`, and `data.papers`.
-- Raw LKM source/match JSON for no-chain source claims when accepted after
+- Raw LKM reasoning JSON from `$lkm-search` for each selected chain-backed
+  claim: `GET /claims/{id}/reasoning`, with `data.reasoning_chains[]`
+  (each containing `premises / conclusion / steps / motivating_questions`),
+  `data.total_chains`, and `data.papers`.
+- Raw LKM source JSON for no-chain source claims when accepted after
   cold start.
-- Raw LKM match JSON: `POST /claims/match`, with `data.variables` and
-  `data.papers`.
-- Orchestrator discovery/selection files: `candidates.md`,
-  `contradictions.md`, `equivalences.md` when available.
+- Raw LKM search JSON: `POST /search`, with `data.variables` (typed
+  nodes — `claim` / `question` / `setting` / `action`) and `data.papers`.
 - Root-claim frontier expansion records from the orchestrator when in refresh mode:
   frontier claim labels, support-channel query payloads,
   open-question/conflict-channel query payloads, and candidate classifications.
-- Existing package path for refresh work, including `artifacts/lkm-discovery/`,
-  `.gaia/inquiry/`, and prior source files.
-- Timeline replay files for LKM-explorer work:
-  `artifacts/lkm-discovery/retrieval_log.jsonl` (schema in
-  `timeline-log-contract.md`) and
-  `artifacts/lkm-discovery/graph_growth_log.jsonl` (chronological growth log
-  emitted by `$lkm-explorer`).
+- Existing package path for refresh work, including `.gaia/inquiry/` and prior
+  source files.
 
 These are loose files. `$lkm-explorer` reads raw LKM payloads directly and does
 not use an intermediate graph artifact.
@@ -57,10 +51,7 @@ Output: a standalone `<name>-gaia/` package:
 - `pyproject.toml`
 - `references.json`
 - `src/<import>/__init__.py`
-- `src/<import>/paper_<key>.py`
-- `src/<import>/cross_paper.py`
 - `src/<import>/priors.py`
-- `artifacts/lkm-discovery/` with verbatim raw inputs, timeline logs, and audit files
 
 Read `package-skeleton.md` before creating or substantially reshaping a package.
 
@@ -68,9 +59,9 @@ Read `package-skeleton.md` before creating or substantially reshaping a package.
 
 Input: batch inputs plus an existing standalone package directory.
 
-Output: edits to the existing package source and audit trail. Preserve existing
-labels, prior decisions, raw inputs, dismissed candidates, and merge verdicts
-unless the user explicitly asks to revise a prior decision.
+Output: edits to the existing package source. Preserve existing
+labels and prior decisions unless the user explicitly asks to revise a prior
+decision.
 
 Read `package-skeleton.md` before substantially reshaping package files.
 
@@ -80,7 +71,7 @@ Use the canonical terms from `mapping-contract.md`:
 
 - **Chain-backed claim**: LKM returned claim content and evidence has
   `total_chains > 0`. It can produce claims plus factor-derived
-  `deduction(...)`.
+  `derive(...)`.
 - **LKM source claim**: LKM returned claim content and provenance, but
   `total_chains = 0`. After cold start, it may enter Gaia as a leaf/source
   `claim(...)`; do not invent premises or deductions.
@@ -99,13 +90,7 @@ Before moving to Step 2:
 - The SOP Environment Preflight has passed before any package file is edited.
 - Every selected item is classified as chain-backed claim, LKM source claim, or
   search lead.
-- Raw LKM payload paths are known and will be preserved verbatim.
-- `timeline-log-contract.md` has been read, and retrieval/graph-growth log paths
-  are known or will be created before source emission.
-- Timeline event identity is initialized for this actor: `schema_version`,
-  `actor_id`, and monotonic `seq` are available for emitted events.
-- Batch package creation will emit `package_initialized`; refresh work has read
-  existing `round_*`, `stage_transition`, and checkpoint events when present.
-- Existing audit trail has been read for refresh work.
+- Raw LKM payload paths are known (kept in the agent's scratch for the run, not
+  emitted into the package).
 - The next todo is marked in progress before loading
   `step-2-bootstrap-and-map.md`.

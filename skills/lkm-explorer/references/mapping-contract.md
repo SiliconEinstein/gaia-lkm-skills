@@ -1,7 +1,7 @@
 # LKM-Explorer-Specific Contract
 
-> Generic Gaia knowledge package emission rules — `claim` / `deduction` /
-> `support` / `contradiction` / `equivalence` body discipline and package
+> Generic Gaia knowledge package emission rules — `claim` / `derive` /
+> `contradict` / `equal` / `exclusive` body discipline and package
 > layout — are owned upstream by `SiliconEinstein/Gaia` (see
 > `docs/for-users/language-reference.md` and
 > `docs/for-users/quick-start.md`). This file covers ONLY rules specific
@@ -12,7 +12,7 @@
 
 ## 0. Evidence-status vocabulary
 
-- **Chain-backed claim**: LKM returned claim content and `GET /claims/{id}/evidence` has `total_chains > 0`. Emit `claim(...)` plus factor-derived `deduction(...)` when factors are present.
+- **Chain-backed claim**: LKM returned claim content and `GET /claims/{id}/evidence` has `total_chains > 0`. Emit `claim(...)` plus factor-derived `derive(...)` when factors are present.
 - **LKM source claim**: LKM returned claim content and provenance, but `total_chains = 0`. After cold start, emit it as a leaf/source `claim(...)`; do not invent premises or deductions.
 - **Search lead**: insufficient content or provenance for a self-contained claim outside an accepted chain-backed factor. Keep only in audit/search notes.
 
@@ -25,42 +25,48 @@ Generic `claim(...)` body rules — label discipline, self-contained check, no
 `docs/for-users/language-reference.md`). The rules below are LKM-specific.
 
 - **No-chain LKM source claims.** If `total_chains = 0`, use
-  `provenance_source="lkm_no_chain"`, preserve `lkm_id`, `lkm_original`, and
-  `source_paper` when available, and log the no-chain status in the audit
-  trail. Do not create `deduction(...)` without factors.
+  `provenance_source="lkm_no_chain"` and preserve `lkm_id` when available.
+  Do not create `derive(...)` without factors.
 - **Prior policy for no-chain candidates.** Do not lower a prior solely because
   `total_chains=0`. Set priors from claim content, provenance clarity,
   method/scope specificity, and scientific judgment.
 - **Chain-internal empty-content premises.** When an LKM evidence chain
   references a premise whose `content` is empty, a placeholder string plus
   `todo="revisit when LKM corpus populates this premise"` in metadata may be
-  used to preserve a factor-derived `deduction(...)`. Log
-  `content_missing=true` in `mapping_audit.md`. Do not invent content.
+  used to preserve a factor-derived `derive(...)`. Do not invent content.
 - **Empty or under-provenanced match/search results outside an accepted
-  chain** are **search leads**, not placeholder claims. Record them in audit
-  files only.
+  chain** are **search leads**, not placeholder claims. Do not emit them.
 
 ## 3. Root-claim frontier supports
 
 During root-claim frontier expansion, the agent searches LKM for content that
 can directly support each frontier claim. A single target claim may have
-**multiple** accepted upstream supports. Use the real Gaia DSL strategy:
+**multiple** accepted upstream supports. Use the canonical v0.5 deterministic
+warrant primitive (the legacy named-strategy `support(...)` is replaced by
+`derive(...)` — see `docs/for-users/language-reference.md` "Notable
+migration rows"):
 
 ```python
-support([U_1], target, reason="<what U_1 says and why it supports target>", prior=<float>)
-support([U_2], target, reason="<what U_2 says and why it supports target>", prior=<float>)
+derive(target, given=[U_1], rationale="<what U_1 says and why it supports target>",
+       label="<u1_supports_target>")
+derive(target, given=[U_2], rationale="<what U_2 says and why it supports target>",
+       label="<u2_supports_target>")
 ```
 
 When several upstream claims only support the target jointly, use one joint
-support:
+derivation:
 
 ```python
-support([U_1, U_2], target, reason="<joint support rationale>", prior=<float>)
+derive(target, given=[U_1, U_2], rationale="<joint support rationale>",
+       label="<u1_u2_supports_target>")
 ```
 
-`support([a], b, prior=p)` is directional: `a` supports `b`. In Gaia, support is
-soft deduction over a directed implication. Higher `p` means the support warrant
-is stronger; `p` close to 1 means `a` nearly determines `b`.
+`derive(target, given=[a], rationale=...)` is directional: `a` supports
+`target`. In Gaia v0.5 the engine `derive(...)` signature accepts only
+`{given, background, rationale, label}` — there is no `metadata=` /
+`warrant_prior` kwarg. Warrant-strength intent (legacy strong/moderate/weak
+bands) lives in the `rationale=` prose so the reviewer's intent is
+preserved in the source without breaking `gaia build check`.
 
 Search effort for each frontier target:
 - Run at least 2 distinct support-channel LKM match queries.
@@ -69,28 +75,33 @@ Search effort for each frontier target:
 - If no candidate satisfies the support standard, record the queries and
   rejection rationales as `support_not_found`; do not invent support.
 
-Warrant prior for each support:
-- Strong (same topic, directly implies) -> 0.85-0.95
-- Moderate (related, partially overlaps) -> 0.70-0.85
-- Weak/lateral -> 0.50-0.65
+Warrant-strength intent (encode qualitatively in `rationale=` prose; the
+engine has no numerical warrant-prior surface on `derive`):
+- Strong (same topic, directly implies) — say so in the rationale.
+- Moderate (related, partially overlaps) — say so in the rationale.
+- Weak/lateral — say so in the rationale, and explicitly note the gap.
 
 The support relation itself may be a reviewer/agent scientific judgment rather
 than an LKM `gfac_*` factor, but both endpoints must already be LKM-grounded
 Gaia claims.
 
-> Support reason discipline (no smuggling; on-the-fly premise claims are normal):
-> see upstream `SiliconEinstein/Gaia` `docs/for-users/language-reference.md`
-> (`support` semantics).
+> Warrant rationale discipline (no smuggling; on-the-fly premise claims are
+> normal): see upstream `SiliconEinstein/Gaia`
+> `docs/for-users/language-reference.md` (`derive` semantics; the legacy
+> `support` strategy semantics on the compat surface inform the same
+> discipline).
 
 For cross-scope supports (different geometry, material, temperature, extraction
-method, approximation, or mass definition), use weak priors close to neutral
-(`0.50-0.58`) unless the LKM-grounded claim text directly implies the target.
-Record the scope differences in `mapping_audit.md` or `merge_audit.md` so BP
-does not silently treat lateral context as strong independent evidence.
+method, approximation, or mass definition), explicitly downgrade the warrant
+intent in the `rationale=` text (e.g. "lateral support: scope differs in
+<axis>, treat as weak evidence") unless the LKM-grounded claim text directly
+implies the target. Reflect the scope difference in the rationale so the
+reviewer reading the source can see the gap; the engine `derive` surface has
+no numerical knob to lower.
 
 Support candidates may be chain-backed or no-chain LKM source claims after cold
 start. Chain-backed candidates may add their own `claim(...)` nodes and
-factor-derived `deduction(...)` strategies. No-chain candidates may enter only
+factor-derived `derive(...)` strategies. No-chain candidates may enter only
 as leaf/source `claim(...)` nodes with clear content and provenance.
 
 ### 3a. Shared-factor extraction (>=2 supports converging on same target)
@@ -117,10 +128,9 @@ This section is the canonical policy for contradiction handling in the local
 LKM-explorer workflow.
 
 The workflow prioritizes open questions during discovery and mapping. When two
-source claims `A` and `B` appear to be in tension, first record the scientific
-open problem they raise. The open problem belongs in
-`artifacts/lkm-discovery/contradictions.md`, `mapping_audit.md`, and, when it
-may drive later work, `.gaia/inquiry/` as a hypothesis.
+source claims `A` and `B` appear to be in tension, first name the scientific
+open problem they raise. When the problem may drive later work, register it
+under `.gaia/inquiry/` as a hypothesis via `gaia inquiry hypothesis add`.
 
 During root-claim frontier expansion, run an open-question/conflict channel for every
 frontier claim. Minimum effort is 5 distinct LKM match queries with `top_k=10`.
@@ -147,13 +157,19 @@ after the two sides so graph views and review output make the conflict visible
 without opening metadata:
 
 ```python
-<side_a>_vs_<side_b>[_<quantity_or_regime>] = contradiction(
+<side_a>_vs_<side_b>[_<quantity_or_regime>] = contradict(
     A,
     B,
-    prior=0.95,
-    reason="<why these claims are adjudicably conflicting> | open_problem: <specific discriminating question>",
+    rationale="<why these claims are adjudicably conflicting> | open_problem: <specific discriminating question>",
+    label="<side_a>_vs_<side_b>[_<quantity_or_regime>]",
 )
 ```
+
+The engine `contradict(...)` signature accepts only
+`{background, rationale, label}` — no `metadata=` / `warrant_prior` /
+`prior=` kwarg. Warrant-strength intent (legacy "clear / less crisp"
+bands) lives in the `rationale=` prose alongside the `open_problem:`
+clause.
 
 Label rules:
 - Prefer `<side_a>_vs_<side_b>` with short semantic side names, e.g.
@@ -163,32 +179,24 @@ Label rules:
 - Keep the label a valid Gaia/Python identifier: lowercase letters, digits, and
   underscores only.
 - Do not name the node `scientific_inconsistency_*`, `paradox_*`, or a generic
-  `contradiction_*`; the operator kind already supplies the relation semantics,
+  `contradict_*`; the operator kind already supplies the relation semantics,
   while the label should identify the two conflicting sides.
 
-The contradiction operator prior is the warrant strength that this pair should
-be treated as an adjudicable scientific contradiction, not a prior on either
-claim being true. Use `0.95` for clear accepted contradictions. Use `0.85-0.92`
-only when the pair is accepted but the scope match or discriminating question is
-less crisp. Do not lower the operator prior merely because the candidate came
+Warrant-strength intent on a `contradict(...)` is the conviction that this
+pair should be treated as an adjudicable scientific contradiction, not a
+prior on either claim being true. Encode in the rationale: say "clear
+accepted contradiction" for the strongest cases; say "accepted but scope
+match / discriminating question is less crisp" when the candidate is
+borderline. Do not weaken the rationale merely because the candidate came
 from different methods; method/method conflicts are often the point of the
 contradiction.
 
-In audit rows, record the taxonomy explicitly:
-
-```text
-decision: accepted_contradiction
-relation_type: scientific_inconsistency
-```
-
-`scientific_inconsistency` is the audit/taxonomy class for accepted
-contradictions under this workflow. It is not the Gaia node label. Avoid
-`paradox` as a formal relation type; it may be used only in synthesis prose when
-appropriate for the field.
+Avoid the word `paradox` in operator labels; it may be used only in synthesis
+prose when appropriate for the field.
 
 ### Promotion signals
 
-Promote a candidate to `contradiction(A, B)` when one or more of these apply:
+Promote a candidate to `contradict(A, B)` when one or more of these apply:
 
 - The claims assert opposite values, signs, orderings, trends, or qualitative
   conclusions about the same system/material, quantity/effect, or scientific
@@ -219,48 +227,25 @@ yet promotable:
 - the candidate is a false alarm, duplicate wording, or unsupported search lead.
 
 For hypothesis-only rows, record why the pair is scientifically interesting,
-the best current open problem, why no `contradiction(...)` operator was emitted,
-and what query or evidence would be needed to promote it later.
-
-## 8. Timeline replay logs (LKM-explorer requirement)
-
-For LKM-explorer package work, every emitted claim, deduction, support,
-contradiction, equivalence, merge, dismissal, inquiry update, and no-op search
-verdict must be indexed in `graph_growth_log.jsonl` (current shape:
-transitional, pending LKM-side refresh; see
-[`timeline-log-contract.md`](timeline-log-contract.md) for the events this
-skill emits), with links back to the LKM retrieval events and raw input
-files that grounded the decision. Each growth event must include a
-structured `graph_delta` block containing added/removed nodes and edges, so
-a frontend can replay the starmap without parsing Python source.
-
-In addition, this skill emits an LKM-specific `retrieval_log.jsonl` whose
-schema is documented in
-[`references/timeline-log-contract.md`](timeline-log-contract.md). It records
-every package-scoped `$lkm-api` call (`match`, `evidence`, `variables`) and is
-linked from each graph-growth event via `retrieval_event_ids`.
-
-These requirements are package replay/audit requirements, not Gaia DSL syntax.
-They do not apply to the raw `$lkm-api` skill or sibling graph/synthesis skills.
+the best current open problem, why no `contradict(...)` operator was emitted,
+and what query or evidence would be needed to promote it later. In the
+post-purge SOP these notes live in the agent's scratch and the
+`gaia inquiry hypothesis add` text, not in a dedicated audit file.
 
 ## 9. What this contract does NOT cover
 
-- Generic claim/deduction/support/contradiction/equivalence emission rules,
+- Generic claim/derive/contradict/equal/exclusive emission rules,
   label discipline, and module placement — owned upstream
   (`SiliconEinstein/Gaia` `docs/for-users/language-reference.md`).
 - Package layout and templates (`pyproject.toml`, `__init__.py`,
-  `paper_<key>.py`, `cross_paper.py`, `priors.py`, `references.json`) — owned
-  upstream (`docs/for-users/quick-start.md`).
-- LKM-side metadata kwargs (`provenance_source`, `claim_kind`, `weak_types`,
-  `p1` / `p2` / `review_prior`, `refs` whitelist, `lkm_id` / `lkm_original`)
-  and the `graph_growth_log.jsonl` event shape — emitted by this skill;
-  transitional, pending LKM-side refresh.
-- The full `priors.py` shape — follow current package examples and verify with
-  `gaia check --hole`.
+  `paper_<key>.py`, `references.json`) — owned upstream
+  (`docs/for-users/quick-start.md`).
+- Generic `lkm_id` / `provenance_source` metadata semantics on Gaia
+  statements — owned upstream.
 - The shape of `pyproject.toml` — follow current package examples and verify
-  with `gaia compile`.
+  with `gaia build compile`.
 - BP interpretation and weakness analysis — handled by caller/user review after
-  `gaia infer`.
+  `gaia run infer`.
 - Render-time choices — use upstream `gaia run render` or package-specific
   render commands after compilation/inference (see
   `docs/for-users/cli-commands.md`).

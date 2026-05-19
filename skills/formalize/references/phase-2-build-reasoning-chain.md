@@ -1,8 +1,8 @@
 # Phase 2 — Reconstruct the Reasoning Chain
 
 Load this file after Phase 1 is complete. Phase 2 produces the per-conclusion
-reasoning chains that will populate the `reason=` field of each
-`deduction(...)` in Phase 4.
+reasoning chains that will populate the `rationale=` field of each
+`derive(...)` in Phase 4.
 
 ## Goal
 
@@ -12,7 +12,7 @@ upstream conclusions, prior cited results) to the conclusion itself.
 
 The trace is held in working notes as an ordered list of step strings per
 conclusion. Each step is one logical move. Steps are not claims; they are
-prose that becomes part of `deduction(...)`'s `reason=`.
+prose that becomes part of `derive(...)`'s `rationale=`.
 
 ## Topological Ordering
 
@@ -98,8 +98,12 @@ proof, record the move as such — do not silently repair it:
 - "The authors assert without derivation that ..."
 - "At this point the argument relies on a heuristic that ..."
 
-These flagged steps inform the deduction prior in Phase 4; persistent gaps
-push the warrant `prior=` below the default 0.95.
+These flagged steps inform the deduction warrant intent Phase 4 writes
+into the `--rationale` prose; persistent gaps surface as explicit "the
+authors assert without derivation" / "the argument relies on a heuristic"
+sentences in the rationale (the engine `derive(...)` signature has no
+`metadata=` / `warrant_prior` kwarg, so the calibration cannot live as
+a number on the deduction itself).
 
 ### 5. No paper-internal pointers in step prose
 
@@ -129,12 +133,12 @@ External citations appearing in step prose use the `[@key]` form, where
 e.g. `[@Smith2020]`). Do **not** leave numeric paper-style citations like
 `[33]`, `Ref. 5`, or `Smith et al., 2020` in step prose; convert at write
 time. If a key cannot be derived from the paper's bibliography, use
-`@unknown_<n>` (bare `@key`, **no brackets** — `gaia compile` rejects
+`@unknown_<n>` (bare `@key`, **no brackets** — `gaia build compile` rejects
 bracketed `[@unknown_n]` as an unresolvable strict reference; bare `@key`
-is opportunistic) and note the gap so Phase 4 can record it in
-`mapping_audit.md`. The full citation contract (allowed prose forms,
-`refs` whitelist, CSL-JSON / `references.json` conventions) is owned
-upstream — see `SiliconEinstein/Gaia` `docs/for-users/language-reference.md`.
+is opportunistic) and note the gap in the hand-off report. The full
+citation contract (allowed prose forms, `refs` whitelist, CSL-JSON /
+`references.json` conventions) is owned upstream — see
+`SiliconEinstein/Gaia` `docs/for-users/language-reference.md`.
 
 ### 7. Authorial voice
 
@@ -164,8 +168,8 @@ reasoning_chains:
 ```
 
 Step ids are **local** to each conclusion's chain (1, 2, 3, ... per chain).
-The numbered Markdown formatting carries through to the final `deduction()`
-`reason=` field in Phase 4.
+The numbered Markdown formatting carries through to the final `derive(...)`
+`rationale=` field in Phase 4.
 
 ## Phase-Completion Gate
 

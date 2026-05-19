@@ -1,91 +1,61 @@
-# LKM-Explorer Audit Dir
+# LKM-Explorer Package Layout
 
 > Generic Gaia knowledge-package layout, naming conventions, and file
-> templates (`pyproject.toml`, `__init__.py`, `paper_<key>.py`,
-> `cross_paper.py`, `priors.py`, `references.json`) are owned upstream by
-> `SiliconEinstein/Gaia` — see `docs/for-users/quick-start.md` and
-> `docs/for-users/language-reference.md`. This file documents ONLY the
-> `artifacts/lkm-discovery/` audit directory specific to LKM-driven
-> exploration.
+> templates (`pyproject.toml`, `__init__.py`, `priors.py`,
+> `references.json`) are owned upstream by `SiliconEinstein/Gaia` — see
+> `docs/for-users/quick-start.md` and `docs/for-users/language-reference.md`,
+> and the canonical shipping walkthroughs `gaia example mendel` /
+> `gaia example galileo`. This file documents only the LKM-explorer
+> module-routing convention.
 
-## Audit-dir layout
+## Module routing
 
-`$lkm-explorer` writes its audit dir under
-`artifacts/lkm-discovery/` (the audit-dir name and its contents are fixed by
-this skill):
+`$lkm-explorer` follows the upstream Mendel/Galileo two-module layout:
 
-```
+- All DSL emissions for every source paper — `claim` / `derive` / `equal`
+  / `contradict` / `exclusive` / `observe` / `note` / `question` — go in
+  the scaffolded `__init__.py` (the default `--file` target when
+  `gaia author <verb>` is invoked without `--file`).
+- Leaf-prior records (`register_prior(...)`) go in a sibling `priors.py`,
+  scaffolded explicitly with `--imports register_prior` so the import is
+  pre-seeded.
+
+There is no per-paper `paper_<key>.py` sibling — that pattern is not in
+the upstream shipping walkthroughs and is not prescribed here.
+
+```text
 <name>-gaia/
-  artifacts/
-    lkm-discovery/
-      retrieval_log.jsonl     # append-only chronological LKM API call log (LKM-specific)
-      graph_growth_log.jsonl  # append-only chronological Gaia growth/decision log
-      merge_audit.md          # dedup decisions
-      mapping_audit.md        # per-claim and per-pair transformation log
-      merge_decisions.todo    # surfaced ambiguous pairs (if any)
-      input/                  # verbatim copy of input files (raw evidence JSON + .md flag files)
-      dismissed/              # candidate tension pairs dismissed as false alarms
-      candidates.md           # discovery flag file
-      contradictions.md       # discovery flag file
-      equivalences.md         # discovery flag file
+├── pyproject.toml
+├── references.json
+└── src/<import>/
+    ├── __init__.py
+    └── priors.py
 ```
 
-## What ships in `artifacts/lkm-discovery/`
+`references.json` is a JSON object keyed by citation key, CSL-JSON entry
+shape; each entry must include `type` (drawn from the CSL allowlist). See
+upstream spec `docs/specs/2026-04-09-references-and-at-syntax.md` in
+`SiliconEinstein/Gaia` for the full schema.
 
-- `merge_audit.md` — every shared-premise dedup decision
-- `mapping_audit.md` — per-claim and per-pair transformation log; LKM table
-  conventions documented below.
-- `merge_decisions.todo` — surfaced ambiguous pairs (agent couldn't decide
-  merge vs keep)
-- `retrieval_log.jsonl` — ordered index of LKM match/evidence/variables calls,
-  with raw payload filename, query/request, frontier/channel, response code,
-  and `trace_id`. LKM-specific schema lives in
-  [`timeline-log-contract.md`](timeline-log-contract.md)
-- `graph_growth_log.jsonl` — ordered index of selected roots, admitted claims,
-  deductions, supports, contradictions, equivalences, dismissals, priors,
-  repairs, and quality-gate results.
-- `input/` — verbatim copy of all input files (raw evidence JSON,
-  `contradictions.md`, `equivalences.md`, `candidates.md`)
-- `dismissed/` — candidate tension pairs the agent dismissed as false alarms,
-  with rationale
+Scaffold with:
 
-The two JSONL logs are the replay index; the markdown audit files carry the
-detailed scientific rationale.
+```bash
+gaia pkg scaffold \
+    --target <name>-gaia \
+    --name <name>-gaia \
+    --namespace <namespace> \
+    --with-uuid \
+    --description "<one-line description>"
 
-## What ships in `artifacts/lkm-discovery/mapping_audit.md`
-
-LKM-explorer-specific table format. A flat decision log:
-
-```markdown
-# Mapping audit log — <package name>
-
-## Factors -> deductions
-
-| factor_id | source_paper | premises | conclusion | dsl_kind |
-|---|---|---|---|---|
-| gfac_9d88a6f8 | paper:814606014073536517 | gcn_2386d1b6, gcn_9f7a3e33 | gcn_66ac13c8 | deduction |
-
-## Equivalences
-
-| pair | a | b | decision | dsl_action |
-|---|---|---|---|---|
-| gcn_73c88cf / gcn_66ac13c8 | gcn_73c88cf | gcn_66ac13c8 | same paper (arXiv->PRB) | merged; no equivalence() |
-
-## Contradictions
-
-| pair | open_problem | decision | relation_type | dsl_action |
-|---|---|---|---|---|
-| (none in this run) | | | | |
-
-## Dismissed
-
-| pair | origin | rationale |
-|---|---|---|
-| (none in this run) | | |
+gaia pkg add-module \
+    --name priors \
+    --imports register_prior \
+    --target <name>-gaia
 ```
 
-This audit log is the reviewer's first stop after `gaia infer .` returns
-surprising beliefs.
-
-The "Factors -> deductions / Equivalences / Contradictions / Dismissed"
-section structure is the LKM-explorer convention for `mapping_audit.md`.
+`--namespace` matches the upstream walkthroughs (Mendel/Galileo pass
+`--namespace example`); set it to whatever namespace the orchestrator has
+chosen for this run. `--imports register_prior` pre-seeds the
+`register_prior` import into `priors.py` so subsequent `gaia author
+register-prior --file priors.py` invocations compile without adding the
+import by hand.

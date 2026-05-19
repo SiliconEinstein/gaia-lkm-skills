@@ -8,9 +8,7 @@ channels inside this SOP.
 The package shape referenced below is owned by upstream `SiliconEinstein/Gaia`
 (see `docs/for-users/language-reference.md` for DSL primitives and package
 layout, `docs/for-users/quick-start.md` for the end-to-end workflow).
-LKM-driven exploration, the `lkm-discovery/` audit dir, the
-`retrieval_log.jsonl` and `graph_growth_log.jsonl` chronological logs, and
-LKM-only mapping rules are owned by
+LKM-driven exploration and LKM-only mapping rules are owned by
 [`$lkm-explorer`](../../lkm-explorer/).
 
 ## Primary Path
@@ -18,11 +16,9 @@ LKM-only mapping rules are owned by
 ```text
 user request
   -> $orchestrator reads this SOP
-  -> $lkm-api retrieves raw match/evidence payloads
-  -> retrieval_log.jsonl records package-scoped LKM calls
+  -> $lkm-search retrieves raw search/reasoning payloads
   -> cold start: user selects one chain-backed root claim
   -> $lkm-explorer maps accepted payloads to Gaia DSL
-  -> graph_growth_log.jsonl records source/audit graph growth
   -> Gaia quality gates produce .gaia/ir.json
   -> later rounds expand from the cold-start root frontier
 ```
@@ -45,7 +41,8 @@ Do not add a project-local install recipe unless the user explicitly asks.
 
 ## Package Layout
 
-The canonical artifact is a single growing `<domain>-gaia/` package:
+The canonical artifact is a single growing `<domain>-gaia/` package,
+matching the upstream Mendel/Galileo two-module layout:
 
 ```text
 <domain>-gaia/
@@ -53,60 +50,45 @@ The canonical artifact is a single growing `<domain>-gaia/` package:
 ├── references.json
 ├── src/<import>/
 │   ├── __init__.py
-│   ├── paper_<key>.py
-│   ├── cross_paper.py
 │   └── priors.py
-├── artifacts/lkm-discovery/
-│   ├── input/
-│   ├── retrieval_log.jsonl
-│   ├── graph_growth_log.jsonl
-│   ├── candidates.md
-│   ├── contradictions.md
-│   ├── equivalences.md
-│   ├── mapping_audit.md
-│   ├── merge_audit.md
-│   ├── merge_decisions.todo
-│   └── dismissed/
 └── .gaia/
     ├── ir.json
     ├── beliefs.json
     └── inquiry/
 ```
 
-All work after cold start operates on this same package unless the user
-explicitly asks for a fork or fresh package.
+All DSL emissions (`claim` / `derive` / `equal` / `contradict` /
+`exclusive` / `observe` / `note` / `question`) go in `__init__.py`. Leaf
+priors (`register_prior(...)`) go in `priors.py`. There is no per-paper
+`paper_<key>.py` sibling — that pattern is not in the upstream shipping
+walkthroughs. All work after cold start operates on this same package
+unless the user explicitly asks for a fork or fresh package.
 
 ## Stage 1 — Cold Start
 
 Use this stage when no package exists yet or the user asks for a fresh package.
 
-1. Read `$lkm-api/SKILL.md`.
+1. Read `$lkm-search/SKILL.md`.
 2. Run the Environment Preflight.
-3. Run a field-specific LKM match query. Use BM25-like keyword/anchor-phrase
-   queries and preserve raw JSON under `artifacts/lkm-discovery/input/` once the
-   package exists.
-4. Append retrieval events to `retrieval_log.jsonl` for every package-scoped
-   match/evidence/variables call. If calls happen before the package directory
-   exists, backfill the log before the user-selection checkpoint.
-5. Fetch evidence for promising distinct candidates.
-6. For cold-start root selection, only offer candidates with `total_chains > 0`.
-7. Record no-chain LKM source claims as leads, but do not offer them as
-   cold-start roots.
-8. Write `candidates.md`, `contradictions.md`, and `equivalences.md` when
-   applicable.
-9. When the package directory is created, append a `package_initialized` event.
-   When multiple roots are plausible, append
-   `user_selection_checkpoint_opened` and stop for the mandatory user-selection
+3. Run a field-specific LKM `/search` query. For BM25-style keyword /
+   anchor-phrase retrieval, pass `--retrieval-mode lexical` with
+   `--keywords <comma,separated>`; for semantically broader recall use the
+   default `--retrieval-mode hybrid`. Filter to `--scopes claim` (and
+   optionally `--reasoning-only`) when only reasoning-backed conclusions
+   are wanted. Raw JSON lives in the agent's scratch for the run; it is
+   not committed into the package.
+4. Fetch reasoning chains for promising distinct candidates via
+   `/claims/{id}/reasoning`.
+5. For cold-start root selection, only offer candidates with `total_chains > 0`.
+6. Record no-chain LKM source claims as scratch leads, but do not offer them
+   as cold-start roots.
+7. When multiple roots are plausible, stop for a mandatory user-selection
    checkpoint. Do not pre-select.
-10. After user selection, append `user_selection_checkpoint_closed`,
-    `selected_root`, `stage_transition` (`cold_start` -> `mapping`), and
-    `round_open` for `round_0000` with the selected root as `frontier_in`.
-11. Read `$lkm-explorer/SKILL.md` and run its progressive five-step workflow in
-    batch mode. Every emitted growth event must include `graph_delta`.
-12. Run the Quality Gates, append `quality_gate_result`, then append
-    `round_close` for `round_0000`. Record the user-selected root claim as the
-    expansion seed; this root claim is the only default starting point for later
-    graph growth.
+8. After user selection, read `$lkm-explorer/SKILL.md` and run its
+   progressive five-step workflow in batch mode.
+9. Run the Quality Gates. Record the user-selected root claim as the
+   expansion seed; this root claim is the only default starting point for
+   later graph growth.
 
 ## Stage 2 — Root-Claim Frontier Expansion
 
@@ -120,16 +102,13 @@ Round 0 frontier is the cold-start root claim selected by the user.
 
 After a completed expansion round, the next frontier is every newly admitted,
 LKM-grounded **science claim** added in that round. Do not expand generated
-helper claims from `support(...)`, `deduction(...)`, or `contradiction(...)`, and
-do not re-expand claims already recorded in the visited frontier log.
+helper claims from `derive(...)` (warrant or factor-derived) or
+`contradict(...)`, and do not re-expand claims already visited.
 
-At the start of each expansion round, append `stage_transition` when entering
-`frontier_expansion`, then append `round_open` with `frontier_in` and
-`frontier_visited_so_far`. At the end, append `round_close` with
-`decisions_summary`, `next_frontier`, and `exhausted`.
+Track visited frontier claims in the agent's scratch for the run.
 
-If a round adds no new science claims, stop and report that the current frontier
-is exhausted; the `round_close` event must set `exhausted=true`.
+If a round adds no new science claims, stop and report that the current
+frontier is exhausted.
 
 ### Per-Claim Search Contract
 
@@ -143,46 +122,56 @@ conditions/regime | source paper/LKM id
 
 Run both channels for **every** frontier claim:
 
-- Support channel: at least **2 distinct LKM match queries**, each with
-  `top_k=10`.
-- Open-question/conflict channel: at least **5 distinct LKM match queries**, each
-  with `top_k=10`.
+- Support channel: at least **2 distinct LKM search queries** (via
+  `$lkm-search /search`, typically `--retrieval-mode lexical` with
+  scope-tuple keywords), each with `top_k=10`.
+- Open-question/conflict channel: at least **5 distinct LKM search queries**
+  (via `$lkm-search /search`, mixing lexical and hybrid modes as the
+  per-claim scope tuple suggests), each with `top_k=10`.
 
 The query count and `top_k=10` are different axes: the former is query
 diversity, the latter is candidates returned per query. Do not reduce either
-without recording the reason in the audit trail.
-
-Preserve every raw match/evidence response verbatim under
-`artifacts/lkm-discovery/input/` and append a corresponding retrieval event to
-`artifacts/lkm-discovery/retrieval_log.jsonl`.
+without surfacing the reason in the hand-off report.
 
 ### Support Channel
 
 Goal: find LKM-grounded content that can directly support the frontier claim in
 real Gaia DSL.
 
-- Fetch evidence for promising support candidates whenever possible.
+- Fetch reasoning chains (`/claims/{id}/reasoning`) for promising support
+  candidates whenever possible.
 - Chain-backed candidates may add `claim(...)` nodes and factor-derived
-  `deduction(...)` strategies.
+  `derive(...)` strategies.
 - Clear no-chain LKM source claims may enter after cold start as leaf/source
   `claim(...)` nodes.
 - A support edge may be a scientific-review judgment rather than an LKM
   `gfac_*` factor, but both endpoints must be LKM-grounded Gaia claims.
-- Accepted support uses real Gaia DSL:
+- Accepted support uses real Gaia DSL (canonical v0.5 form — `derive(...)`
+  replaces the legacy `support(...)` strategy; see
+  `docs/for-users/language-reference.md` "Notable migration rows"):
 
 ```python
-support([upstream_claim], target_claim, reason="<why upstream supports target>", prior=<float>)
+derive(target_claim, given=[upstream_claim],
+       rationale="<why upstream supports target; warrant-strength intent: strong/moderate/weak>",
+       label="<upstream_supports_target>")
 ```
 
 or, when several upstream claims only support the target jointly:
 
 ```python
-support([u1, u2], target_claim, reason="<joint support rationale>", prior=<float>)
+derive(target_claim, given=[u1, u2],
+       rationale="<joint support rationale; warrant-strength intent>",
+       label="<u1_u2_supports_target>")
 ```
 
+The engine `derive(...)` signature accepts only `{given, background,
+rationale, label}` — there is no `metadata=` / `warrant_prior` kwarg, so
+warrant-strength intent lives in the `rationale=` prose.
+
 Allow multiple accepted support candidates into the same iteration when they
-satisfy the mapping contract. If no candidate satisfies the standard, record
-`support_not_found` with the queries checked and rejection rationales.
+satisfy the mapping contract. If no candidate satisfies the standard,
+surface `support_not_found` in the hand-off report with the queries
+checked and rejection rationales.
 
 ### Open-Question / Conflict Channel
 
@@ -212,42 +201,38 @@ Accepted contradictions follow the mapping contract's open-question-first
 standard and use direct Gaia DSL:
 
 ```python
-<side_a>_vs_<side_b>[_<quantity_or_regime>] = contradiction(
+<side_a>_vs_<side_b>[_<quantity_or_regime>] = contradict(
     A,
     B,
-    reason="<why A and B are adjudicably conflicting> | open_problem: <question>",
-    prior=0.95,
+    rationale="<why A and B are adjudicably conflicting> | open_problem: <question>",
+    label="<side_a>_vs_<side_b>[_<quantity_or_regime>]",
 )
 ```
 
-If no candidate satisfies the hypothesis or contradiction standards, record
-`conflict_not_found` with the queries checked and rejection rationales.
+The engine `contradict(...)` signature accepts only
+`{background, rationale, label}` — no `metadata=` / `warrant_prior` /
+`prior=` kwarg. Warrant-strength intent ("clear" vs. "less crisp") lives
+in the `rationale=` prose alongside the `open_problem:` clause.
 
-### Candidate Records
+If no candidate satisfies the hypothesis or contradiction standards,
+surface `conflict_not_found` in the hand-off report with the queries
+checked and rejection rationales.
 
-Before editing Gaia source, append candidate rows to
-`artifacts/lkm-discovery/mapping_audit.md`, `contradictions.md`, or a
-topic-specific audit file, and append graph-growth events to
-`artifacts/lkm-discovery/graph_growth_log.jsonl` for accepted, dismissed, and
-not-found decisions. Before any terminal candidate decision, append a
-`candidate_considered` event for every candidate that entered scope comparison.
-Each row should include:
+### Candidate Tracking
+
+Track every candidate pair in the agent's scratch for the run, with:
 
 - frontier claim label and LKM id when available,
 - channel: `support` or `open_question_conflict`,
 - query text and `top_k`,
 - candidate LKM id and evidence status (`chain-backed`, `lkm_no_chain`, or
   `search_lead`),
-- raw input filename(s),
 - scope comparison across system, quantity, method/model, theory/experiment
   role, regime, and conditions,
-- proposed Gaia action: `claim`, `deduction`, `support`,
-  `accepted_contradiction`, `hypothesis_only`, `dismissed`, or `not_found`,
+- proposed Gaia action: `claim`, `derive` (covers both factor-derived
+  deductions and warrant supports), `accepted_contradiction`,
+  `hypothesis_only`, `dismissed`, or `not_found`,
 - rationale and next action.
-
-The corresponding JSONL events should fill structured fields when applicable:
-`scope_tuple`, `scope_diff`, `open_problem`, `rejection_reason`, and
-`warrant_prior`.
 
 After candidate classification, run `$lkm-explorer` progressive workflow in
 refresh mode for accepted package changes.
@@ -262,44 +247,33 @@ quality gates or review identify issues.
 3. Classify each pair:
    - exact duplicate -> merge,
    - same-paper helper restatement -> merge when safe,
-   - independent same proposition -> keep both and add `equivalence(...)`,
-   - different scope/material/method/condition -> keep distinct and log,
-   - ambiguous -> keep distinct and add to `merge_decisions.todo`.
-4. Fill leaf priors surfaced by `gaia check --hole .` in `priors.py`.
-5. Log every verdict in `merge_audit.md` or `mapping_audit.md`.
-6. Append graph-growth events for merge, keep-distinct, prior, and repair
-   decisions.
-7. Re-run the Quality Gates.
+   - independent same proposition -> keep both and add `equal(...)`,
+   - different scope/material/method/condition -> keep distinct,
+   - ambiguous -> default to keep distinct.
+4. Fill leaf priors surfaced by `gaia build check --hole .` via
+   `gaia author register-prior --file priors.py`.
+5. Re-run the Quality Gates.
 
 ## Quality Gates
 
 Run before accepting any package state:
 
 ```bash
-gaia compile .
-gaia check --brief .
-gaia check --hole .
-gaia infer .
+gaia build compile .
+gaia build check --brief .
+gaia build check --hole .
+gaia run infer .
 gaia inquiry review --strict .
 ```
 
-Before running the gate, append `stage_transition` to `quality_gate`. After the
-gate, append `stage_transition` back to `mapping`, `frontier_expansion`, or
-`repair` as appropriate for the next action.
+If holes appear, fill them via `gaia author register-prior` and rerun. If
+review reports duplicates, unreviewed warrants, or unresolved
+obligations/hypotheses, resolve them and rerun.
 
-If holes appear, fill `priors.py` and rerun. If review reports duplicates,
-unreviewed warrants, or unresolved obligations/hypotheses, log or resolve them
-and rerun.
-
-Append a `quality_gate_result` event to `graph_growth_log.jsonl` after each gate
-attempt, including command pass/fail status and a short failure summary when
-applicable. The event must include an empty `graph_delta` unless the gate-driven
-repair changed nodes or edges; repair passes get separate `repair` events.
-
-## Audit-Trail Invariants
+## Source-Of-Truth Invariants
 
 - Raw LKM JSON and `data.papers` are the source of truth for science-facing
-  Gaia claims, factors, provenance, references, and audit anchors.
+  Gaia claims, factors, provenance, and references.
 - Do not use external PDFs, paper text, web summaries, or synthetic bridge
   claims as evidence unless the user explicitly changes the rule.
 - For cold-start Gaia packages, the selected root must be chain-backed
@@ -310,17 +284,8 @@ repair changed nodes or edges; repair passes get separate `repair` events.
   from the user-selected root claim. Do not substitute a graph-centrality,
   belief-based, contradiction-side, or arbitrary frontier policy unless the user
   explicitly asks for a different workflow.
-- `artifacts/lkm-discovery/input/` is append-only for raw retrievals.
-- `retrieval_log.jsonl` and `graph_growth_log.jsonl` are append-only
-  chronological replay indexes for LKM-explorer package work only.
-  `retrieval_log.jsonl` schema lives in
-  `$lkm-explorer/references/timeline-log-contract.md`;
-  `graph_growth_log.jsonl` is the chronological growth log emitted by
-  `$lkm-explorer`.
-- `merge_audit.md`, `mapping_audit.md`, `merge_decisions.todo`, `dismissed/`,
-  and `.gaia/inquiry/` preserve prior decisions across rounds.
-- `contradictions.md` and `equivalences.md` are discovery/audit flag files, not
-  executable truth by themselves.
+- `.gaia/inquiry/` preserves prior obligation/hypothesis decisions across
+  rounds.
 - Open-question-first contradiction handling is canonical in
   `$lkm-explorer/references/mapping-contract.md` §4.
 

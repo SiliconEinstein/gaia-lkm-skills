@@ -39,13 +39,14 @@ The `description` is what an agent reads to decide whether to invoke the skill. 
 
 Each atomic skill does **one thing** and exposes a clean contract:
 
-- **`$lkm-api`** — HTTP I/O against LKM only. No graph logic, no DSL emission.
-- **`$lkm-explorer`** — contract-driven LKM exploration → Gaia knowledge package per the upstream Gaia spec. LKM evidence → Gaia DSL via a five-step contradiction-driven workflow. Owns the `lkm-discovery/` audit dir and the LKM-specific `retrieval_log.jsonl`. No HTTP, no rendering.
-- **`$formalize`** — paper-driven sibling to `$lkm-explorer`. Reads a single paper Markdown and emits a Gaia knowledge package per the upstream Gaia spec via a four-phase analytical workflow. Owns the `artifacts/paper-extract/` audit dir.
-- **`$evidence-subgraph`** — graph build / audit / render only. Consumes `$lkm-api` JSON. Independent optional branch — not an upstream dependency of `$lkm-explorer`.
+- **`$lkm-search`** — HTTP I/O against the LKM public API (search / reasoning / reasoning-search / variables / papers-graph). No graph logic, no DSL emission.
+- **`$lkm-search-internal`** — HTTP I/O against the LKM internal API (paper full-text markdown via `POST /papers/content/batch`). Whitelisted users only.
+- **`$lkm-explorer`** — contract-driven LKM exploration → Gaia knowledge package per the upstream Gaia spec. LKM evidence → Gaia DSL via a five-step contradiction-driven workflow. No HTTP, no rendering.
+- **`$formalize`** — paper-driven sibling to `$lkm-explorer`. Reads a single paper Markdown and emits a Gaia knowledge package per the upstream Gaia spec via a four-phase analytical workflow.
+- **`$evidence-subgraph`** — graph build / audit / render only. Consumes `$lkm-search` JSON. Independent optional branch — not an upstream dependency of `$lkm-explorer`.
 - **`$scholarly-synthesis`** — audited graph → article only. Independent optional branch.
 
-Gaia DSL primitives, package layout, and CLI command reference are owned by upstream `SiliconEinstein/Gaia` — see `docs/for-users/language-reference.md`, `docs/for-users/quick-start.md`, and `docs/for-users/cli-commands.md`. This repo is LKM-side only and does not duplicate upstream teaching.
+Gaia DSL primitives (canonical v0.5: `claim` / `derive` / `contradict` / `equal`), package layout, and CLI command reference are owned by upstream `SiliconEinstein/Gaia` — see `docs/for-users/language-reference.md`, `docs/for-users/quick-start.md`, and `docs/for-users/cli-commands.md`. The cli-as-client authoring surface (`gaia author <verb>` + `gaia pkg scaffold`) is the v0.5 agent-first path for editing knowledge packages without writing Python by hand; see `docs/reference/cli/author.md`. This repo is LKM-side only and does not duplicate upstream teaching.
 
 There is no project-local render skill. For visualization of a compiled Gaia package, use the upstream `gaia run render` command (see upstream `docs/for-users/cli-commands.md`).
 
@@ -53,7 +54,7 @@ There is no project-local render skill. For visualization of a compiled Gaia pac
 
 ### `$<skill>` reference syntax
 
-Cross-skill references in any `SKILL.md` body use `$<skill-name>` (e.g. `$lkm-api`, `$evidence-subgraph`). The orchestrator's catalog uses the same convention. When you add or rename a skill, grep the repo for the old `$<name>` and update.
+Cross-skill references in any `SKILL.md` body use `$<skill-name>` (e.g. `$lkm-search`, `$evidence-subgraph`). The orchestrator's catalog uses the same convention. When you add or rename a skill, grep the repo for the old `$<name>` and update.
 
 ### What goes in `SKILL.md` vs `references/`
 
@@ -64,13 +65,12 @@ If a `SKILL.md` is over ~300 lines, push reference material out into `references
 
 ## Audit-trail discipline
 
-Any skill that writes to a `<domain>-gaia/` package MUST preserve the audit trail defined by the active SOP (`skills/orchestrator/references/lkm-explorer-sop.md` — the single maintained workflow; support search and contradiction/open-question search are channels inside it):
+Any skill that writes to a `<domain>-gaia/` package MUST preserve prior emitted statements (`skills/orchestrator/references/lkm-explorer-sop.md` — the single maintained workflow; support search and contradiction/open-question search are channels inside it):
 
-- Append, never silently overwrite, in the package's audit area.
-- Prior verdicts are honoured. A pair already merged stays merged; a candidate already dismissed is not re-introduced silently.
-- Raw LKM payloads are preserved verbatim before any classification or DSL emission.
+- Refresh runs are append-only at the DSL boundary. A claim or operator already in the package stays — `gaia author`'s pre-write collision check enforces this at the CLI surface.
+- Inquiry state under `.gaia/inquiry/` survives across rounds.
 
-The exact file shapes (verdict files, dismissed/, todo files, inquiry state) are owned by the active SOP and the `$lkm-explorer` workflow — refer to those documents for ground truth.
+The exact emission and refresh semantics are owned by the active SOP and the `$lkm-explorer` workflow — refer to those documents for ground truth.
 
 ## Field-neutrality
 

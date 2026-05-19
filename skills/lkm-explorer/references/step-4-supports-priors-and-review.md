@@ -6,58 +6,62 @@ leaves, double counting, and untracked weak premises.
 ## Upstream Support
 
 For root-claim frontier expansion, every frontier claim receives a
-support-channel LKM search. Search for upstream LKM-grounded conclusions relevant to the target
-claim. A single target may have multiple upstream supports; each can get its own
-directional `support(...)`:
+support-channel LKM search. Search for upstream LKM-grounded conclusions
+relevant to the target claim. A single target may have multiple upstream
+supports; each can get its own directional `derive(...)` (canonical v0.5
+replacement for the legacy `support(...)` strategy — see
+`docs/for-users/language-reference.md` "Notable migration rows"):
 
 ```python
-support([U_1], P, reason="<what U_1 says and why it supports P>", prior=<float>)
-support([U_2], P, reason="<what U_2 says and why it supports P>", prior=<float>)
+derive(P, given=[U_1], rationale="<what U_1 says and why it supports P>",
+       label="<u1_supports_p>")
+derive(P, given=[U_2], rationale="<what U_2 says and why it supports P>",
+       label="<u2_supports_p>")
 ```
 
 When several upstream claims only support the target jointly, use a joint
-support:
+derivation:
 
 ```python
-support([U_1, U_2], P, reason="<joint support rationale>", prior=<float>)
+derive(P, given=[U_1, U_2], rationale="<joint support rationale>",
+       label="<u1_u2_supports_p>")
 ```
 
-`support([a], b, prior=p)` means `a` supports `b`; high `p` means `a` nearly
-determines `b`. This is true Gaia DSL syntax for the current `gaia.lang`
-support strategy.
+`derive(P, given=[a], rationale=...)` means `a` supports `P`. The engine
+`derive(...)` signature accepts only `{given, background, rationale, label}` —
+warrant-strength intent (strong / moderate / weak / lateral) lives in the
+`rationale=` prose, not in a `metadata=` / `warrant_prior` kwarg (the CLI
+flag exists but the post-write `gaia build check` rejects).
 
 Minimum support-channel effort per frontier claim:
 
 - run at least 2 distinct LKM match queries,
 - use `top_k=10` for each query,
-- preserve raw match/evidence payloads and append retrieval events to
-  `retrieval_log.jsonl`,
-- if no candidate satisfies the support standard, record `support_not_found`
-  with query and rejection rationales.
+- if no candidate satisfies the support standard, surface `support_not_found`
+  in the hand-off report with query and rejection rationales.
 
-Before accepting, dismissing, or marking a support candidate not found, append a
-`candidate_considered` event for every candidate that enters scope comparison.
-The event must carry `source_query_event_id`, `scope_tuple`, `scope_diff`,
-`evidence_status`, and `preliminary_verdict`.
+Warrant-strength intent (encode qualitatively in `rationale=` prose; the
+engine has no numerical warrant surface on `derive`):
 
-Warrant prior ranges:
+- Strong, same topic and directly implies — say so in the rationale.
+- Moderate, related and partially overlaps — say so in the rationale.
+- Weak or lateral — say so in the rationale and name the gap (scope,
+  method, regime).
 
-- Strong, same topic and directly implies: 0.85–0.95.
-- Moderate, related and partially overlaps: 0.70–0.85.
-- Weak or lateral: 0.50–0.65.
+The `derive(...)` warrant edge may be a scientific-review judgment rather
+than an LKM factor, but both endpoint claims must already be LKM-grounded.
 
-The `support(...)` edge may be a scientific-review judgment rather than an LKM
-factor, but both endpoint claims must already be LKM-grounded.
-
-> Support reason discipline (no smuggling; on-the-fly premise claims are normal):
-> see upstream `SiliconEinstein/Gaia` `docs/for-users/language-reference.md`
-> (`support` semantics).
+> Warrant rationale discipline (no smuggling; on-the-fly premise claims are
+> normal): see upstream `SiliconEinstein/Gaia`
+> `docs/for-users/language-reference.md` (`derive` semantics; the legacy
+> `support` strategy semantics on the compat surface inform the same
+> discipline).
 
 For cross-scope supports involving different geometry, material, temperature,
-experimental extraction method, approximation, or mass definition, keep the
-warrant weak and close to neutral (`0.50–0.58`) unless the LKM-grounded source
-claim directly implies the target. Audit the scope differences and explain why
-the relation is contextual rather than strong.
+experimental extraction method, approximation, or mass definition, explicitly
+flag the support as weak/lateral in the `rationale=` text (e.g. "lateral
+support: scope differs in <axis>; treat as weak evidence") unless the
+LKM-grounded source claim directly implies the target.
 
 If no relevant upstream conclusion is found, do not invent one.
 
@@ -75,14 +79,11 @@ Rules:
    dataset, physical approximation, or other non-independent factor, extract
    that factor as a new claim and route supports through it.
 4. Keep distinct supports that are genuinely independent.
-5. Surface ambiguous cases to `merge_decisions.todo`; default is keep distinct.
-
-Log every merge, equivalence, keep-distinct, and ambiguous verdict in
-`merge_audit.md` and append the corresponding graph-growth event.
+5. For ambiguous cases, default to keep distinct.
 
 ## Leaf Priors
 
-After source emission, the caller quality gate runs `gaia check --hole .`.
+After source emission, the caller quality gate runs `gaia build check --hole .`.
 Claims reported as leaves get entries in `priors.py`:
 
 ```python
@@ -96,11 +97,10 @@ claim priors at 0.90. Do not lower a prior solely because the claim has
 `total_chains=0`; judge content, provenance clarity, method/scope specificity,
 and scientific plausibility.
 
-Accepted `contradiction(...)` operators from Step 3 carry their own high warrant
-prior in source, normally `0.95` as defined in `mapping-contract.md` §4. That
-operator prior is not a leaf-claim prior and should not be mirrored into
-`priors.py`.
-Append a `prior_added` graph-growth event for each prior batch.
+Accepted `contradict(...)` operators from Step 3 carry their warrant-strength
+intent in the `rationale=` prose (the engine has no `metadata=` /
+`warrant_prior` kwarg on `contradict`); that intent is not a leaf-claim
+prior and is not mirrored into `priors.py`.
 
 ## Inquiry Obligations
 
@@ -114,18 +114,11 @@ Use `gaia inquiry obligation list` as the exploration TODO list. Do not
 mechanically pick the lowest-belief claim; obligations carry intentional
 exploration choices, while beliefs are diagnostics.
 
-Every `gaia inquiry obligation add` call must be paired with an
-`obligation_added` graph-growth event containing the CLI command, scope, text,
-and `graph_delta`.
-
 Register open-question hypotheses from Step 3 with:
 
 ```bash
 gaia inquiry hypothesis add "<open question>" --scope <namespace>::<label>
 ```
-
-If this step registers a hypothesis, pair it with a `hypothesis_added`
-graph-growth event.
 
 ## Duplicate Controls
 
@@ -133,12 +126,12 @@ For duplicate cleanup or refreshes, classify suspicious pairs:
 
 - exact duplicate -> merge,
 - same-paper helper restatement -> merge into canonical claim when safe,
-- independent same proposition -> keep both and add `equivalence(...)`,
-- different scope/material/method/condition -> keep distinct and log,
-- ambiguous -> keep distinct and add to `merge_decisions.todo`.
+- independent same proposition -> keep both and add `equal(...)`,
+- different scope/material/method/condition -> keep distinct,
+- ambiguous -> default to keep distinct.
 
-Preserve merged-out labels' metadata in the canonical claim via `lkm_ids=[...]`
-when possible.
+Preserve merged-out labels' `lkm_id` provenance in the canonical claim via
+`lkm_ids=[...]` when possible.
 
 ## Step-Completion Gate
 
@@ -146,18 +139,10 @@ Before moving to Step 5:
 
 - Relevant upstream supports have been searched and mapped or explicitly not
   found.
-- Root-claim frontier claims have completed the required support-channel search
-  or recorded `support_not_found`.
-- Every support candidate that entered scope comparison has a
-  `candidate_considered` event before its final verdict.
-- Shared-factor and duplicate risks have audit decisions.
+- Root-claim frontier claims have completed the required support-channel
+  search or surfaced `support_not_found` in the hand-off report.
+- Shared-factor and duplicate decisions are resolved.
 - Leaf-prior candidates are ready for `priors.py`.
-- Inquiry obligations/hypotheses are registered or queued.
-- Every inquiry CLI call in this step has a paired `hypothesis_added` or
-  `obligation_added` event.
-- Support, duplicate, merge, and prior decisions have corresponding
-  graph-growth events, including `support_not_found` no-op decisions.
-- Applicable events fill structured `scope_tuple`, `scope_diff`,
-  `rejection_reason`, `warrant_prior`, and `graph_delta`.
+- Inquiry obligations/hypotheses are registered.
 - Mark Step 4 complete, mark Step 5 in progress, then load
   `step-5-emit-and-handoff.md`.

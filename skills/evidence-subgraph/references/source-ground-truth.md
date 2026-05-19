@@ -60,7 +60,7 @@ The goal is no fabrication — not exhaustive coverage. A graph with a few `anch
 
 When a single paper analyses multiple sub-models / variants and LKM has split it into several claims, each chain-backed claim id is a candidate root. Pick **one** as the root for this graph and limit nodes to that claim's `evidence_chains`. If the user wants the other sub-models, that is a separate run with a different root id.
 
-If the chain you receive is missing a sub-model the user expected to see, return to `$lkm-api` and run targeted `/claims/match` queries for that sub-model's distinctive terms — do **not** import sub-model content from outside the chain payload.
+If the chain you receive is missing a sub-model the user expected to see, return to `$lkm-search` and run targeted `/search` queries (`--retrieval-mode lexical --keywords <sub-model's distinctive terms>`, `--scopes claim`) for that sub-model — do **not** import sub-model content from outside the chain payload.
 
 ## Caching
 
