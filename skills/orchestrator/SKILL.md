@@ -1,6 +1,6 @@
 ---
 name: orchestrator
-description: Thin router for project-local LKM/Gaia skills. Use first for LKM-driven or Gaia-graph tasks. Classifies the user request and points the agent to the right atomic skill or SOP. Two main maintained workflows — LKM → Gaia package via $lkm-api and $lkm-explorer (claim-driven, contradiction-driven), and Paper → Gaia package via $formalize (single-paper, 4-phase). Both emit packages conforming to the $gaia-package contract. Evidence-subgraph and scholarly-synthesis are independent optional branches; gaia-cli is the CLI toolchain reference.
+description: Thin router for project-local LKM/Gaia skills. Use first for LKM-driven or Gaia-graph tasks. Classifies the user request and points the agent to the right atomic skill or SOP. Two main maintained workflows — LKM → Gaia package via $lkm-search and $lkm-explorer (claim-driven, contradiction-driven), and Paper → Gaia package via $formalize (single-paper, 4-phase). Both emit packages conforming to the $gaia-package contract. $lkm-search-internal provides paper full-text access. Evidence-subgraph and scholarly-synthesis are independent optional branches; gaia-cli is the CLI toolchain reference.
 ---
 
 # Orchestrator
@@ -13,8 +13,13 @@ routes the task and loads the right SOP or atomic skill.
 
 ## Atomic Skills
 
-- **`$lkm-api`** — Bohrium LKM HTTP API surface: match, evidence, variables,
-  auth, raw JSON preservation, and API quirks.
+- **`$lkm-search`** — Bohrium LKM public HTTP API: search claims/questions,
+  trace reasoning chains, search by reasoning pattern, batch-fetch variable
+  details, and retrieve paper knowledge graphs. The primary API skill for all
+  external LKM interactions.
+- **`$lkm-search-internal`** — Bohrium LKM internal API: fetch paper full-text
+  markdown and images (`POST /papers/content/batch`). Requires internal
+  whitelist access.
 - **`$gaia-package`** — references-only contract atomic for the unified
   `<name>-gaia/` package shape, generic emit-mapping rules, and the
   `graph_growth_log.jsonl` v1 audit schema. Consumed by every Gaia-emitting
@@ -25,7 +30,7 @@ routes the task and loads the right SOP or atomic skill.
 - **`$formalize`** — single-paper formalization: reads a paper Markdown,
   performs four analytical phases (extract conclusions / build reasoning chain
   / review weak points / emit), and produces a Gaia knowledge package per
-  `$gaia-package`. Phase 1b cross-grounds via `$lkm-api` `/search` reverse
+  `$gaia-package`. Phase 1b cross-grounds via `$lkm-search` `/search` reverse
   trace.
 - **`$gaia-cli`** — Gaia CLI toolchain reference (`init`, `compile`, `check`,
   `infer`, `render`, `register`, `add`). Pure documentation; consulted by
@@ -56,7 +61,7 @@ search, contradiction/open-question search, duplicate cleanup, and iterative
 root-claim frontier expansion all route through the same SOP.
 
 1. Read `references/lkm-explorer-sop.md`.
-2. Read `$lkm-api/SKILL.md` before any API calls.
+2. Read `$lkm-search/SKILL.md` before any API calls.
 3. Maintain the LKM-explorer timeline logs required by the SOP for every
    package retrieval and graph-growth decision.
 4. Read `$lkm-explorer/SKILL.md` when selected LKM payloads are ready to map.
@@ -73,16 +78,17 @@ and the requested output is Gaia DSL or a Gaia knowledge package.
 1. Read `$formalize/SKILL.md`.
 2. Run the 4-phase workflow: extract conclusions → build reasoning chain →
    review weak points → emit package. Phase-3 cross-grounds via Phase 1b LKM
-   reverse trace (`$lkm-api` `/search`); Phase 1b is best-effort and skips
+   reverse trace (`$lkm-search` `/search`); Phase 1b is best-effort and skips
    silently when the paper isn't in the LKM corpus.
 3. Emit conforms to `$gaia-package`.
 4. Run Gaia quality gates (per `$gaia-cli`) after emission: `gaia compile`,
    `gaia check --hole`, `gaia infer`.
 
-### Raw LKM API Task
+### Raw LKM Search Task
 
-Use `$lkm-api` directly when the user only asks to fetch, inspect, or compare
-raw LKM API output and does not ask for Gaia formalization.
+Use `$lkm-search` directly when the user only asks to search, inspect, or
+compare LKM claims/reasoning and does not ask for Gaia formalization. Use
+`$lkm-search-internal` if they additionally need paper full-text markdown.
 
 ### Evidence Graph Only
 
