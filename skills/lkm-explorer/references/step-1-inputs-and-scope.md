@@ -80,7 +80,7 @@ Use the canonical terms from `mapping-contract.md`:
 
 - **Chain-backed claim**: LKM returned claim content and evidence has
   `total_chains > 0`. It can produce claims plus factor-derived
-  `deduction(...)`.
+  `derive(...)`.
 - **LKM source claim**: LKM returned claim content and provenance, but
   `total_chains = 0`. After cold start, it may enter Gaia as a leaf/source
   `claim(...)`; do not invent premises or deductions.

@@ -281,15 +281,15 @@ A: **不可以**。`score` 是检索排序信号，不是科学置信度。Gaia 
 
 LKM-specific 映射规则（owned by `$lkm-explorer`）：
 
-- **`noisy_and`** → `derive` / `deduction`（rigid；LKM 推理链内部假设全是严格推导）
-- **`deduction`** → `deduction`
-- **`support`** → `support`
-- **No-chain LKM source claims**（`total_chains=0`）：冷启动后可以作为 leaf/source `claim(...)` 进入，`provenance_source="lkm_no_chain"`，**不要** 编造 premise 或 deduction
-- **Empty-content premise**（chain 内部）：可以用 placeholder string + `todo="revisit when LKM corpus populates this premise"` 保留 factor-derived `deduction(...)`，记录 `content_missing=true`
+- **LKM `noisy_and` 因子** → Gaia `derive(...)`（rigid；LKM 推理链内部假设全是严格推导）
+- **LKM `deduction` 因子** → Gaia `derive(...)`
+- **LKM `support` 因子** → Gaia `derive(...)` 配合 `metadata={"warrant_prior": ...}`（v0.5 canonical 形态，替代 legacy `support(...)` strategy）
+- **No-chain LKM source claims**（`total_chains=0`）：冷启动后可以作为 leaf/source `claim(...)` 进入，`provenance_source="lkm_no_chain"`，**不要** 编造 premise 或 `derive`
+- **Empty-content premise**（chain 内部）：可以用 placeholder string + `todo="revisit when LKM corpus populates this premise"` 保留 factor-derived `derive(...)`，记录 `content_missing=true`
 
 完整的 LKM-specific contract：`skills/lkm-explorer/references/mapping-contract.md`。
 
-Gaia DSL 通用语法（`claim` / `deduction` / `support` / `contradiction` body discipline、metadata kwargs、label 规则等）见 upstream `SiliconEinstein/Gaia` `docs/for-users/language-reference.md`。
+Gaia DSL 通用语法（`claim` / `derive` / `contradict` / `equal` body discipline、metadata kwargs、label 规则等）见 upstream `SiliconEinstein/Gaia` `docs/for-users/language-reference.md`。
 
 ### 3.4 包结构与审计 dir
 

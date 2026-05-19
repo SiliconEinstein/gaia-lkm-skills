@@ -3,7 +3,7 @@
 Load this file after Phase 2 is complete. Phase 3 is the analytical heart of
 the skill: it produces the load-bearing uncertainties (weak points) and
 load-bearing strengths (highlights) for each conclusion, and the probability
-calibrations that drive `priors.py` and the `deduction(...)` warrants.
+calibrations that drive `priors.py` and the `derive(...)` warrants.
 
 ## Goal
 
@@ -15,7 +15,7 @@ Phase 2 and produce in working notes:
    `priors.py` entry in Phase 4.
 2. **Highlights** — load-bearing strengths whose presence is a substantive
    reason to credit the conclusion. Highlights stay in `mapping_audit.md`;
-   they may also raise the `deduction(...)` warrant prior.
+   they may also raise the `derive(...)` warrant prior.
 3. **Per-conclusion synthesis** — an integrated `prior_probability` and a
    short narrative explaining how the weak points and highlights interact for
    that conclusion.
@@ -105,7 +105,8 @@ If two weak points on the same conclusion share an underlying factor — same
 approximation, same dataset, same lemma, same external assumption — extract
 the shared factor as a separate weak-point claim and let both supports
 threaten that one factor. This is the same logic as the `$lkm-explorer`
-`support()` shared-factor extraction rule; see
+shared-factor extraction rule on the `derive(...)` warrant surface (legacy
+`support()`); see
 [`$lkm-explorer/references/mapping-contract.md`](../../lkm-explorer/references/mapping-contract.md)
 §3a "Shared-factor extraction" for the canonical statement.
 
@@ -353,9 +354,9 @@ synthesis for that conclusion:
   `claim(...)` (capped at 0.9 — `review_prior` semantics are owned
   upstream; see `SiliconEinstein/Gaia` `docs/for-users/language-reference.md`);
   for isolated conclusions (no upstream, no weak points → no
-  `deduction(...)`) it is **also** used as the conclusion's `priors.py`
-  value because the conclusion is a leaf in that case. The `deduction(...)`
-  warrant prior is a different number — see upstream
+  `derive(...)`) it is **also** used as the conclusion's `priors.py`
+  value because the conclusion is a leaf in that case. The `derive(...)`
+  `warrant_prior` metadata value is a different number — see upstream
   `docs/for-users/language-reference.md` (deduction warrant calibration).
   Calibration:
   - A conclusion with several high-`p2` weak points cannot have a high

@@ -59,17 +59,17 @@ LKM-explorer-specific table format. A flat decision log:
 ```markdown
 # Mapping audit log — <package name>
 
-## Factors -> deductions
+## Factors -> derivations
 
 | factor_id | source_paper | premises | conclusion | dsl_kind |
 |---|---|---|---|---|
-| gfac_9d88a6f8 | paper:814606014073536517 | gcn_2386d1b6, gcn_9f7a3e33 | gcn_66ac13c8 | deduction |
+| gfac_9d88a6f8 | paper:814606014073536517 | gcn_2386d1b6, gcn_9f7a3e33 | gcn_66ac13c8 | derive |
 
 ## Equivalences
 
 | pair | a | b | decision | dsl_action |
 |---|---|---|---|---|
-| gcn_73c88cf / gcn_66ac13c8 | gcn_73c88cf | gcn_66ac13c8 | same paper (arXiv->PRB) | merged; no equivalence() |
+| gcn_73c88cf / gcn_66ac13c8 | gcn_73c88cf | gcn_66ac13c8 | same paper (arXiv->PRB) | merged; no equal() |
 
 ## Contradictions
 

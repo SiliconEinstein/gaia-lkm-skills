@@ -12,7 +12,7 @@ file and the mapping contract disagree, the mapping contract wins.
 
 `mapping-contract.md` §4 is the sole authority for contradiction semantics. In
 this step, prioritize open-question discovery, then run a final scan that either
-emits direct `contradiction(A, B)` for accepted scientific contradictions or
+emits direct `contradict(A, B)` for accepted scientific contradictions or
 keeps the item as hypothesis/audit-only.
 
 ## Baseline Sources To Check
@@ -94,21 +94,24 @@ the hypothesis is how later refreshes remember what to test.
 ## Accepted Contradiction Output
 
 For each final-scan `accepted_contradiction`, emit direct
-`contradiction(A, B)` using the `xx_vs_yy` label policy in
+`contradict(A, B)` using the `xx_vs_yy` label policy in
 `mapping-contract.md` §4:
 
 ```python
-<side_a>_vs_<side_b>[_<quantity_or_regime>] = contradiction(
+<side_a>_vs_<side_b>[_<quantity_or_regime>] = contradict(
     A,
     B,
-    prior=0.95,
-    reason="<why A and B are an adjudicable scientific conflict> | open_problem: <specific discriminating question>",
+    rationale="<why A and B are an adjudicable scientific conflict> | open_problem: <specific discriminating question>",
+    label="<side_a>_vs_<side_b>[_<quantity_or_regime>]",
 )
 ```
 
-The `reason` field must include `open_problem:`. If no specific open problem can
-be written, the candidate is not ready for `accepted_contradiction`; keep it as
-`hypothesis_only`.
+The operator's warrant strength lives on its `metadata` (e.g.
+`metadata={"warrant_prior": 0.95}`) rather than as a top-level `prior=` kwarg.
+
+The `rationale` field must include `open_problem:`. If no specific open
+problem can be written, the candidate is not ready for
+`accepted_contradiction`; keep it as `hypothesis_only`.
 
 The audit row for an emitted contradiction must include:
 
@@ -139,7 +142,7 @@ Warrant prior ranges for accepted contradiction operators:
 For tensions that raise useful open problems but do not yet satisfy
 `mapping-contract.md` §4's final promotion standard:
 
-- write no Gaia `contradiction(...)` operator,
+- write no Gaia `contradict(...)` operator,
 - append a row to `artifacts/lkm-discovery/contradictions.md` or a topic audit
   file,
 - include raw LKM anchors, why it is scientifically interesting, the open
@@ -160,9 +163,9 @@ Before moving to Step 4:
   search or recorded `conflict_not_found` with query/candidate rationales.
 - Every conflict candidate that entered scope comparison has a
   `candidate_considered` event before its final verdict.
-- Accepted contradictions have direct `contradiction(A, B)` operators whose
+- Accepted contradictions have direct `contradict(A, B)` operators whose
   labels identify both sides with the `xx_vs_yy` convention, with an
-  `open_problem:` reason, high operator prior, and audit
+  `open_problem:` rationale, high `warrant_prior` metadata, and audit
   `relation_type: scientific_inconsistency`.
 - Non-promoted but useful tensions are preserved as hypothesis/audit-only rows.
 - Every inquiry hypothesis CLI call has a paired `hypothesis_added` event.

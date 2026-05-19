@@ -1,8 +1,8 @@
 # Phase 2 — Reconstruct the Reasoning Chain
 
 Load this file after Phase 1 is complete. Phase 2 produces the per-conclusion
-reasoning chains that will populate the `reason=` field of each
-`deduction(...)` in Phase 4.
+reasoning chains that will populate the `rationale=` field of each
+`derive(...)` in Phase 4.
 
 ## Goal
 
@@ -12,7 +12,7 @@ upstream conclusions, prior cited results) to the conclusion itself.
 
 The trace is held in working notes as an ordered list of step strings per
 conclusion. Each step is one logical move. Steps are not claims; they are
-prose that becomes part of `deduction(...)`'s `reason=`.
+prose that becomes part of `derive(...)`'s `rationale=`.
 
 ## Topological Ordering
 
@@ -99,7 +99,7 @@ proof, record the move as such — do not silently repair it:
 - "At this point the argument relies on a heuristic that ..."
 
 These flagged steps inform the deduction prior in Phase 4; persistent gaps
-push the warrant `prior=` below the default 0.95.
+push the `metadata={"warrant_prior": ...}` value below the default 0.95.
 
 ### 5. No paper-internal pointers in step prose
 
@@ -164,8 +164,8 @@ reasoning_chains:
 ```
 
 Step ids are **local** to each conclusion's chain (1, 2, 3, ... per chain).
-The numbered Markdown formatting carries through to the final `deduction()`
-`reason=` field in Phase 4.
+The numbered Markdown formatting carries through to the final `derive(...)`
+`rationale=` field in Phase 4.
 
 ## Phase-Completion Gate
 

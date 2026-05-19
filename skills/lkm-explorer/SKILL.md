@@ -1,6 +1,6 @@
 ---
 name: lkm-explorer
-description: Contract-driven LKM exploration in service of populating a Gaia knowledge package per the upstream Gaia spec. Maps LKM evidence/source payloads (raw match/evidence/variables JSON) into Gaia DSL via a progressive five-step workflow with contradiction-driven graph expansion. Modes are `batch` (create a fresh `<name>-gaia/` package) and `refresh` (extend or repair an existing package in place). Owns the LKM-driven `lkm-discovery/` audit dir (retrieval log + LKM-specific decisions) and the `graph_growth_log.jsonl` chronological growth log. Generic claim/deduction/support emission rules and package layout are owned upstream (see upstream `SiliconEinstein/Gaia` docs `docs/for-users/`). Domain-agnostic.
+description: Contract-driven LKM exploration in service of populating a Gaia knowledge package per the upstream Gaia spec. Maps LKM evidence/source payloads (raw match/evidence/variables JSON) into Gaia DSL via a progressive five-step workflow with contradiction-driven graph expansion. Modes are `batch` (create a fresh `<name>-gaia/` package) and `refresh` (extend or repair an existing package in place). Owns the LKM-driven `lkm-discovery/` audit dir (retrieval log + LKM-specific decisions) and the `graph_growth_log.jsonl` chronological growth log. Generic claim/derive/contradict emission rules and package layout are owned upstream (see upstream `SiliconEinstein/Gaia` docs `docs/for-users/`). Domain-agnostic.
 ---
 
 # LKM-Explorer
@@ -25,7 +25,7 @@ via `gaia run infer`, and carries LKM provenance into `**metadata` kwargs of eve
 claim.
 
 > **Contract ownership.** Gaia knowledge-package shape (`<name>-gaia/` layout,
-> file templates), `claim` / `deduction` / `support` body discipline, label
+> file templates), `claim` / `derive` / `contradict` body discipline, label
 > rules, and module placement are owned upstream by `SiliconEinstein/Gaia` —
 > see `docs/for-users/language-reference.md` and
 > `docs/for-users/quick-start.md`. This skill adds the LKM-specific
@@ -84,7 +84,7 @@ obligations, start a new five-step iteration with the new target.
 - Raw LKM JSON and `data.papers` are the source of truth for science-facing
   claims, factors, steps, provenance, references, and audit anchors.
 - Chain-backed claims (`total_chains > 0`) may produce factor-derived
-  `deduction(...)`; no-chain LKM source claims may enter after cold start only
+  `derive(...)`; no-chain LKM source claims may enter after cold start only
   as leaf/source `claim(...)` nodes.
 - Search leads outside accepted chain-backed factors or accepted post-cold-start
   source claims do not enter executable DSL.
@@ -97,11 +97,13 @@ obligations, start a new five-step iteration with the new target.
   user. For every frontier science claim, the orchestrator runs both support and
   open-question/conflict LKM channels; this skill maps accepted candidates.
 - Support handling follows `mapping-contract.md` §3: real Gaia
-  `support([premises], conclusion, reason=..., prior=...)` syntax, LKM-grounded
-  endpoints, no synthetic bridge facts, and duplicate/shared-factor controls.
+  `derive(target, given=[premises], rationale=..., metadata={"warrant_prior": ...})`
+  syntax (canonical replacement for the legacy named-strategy
+  `support(...)`), LKM-grounded endpoints, no synthetic bridge facts, and
+  duplicate/shared-factor controls.
 - Contradiction handling follows `mapping-contract.md` §4: prioritize open
   questions, then final-scan accepted scientific contradictions into direct
-  `contradiction(A, B)` operators with `xx_vs_yy` labels and audit
+  `contradict(a, b)` operators with `xx_vs_yy` labels and audit
   `relation_type: scientific_inconsistency`; other useful tensions remain audit
   rows plus optional inquiry hypotheses.
 - Audit-trail files are cumulative and must not silently overwrite prior
@@ -161,7 +163,7 @@ read-only pointer targets; do not duplicate locally):
 - `docs/for-users/quick-start.md` — end-to-end Gaia knowledge-package
   workflow (directory layout, file templates, package initialization).
 - `docs/for-users/language-reference.md` — DSL primitives
-  (`claim` / `deduction` / `support` / `contradiction` / `equivalence`),
+  (`claim` / `derive` / `contradict` / `equal` / `exclusive`),
   label discipline, module placement.
 - `docs/for-users/cli-commands.md` — full CLI reference
   (`gaia build compile` / `build check` / `run infer` / `run render` / etc.).

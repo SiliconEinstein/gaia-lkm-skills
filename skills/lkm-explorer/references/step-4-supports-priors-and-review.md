@@ -6,25 +6,30 @@ leaves, double counting, and untracked weak premises.
 ## Upstream Support
 
 For root-claim frontier expansion, every frontier claim receives a
-support-channel LKM search. Search for upstream LKM-grounded conclusions relevant to the target
-claim. A single target may have multiple upstream supports; each can get its own
-directional `support(...)`:
+support-channel LKM search. Search for upstream LKM-grounded conclusions
+relevant to the target claim. A single target may have multiple upstream
+supports; each can get its own directional `derive(...)` (canonical v0.5
+replacement for the legacy `support(...)` strategy — see
+`docs/for-users/language-reference.md` "Notable migration rows"):
 
 ```python
-support([U_1], P, reason="<what U_1 says and why it supports P>", prior=<float>)
-support([U_2], P, reason="<what U_2 says and why it supports P>", prior=<float>)
+derive(P, given=[U_1], rationale="<what U_1 says and why it supports P>",
+       metadata={"warrant_prior": <float>})
+derive(P, given=[U_2], rationale="<what U_2 says and why it supports P>",
+       metadata={"warrant_prior": <float>})
 ```
 
 When several upstream claims only support the target jointly, use a joint
-support:
+derivation:
 
 ```python
-support([U_1, U_2], P, reason="<joint support rationale>", prior=<float>)
+derive(P, given=[U_1, U_2], rationale="<joint support rationale>",
+       metadata={"warrant_prior": <float>})
 ```
 
-`support([a], b, prior=p)` means `a` supports `b`; high `p` means `a` nearly
-determines `b`. This is true Gaia DSL syntax for the current `gaia.lang`
-support strategy.
+`derive(P, given=[a], metadata={"warrant_prior": p})` means `a` supports
+`P`; high `p` means `a` nearly determines `P`. The warrant strength lives
+on the `metadata` kwarg in v0.5 rather than as a top-level `prior=` kwarg.
 
 Minimum support-channel effort per frontier claim:
 
@@ -46,12 +51,14 @@ Warrant prior ranges:
 - Moderate, related and partially overlaps: 0.70–0.85.
 - Weak or lateral: 0.50–0.65.
 
-The `support(...)` edge may be a scientific-review judgment rather than an LKM
-factor, but both endpoint claims must already be LKM-grounded.
+The `derive(...)` warrant edge may be a scientific-review judgment rather
+than an LKM factor, but both endpoint claims must already be LKM-grounded.
 
-> Support reason discipline (no smuggling; on-the-fly premise claims are normal):
-> see upstream `SiliconEinstein/Gaia` `docs/for-users/language-reference.md`
-> (`support` semantics).
+> Warrant rationale discipline (no smuggling; on-the-fly premise claims are
+> normal): see upstream `SiliconEinstein/Gaia`
+> `docs/for-users/language-reference.md` (`derive` semantics; the legacy
+> `support` strategy semantics on the compat surface inform the same
+> discipline).
 
 For cross-scope supports involving different geometry, material, temperature,
 experimental extraction method, approximation, or mass definition, keep the
@@ -96,10 +103,10 @@ claim priors at 0.90. Do not lower a prior solely because the claim has
 `total_chains=0`; judge content, provenance clarity, method/scope specificity,
 and scientific plausibility.
 
-Accepted `contradiction(...)` operators from Step 3 carry their own high warrant
-prior in source, normally `0.95` as defined in `mapping-contract.md` §4. That
-operator prior is not a leaf-claim prior and should not be mirrored into
-`priors.py`.
+Accepted `contradict(...)` operators from Step 3 carry their own high
+`warrant_prior` metadata in source, normally `0.95` as defined in
+`mapping-contract.md` §4. That operator warrant is not a leaf-claim prior
+and should not be mirrored into `priors.py`.
 Append a `prior_added` graph-growth event for each prior batch.
 
 ## Inquiry Obligations
@@ -133,7 +140,7 @@ For duplicate cleanup or refreshes, classify suspicious pairs:
 
 - exact duplicate -> merge,
 - same-paper helper restatement -> merge into canonical claim when safe,
-- independent same proposition -> keep both and add `equivalence(...)`,
+- independent same proposition -> keep both and add `equal(...)`,
 - different scope/material/method/condition -> keep distinct and log,
 - ambiguous -> keep distinct and add to `merge_decisions.todo`.
 

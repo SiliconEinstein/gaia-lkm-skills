@@ -117,7 +117,7 @@ paragraph. Do not invent contributions to fill the gap.
   conclusion (`claim_kind="conclusion"`, exported in `__all__`) or a step-3
   weak point used as a leaf premise (`claim_kind="weak_point"`, listed in
   `priors.py`). A reasoning step is not a claim; it is text that lives
-  inside a `deduction(...)` `reason=` field.
+  inside a `derive(...)` `rationale=` field.
 - **One epistemic question per conclusion.** Each `claim_kind="conclusion"`
   body answers exactly one citable question — "what is the new bound /
   relation / procedure / value / agreement?" — not several. A paragraph
@@ -128,14 +128,14 @@ paragraph. Do not invent contributions to fill the gap.
 - **One deduction per derived conclusion.** Each conclusion that has at
   least one upstream conclusion or one weak point becomes the conclusion
   of exactly one
-  `deduction([premises], conclusion, reason=..., prior=...)`. Premises are
-  the union of the conclusion's upstream conclusions (from the
-  cross-conclusion logic graph) and its weak-point claims.
+  `derive(conclusion, given=[premises], rationale=..., metadata={"warrant_prior": ...})`.
+  Premises are the union of the conclusion's upstream conclusions (from
+  the cross-conclusion logic graph) and its weak-point claims.
 - **Highlights are audit-only.** Step-3 highlights characterize *why* a
   conclusion is unusually solid, but they do not enter the executable DSL —
-  Gaia's BP semantics already handle credit through priors and deduction
-  warrant. Highlights are recorded in `mapping_audit.md` and referenced
-  when setting deduction warrant priors.
+  Gaia's BP semantics already handle credit through priors and the
+  `derive(...)` warrant. Highlights are recorded in `mapping_audit.md` and
+  referenced when setting `derive(...)` warrant priors.
 - **Probability calibration on `priors.py`.** Leaf-claim priors come from
   step-3 calibrations (`prior_probability` for the weak point, capped at
   0.9). Each justification ends with `TODO:review`. Do not invent priors
@@ -198,7 +198,7 @@ read-only pointer targets; do not duplicate locally):
 - `docs/for-users/quick-start.md` — end-to-end Gaia knowledge-package
   workflow, including single-paper package layout, file templates,
   and audit-dir layout.
-- `docs/for-users/language-reference.md` — `claim` / `deduction` /
+- `docs/for-users/language-reference.md` — `claim` / `derive` /
   `question` emission rules, `provenance_source` / `claim_kind` /
   `weak_types` enums, `p1` / `p2` / `review_prior` semantics, `refs`
   whitelist, deduction warrant calibration, label rules,

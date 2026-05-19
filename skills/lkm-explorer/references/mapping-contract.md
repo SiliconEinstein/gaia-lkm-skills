@@ -1,7 +1,7 @@
 # LKM-Explorer-Specific Contract
 
-> Generic Gaia knowledge package emission rules — `claim` / `deduction` /
-> `support` / `contradiction` / `equivalence` body discipline and package
+> Generic Gaia knowledge package emission rules — `claim` / `derive` /
+> `contradict` / `equal` / `exclusive` body discipline and package
 > layout — are owned upstream by `SiliconEinstein/Gaia` (see
 > `docs/for-users/language-reference.md` and
 > `docs/for-users/quick-start.md`). This file covers ONLY rules specific
@@ -12,7 +12,7 @@
 
 ## 0. Evidence-status vocabulary
 
-- **Chain-backed claim**: LKM returned claim content and `GET /claims/{id}/evidence` has `total_chains > 0`. Emit `claim(...)` plus factor-derived `deduction(...)` when factors are present.
+- **Chain-backed claim**: LKM returned claim content and `GET /claims/{id}/evidence` has `total_chains > 0`. Emit `claim(...)` plus factor-derived `derive(...)` when factors are present.
 - **LKM source claim**: LKM returned claim content and provenance, but `total_chains = 0`. After cold start, emit it as a leaf/source `claim(...)`; do not invent premises or deductions.
 - **Search lead**: insufficient content or provenance for a self-contained claim outside an accepted chain-backed factor. Keep only in audit/search notes.
 
@@ -27,14 +27,14 @@ Generic `claim(...)` body rules — label discipline, self-contained check, no
 - **No-chain LKM source claims.** If `total_chains = 0`, use
   `provenance_source="lkm_no_chain"`, preserve `lkm_id`, `lkm_original`, and
   `source_paper` when available, and log the no-chain status in the audit
-  trail. Do not create `deduction(...)` without factors.
+  trail. Do not create `derive(...)` without factors.
 - **Prior policy for no-chain candidates.** Do not lower a prior solely because
   `total_chains=0`. Set priors from claim content, provenance clarity,
   method/scope specificity, and scientific judgment.
 - **Chain-internal empty-content premises.** When an LKM evidence chain
   references a premise whose `content` is empty, a placeholder string plus
   `todo="revisit when LKM corpus populates this premise"` in metadata may be
-  used to preserve a factor-derived `deduction(...)`. Log
+  used to preserve a factor-derived `derive(...)`. Log
   `content_missing=true` in `mapping_audit.md`. Do not invent content.
 - **Empty or under-provenanced match/search results outside an accepted
   chain** are **search leads**, not placeholder claims. Record them in audit
@@ -44,23 +44,30 @@ Generic `claim(...)` body rules — label discipline, self-contained check, no
 
 During root-claim frontier expansion, the agent searches LKM for content that
 can directly support each frontier claim. A single target claim may have
-**multiple** accepted upstream supports. Use the real Gaia DSL strategy:
+**multiple** accepted upstream supports. Use the canonical v0.5 deterministic
+warrant primitive (the legacy named-strategy `support(...)` is replaced by
+`derive(...)` with a `warrant_prior` metadata kwarg — see
+`docs/for-users/language-reference.md` "Notable migration rows"):
 
 ```python
-support([U_1], target, reason="<what U_1 says and why it supports target>", prior=<float>)
-support([U_2], target, reason="<what U_2 says and why it supports target>", prior=<float>)
+derive(target, given=[U_1], rationale="<what U_1 says and why it supports target>",
+       metadata={"warrant_prior": <float>})
+derive(target, given=[U_2], rationale="<what U_2 says and why it supports target>",
+       metadata={"warrant_prior": <float>})
 ```
 
 When several upstream claims only support the target jointly, use one joint
-support:
+derivation:
 
 ```python
-support([U_1, U_2], target, reason="<joint support rationale>", prior=<float>)
+derive(target, given=[U_1, U_2], rationale="<joint support rationale>",
+       metadata={"warrant_prior": <float>})
 ```
 
-`support([a], b, prior=p)` is directional: `a` supports `b`. In Gaia, support is
-soft deduction over a directed implication. Higher `p` means the support warrant
-is stronger; `p` close to 1 means `a` nearly determines `b`.
+`derive(target, given=[a], metadata={"warrant_prior": p})` is directional:
+`a` supports `target`. In Gaia v0.5 the warrant strength `p` lives on the
+deduction's metadata rather than as a top-level kwarg; higher `p` means the
+warrant is stronger; `p` close to 1 means `a` nearly determines `target`.
 
 Search effort for each frontier target:
 - Run at least 2 distinct support-channel LKM match queries.
@@ -78,9 +85,11 @@ The support relation itself may be a reviewer/agent scientific judgment rather
 than an LKM `gfac_*` factor, but both endpoints must already be LKM-grounded
 Gaia claims.
 
-> Support reason discipline (no smuggling; on-the-fly premise claims are normal):
-> see upstream `SiliconEinstein/Gaia` `docs/for-users/language-reference.md`
-> (`support` semantics).
+> Warrant rationale discipline (no smuggling; on-the-fly premise claims are
+> normal): see upstream `SiliconEinstein/Gaia`
+> `docs/for-users/language-reference.md` (`derive` semantics; the legacy
+> `support` strategy semantics on the compat surface inform the same
+> discipline).
 
 For cross-scope supports (different geometry, material, temperature, extraction
 method, approximation, or mass definition), use weak priors close to neutral
@@ -90,7 +99,7 @@ does not silently treat lateral context as strong independent evidence.
 
 Support candidates may be chain-backed or no-chain LKM source claims after cold
 start. Chain-backed candidates may add their own `claim(...)` nodes and
-factor-derived `deduction(...)` strategies. No-chain candidates may enter only
+factor-derived `derive(...)` strategies. No-chain candidates may enter only
 as leaf/source `claim(...)` nodes with clear content and provenance.
 
 ### 3a. Shared-factor extraction (>=2 supports converging on same target)
@@ -147,13 +156,17 @@ after the two sides so graph views and review output make the conflict visible
 without opening metadata:
 
 ```python
-<side_a>_vs_<side_b>[_<quantity_or_regime>] = contradiction(
+<side_a>_vs_<side_b>[_<quantity_or_regime>] = contradict(
     A,
     B,
-    prior=0.95,
-    reason="<why these claims are adjudicably conflicting> | open_problem: <specific discriminating question>",
+    rationale="<why these claims are adjudicably conflicting> | open_problem: <specific discriminating question>",
+    label="<side_a>_vs_<side_b>[_<quantity_or_regime>]",
 )
 ```
+
+The operator-warrant strength lives on the call's `metadata` (e.g.
+`metadata={"warrant_prior": 0.95}`) rather than as a top-level `prior=`
+kwarg; the relation verb itself does not accept `prior=`.
 
 Label rules:
 - Prefer `<side_a>_vs_<side_b>` with short semantic side names, e.g.
@@ -163,16 +176,16 @@ Label rules:
 - Keep the label a valid Gaia/Python identifier: lowercase letters, digits, and
   underscores only.
 - Do not name the node `scientific_inconsistency_*`, `paradox_*`, or a generic
-  `contradiction_*`; the operator kind already supplies the relation semantics,
+  `contradict_*`; the operator kind already supplies the relation semantics,
   while the label should identify the two conflicting sides.
 
-The contradiction operator prior is the warrant strength that this pair should
-be treated as an adjudicable scientific contradiction, not a prior on either
-claim being true. Use `0.95` for clear accepted contradictions. Use `0.85-0.92`
-only when the pair is accepted but the scope match or discriminating question is
-less crisp. Do not lower the operator prior merely because the candidate came
-from different methods; method/method conflicts are often the point of the
-contradiction.
+The `contradict(...)` operator's `warrant_prior` metadata is the warrant
+strength that this pair should be treated as an adjudicable scientific
+contradiction, not a prior on either claim being true. Use `0.95` for clear
+accepted contradictions. Use `0.85-0.92` only when the pair is accepted but
+the scope match or discriminating question is less crisp. Do not lower the
+operator warrant merely because the candidate came from different methods;
+method/method conflicts are often the point of the contradiction.
 
 In audit rows, record the taxonomy explicitly:
 
@@ -188,7 +201,7 @@ appropriate for the field.
 
 ### Promotion signals
 
-Promote a candidate to `contradiction(A, B)` when one or more of these apply:
+Promote a candidate to `contradict(A, B)` when one or more of these apply:
 
 - The claims assert opposite values, signs, orderings, trends, or qualitative
   conclusions about the same system/material, quantity/effect, or scientific
@@ -219,7 +232,7 @@ yet promotable:
 - the candidate is a false alarm, duplicate wording, or unsupported search lead.
 
 For hypothesis-only rows, record why the pair is scientifically interesting,
-the best current open problem, why no `contradiction(...)` operator was emitted,
+the best current open problem, why no `contradict(...)` operator was emitted,
 and what query or evidence would be needed to promote it later.
 
 ## 8. Timeline replay logs (LKM-explorer requirement)
@@ -245,7 +258,7 @@ They do not apply to the raw `$lkm-api` skill or sibling graph/synthesis skills.
 
 ## 9. What this contract does NOT cover
 
-- Generic claim/deduction/support/contradiction/equivalence emission rules,
+- Generic claim/derive/contradict/equal/exclusive emission rules,
   label discipline, and module placement — owned upstream
   (`SiliconEinstein/Gaia` `docs/for-users/language-reference.md`).
 - Package layout and templates (`pyproject.toml`, `__init__.py`,

@@ -120,8 +120,9 @@ Round 0 frontier is the cold-start root claim selected by the user.
 
 After a completed expansion round, the next frontier is every newly admitted,
 LKM-grounded **science claim** added in that round. Do not expand generated
-helper claims from `support(...)`, `deduction(...)`, or `contradiction(...)`, and
-do not re-expand claims already recorded in the visited frontier log.
+helper claims from `derive(...)` (warrant or factor-derived) or
+`contradict(...)`, and do not re-expand claims already recorded in the
+visited frontier log.
 
 At the start of each expansion round, append `stage_transition` when entering
 `frontier_expansion`, then append `round_open` with `frontier_in` and
@@ -163,21 +164,27 @@ real Gaia DSL.
 
 - Fetch evidence for promising support candidates whenever possible.
 - Chain-backed candidates may add `claim(...)` nodes and factor-derived
-  `deduction(...)` strategies.
+  `derive(...)` strategies.
 - Clear no-chain LKM source claims may enter after cold start as leaf/source
   `claim(...)` nodes.
 - A support edge may be a scientific-review judgment rather than an LKM
   `gfac_*` factor, but both endpoints must be LKM-grounded Gaia claims.
-- Accepted support uses real Gaia DSL:
+- Accepted support uses real Gaia DSL (canonical v0.5 form — `derive(...)`
+  with `warrant_prior` metadata replaces the legacy `support(...)` strategy;
+  see `docs/for-users/language-reference.md` "Notable migration rows"):
 
 ```python
-support([upstream_claim], target_claim, reason="<why upstream supports target>", prior=<float>)
+derive(target_claim, given=[upstream_claim],
+       rationale="<why upstream supports target>",
+       metadata={"warrant_prior": <float>})
 ```
 
 or, when several upstream claims only support the target jointly:
 
 ```python
-support([u1, u2], target_claim, reason="<joint support rationale>", prior=<float>)
+derive(target_claim, given=[u1, u2],
+       rationale="<joint support rationale>",
+       metadata={"warrant_prior": <float>})
 ```
 
 Allow multiple accepted support candidates into the same iteration when they
@@ -212,13 +219,17 @@ Accepted contradictions follow the mapping contract's open-question-first
 standard and use direct Gaia DSL:
 
 ```python
-<side_a>_vs_<side_b>[_<quantity_or_regime>] = contradiction(
+<side_a>_vs_<side_b>[_<quantity_or_regime>] = contradict(
     A,
     B,
-    reason="<why A and B are adjudicably conflicting> | open_problem: <question>",
-    prior=0.95,
+    rationale="<why A and B are adjudicably conflicting> | open_problem: <question>",
+    label="<side_a>_vs_<side_b>[_<quantity_or_regime>]",
 )
 ```
+
+The operator-warrant strength lives on the call's `metadata` (e.g.
+`metadata={"warrant_prior": 0.95}`) rather than as a top-level `prior=`
+kwarg.
 
 If no candidate satisfies the hypothesis or contradiction standards, record
 `conflict_not_found` with the queries checked and rejection rationales.
@@ -241,8 +252,9 @@ Each row should include:
 - raw input filename(s),
 - scope comparison across system, quantity, method/model, theory/experiment
   role, regime, and conditions,
-- proposed Gaia action: `claim`, `deduction`, `support`,
-  `accepted_contradiction`, `hypothesis_only`, `dismissed`, or `not_found`,
+- proposed Gaia action: `claim`, `derive` (covers both factor-derived
+  deductions and warrant supports), `accepted_contradiction`,
+  `hypothesis_only`, `dismissed`, or `not_found`,
 - rationale and next action.
 
 The corresponding JSONL events should fill structured fields when applicable:
@@ -262,7 +274,7 @@ quality gates or review identify issues.
 3. Classify each pair:
    - exact duplicate -> merge,
    - same-paper helper restatement -> merge when safe,
-   - independent same proposition -> keep both and add `equivalence(...)`,
+   - independent same proposition -> keep both and add `equal(...)`,
    - different scope/material/method/condition -> keep distinct and log,
    - ambiguous -> keep distinct and add to `merge_decisions.todo`.
 4. Fill leaf priors surfaced by `gaia build check --hole .` in `priors.py`.

@@ -5,7 +5,7 @@ payload content into Gaia DSL source.
 
 ## Required References
 
-- `mapping-contract.md` §§0–2, 5–7 for claim, deduction, references, exports,
+- `mapping-contract.md` §§0–2, 5–7 for claim, derive, references, exports,
   and module placement rules.
 - `package-skeleton.md` when creating or reshaping package files.
 - `timeline-log-contract.md` before recording accepted DSL actions.
@@ -17,16 +17,16 @@ For each chain-backed root claim, load the LKM evidence payload. Write:
 - one `claim(...)` for the root conclusion,
 - one `claim(...)` for every distinct premise with usable content,
 - one placeholder `claim(...)` for a chain-internal empty-content premise only
-  when needed to preserve a factor-derived `deduction(...)`,
-- one `deduction([premises], conclusion, reason="<numbered LKM steps>",
-  prior=0.95)` for every `gfac_*` factor.
+  when needed to preserve a factor-derived `derive(...)`,
+- one `derive(conclusion, given=[premises], rationale="<numbered LKM steps>",
+  metadata={"warrant_prior": 0.95})` for every `gfac_*` factor.
 
-When `factors[].steps[]` contains usable `reasoning`, the deduction reason is
-the full LKM evidence formatted as a numbered markdown list, preserving step
-order and figure/table references.
+When `factors[].steps[]` contains usable `reasoning`, the deduction rationale
+is the full LKM evidence formatted as a numbered markdown list, preserving
+step order and figure/table references.
 
 When `factors[].steps[]` is missing or empty, still emit the factor-derived
-`deduction(...)`, but use an explicit fallback reason:
+`derive(...)`, but use an explicit fallback rationale:
 `LKM factor <gfac_id> links premises <ids> to conclusion <id>; step-level
 reasoning was not returned by the API.` Record `steps_missing=true` for that
 factor in `mapping_audit.md`.
@@ -39,7 +39,7 @@ leaf/source `claim(...)` with:
 - preserved `lkm_original`,
 - `source_paper` when available.
 
-Do not fabricate premises, factors, steps, or `deduction(...)` for no-chain
+Do not fabricate premises, factors, steps, or `derive(...)` for no-chain
 source claims.
 
 ## Empty-Content Premises Vs Search Leads
@@ -90,10 +90,11 @@ atomic claims, keep the original compound claim and log the limitation.
 
 Connect decomposed claims through `mapping-contract.md` §4:
 
-- Accepted scientific contradiction -> emit direct `contradiction(A, B)` with
-  an `xx_vs_yy` label, the associated `open_problem:` reason, high operator
-  prior, and audit `relation_type: scientific_inconsistency`.
-- Same proposition -> `equivalence(A, B, reason="...", prior=...)`.
+- Accepted scientific contradiction -> emit direct `contradict(A, B)` with
+  an `xx_vs_yy` label, the associated `open_problem:` rationale, high
+  `warrant_prior` metadata, and audit
+  `relation_type: scientific_inconsistency`.
+- Same proposition -> `equal(A, B, rationale="...", metadata={"warrant_prior": ...})`.
 - Useful but not-yet-promoted tension -> no Gaia operator; log an audit row and
   optional inquiry hypothesis.
 
@@ -120,7 +121,7 @@ Place source:
 Before moving to Step 3:
 
 - All accepted claims are self-contained or explicitly logged as placeholders.
-- Chain-backed factors have corresponding `deduction(...)` calls.
+- Chain-backed factors have corresponding `derive(...)` calls.
 - Factors without step-level reasoning have explicit fallback reasons and
   `steps_missing=true` audit entries.
 - Chain-internal empty premises are placeholders only when needed for a factor,
