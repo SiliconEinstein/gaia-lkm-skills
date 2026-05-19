@@ -265,7 +265,7 @@ quality gates or review identify issues.
    - independent same proposition -> keep both and add `equivalence(...)`,
    - different scope/material/method/condition -> keep distinct and log,
    - ambiguous -> keep distinct and add to `merge_decisions.todo`.
-4. Fill leaf priors surfaced by `gaia check --hole .` in `priors.py`.
+4. Fill leaf priors surfaced by `gaia build check --hole .` in `priors.py`.
 5. Log every verdict in `merge_audit.md` or `mapping_audit.md`.
 6. Append graph-growth events for merge, keep-distinct, prior, and repair
    decisions.
@@ -276,10 +276,10 @@ quality gates or review identify issues.
 Run before accepting any package state:
 
 ```bash
-gaia compile .
-gaia check --brief .
-gaia check --hole .
-gaia infer .
+gaia build compile .
+gaia build check --brief .
+gaia build check --hole .
+gaia run infer .
 gaia inquiry review --strict .
 ```
 

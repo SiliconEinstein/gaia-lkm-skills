@@ -10,7 +10,7 @@ description: Single-paper formalization — read one academic paper (Markdown pr
 Read a single academic paper (Markdown preferred; plain-text or other
 readable text formats also accepted), audit it as a scientific reasoning
 reviewer would, and emit a standalone Gaia knowledge package that
-compiles via `gaia compile` and propagates beliefs via `gaia infer`. The
+compiles via `gaia build compile` and propagates beliefs via `gaia run infer`. The
 agent running this skill does the analytical work itself; it does not
 orchestrate a separate extraction pipeline and does not produce intermediate
 XML artifacts.
@@ -164,7 +164,7 @@ paragraph. Do not invent contributions to fill the gap.
   `SiliconEinstein/Gaia` (see `docs/for-users/`). This skill consumes
   upstream rules where they apply and adds paper-decomposition workflow on
   top.
-- It does not run `gaia compile` / `gaia infer` itself; the caller runs
+- It does not run `gaia build compile` / `gaia run infer` itself; the caller runs
   those quality gates after emission. Surfaced compile errors come back as
   Phase 4 follow-up obligations, not as a built-in step.
 - It does not orchestrate the existing `paper-extract` Python pipeline.
@@ -203,8 +203,8 @@ read-only pointer targets; do not duplicate locally):
   `weak_types` enums, `p1` / `p2` / `review_prior` semantics, `refs`
   whitelist, deduction warrant calibration, label rules,
   `references.json` (CSL-JSON) conventions, `__all__` rules.
-- `docs/for-users/cli-commands.md` — full CLI reference (`gaia compile`
-  / `check` / `infer` / `run render`).
+- `docs/for-users/cli-commands.md` — full CLI reference (`gaia build compile`
+  / `build check` / `run infer` / `run render`).
 - `docs/for-users/hole-bridge-tutorial.md` — prior calibration tutorial.
 
 For runtime help, prefer `gaia <group> <cmd> --help`.

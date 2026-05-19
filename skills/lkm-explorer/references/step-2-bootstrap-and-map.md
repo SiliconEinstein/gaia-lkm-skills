@@ -72,7 +72,7 @@ Include the missing scientific scope when available:
 Always preserve raw wording in `lkm_original`.
 
 Do not add a `prior` kwarg on `claim(...)`; leaf priors go in `priors.py` after
-`gaia check --hole`.
+`gaia build check --hole`.
 
 ## Decompose Compound Claims
 

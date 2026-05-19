@@ -84,7 +84,7 @@ LKM-explorer-specific table format. A flat decision log:
 | (none in this run) | | |
 ```
 
-This audit log is the reviewer's first stop after `gaia infer .` returns
+This audit log is the reviewer's first stop after `gaia run infer .` returns
 surprising beliefs.
 
 The "Factors -> deductions / Equivalences / Contradictions / Dismissed"

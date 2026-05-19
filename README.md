@@ -25,7 +25,7 @@ Atomic skills + one thin orchestrator. Full contracts live in each skill's `SKIL
 - **`skills/evidence-subgraph/`** — build / audit / render an evidence graph from LKM chain payloads (factor diamonds, three-class edge taxonomy, chain-bounded discipline). Optional graph-only branch; not an upstream dependency of `$lkm-explorer`.
 - **`skills/scholarly-synthesis/`** — *optional / future-work*: write a domain-vocabulary scholarly synthesis from an audited evidence graph + bibliographic metadata. Not part of the LKM/Paper → Gaia package loop.
 
-For Gaia DSL primitives (`claim` / `deduction` / `support` / `contradiction` / `equivalence` body discipline, metadata kwargs, package layout) and the Gaia CLI (`init`, `compile`, `check`, `infer`, `run render`, `register`, `add`), see the upstream `SiliconEinstein/Gaia` docs:
+For Gaia DSL primitives (`claim` / `deduction` / `support` / `contradiction` / `equivalence` body discipline, metadata kwargs, package layout) and the Gaia CLI (`build init`, `build compile`, `build check`, `run infer`, `run render`, `pkg register`, `pkg add`), see the upstream `SiliconEinstein/Gaia` docs:
 
 - `docs/for-users/quick-start.md` — end-to-end workflow.
 - `docs/for-users/language-reference.md` — DSL primitives + package structure.
@@ -37,11 +37,11 @@ For runtime help, prefer `gaia <group> <cmd> --help`; the upstream CLI is self-d
 ## Routing paths (full recipes in `skills/orchestrator/SKILL.md`)
 
 1. **LKM → Gaia Package** — the maintained LKM-driven flow. Read `references/lkm-explorer-sop.md`, then `$lkm-api/SKILL.md` before any API calls, then `$lkm-explorer/SKILL.md` once selected payloads are ready. `$lkm-explorer` runs its own progressive five-step workflow and creates its session todo. Support search, contradiction / open-question search, duplicate cleanup, and iterative root-claim frontier expansion are all channels inside this SOP — there is no separate expansion SOP. Upstream `gaia` CLI quality gates (see upstream `SiliconEinstein/Gaia` docs `docs/for-users/cli-commands.md`) close the turn.
-2. **Paper → Gaia Package** — the maintained paper-driven flow. Read `$formalize/SKILL.md`, then run its four-phase workflow: extract conclusions → reconstruct reasoning chain → audit weak points → emit package. Phase 1b cross-grounds the paper against LKM's existing graph via `$lkm-api`'s `/search` reverse trace (best-effort; skips when the paper isn't in the corpus). Emit conforms to the upstream Gaia knowledge-package spec. Run Gaia quality gates (`gaia compile`, `gaia check --hole`, `gaia infer` — see upstream `docs/for-users/cli-commands.md`) after emission.
+2. **Paper → Gaia Package** — the maintained paper-driven flow. Read `$formalize/SKILL.md`, then run its four-phase workflow: extract conclusions → reconstruct reasoning chain → audit weak points → emit package. Phase 1b cross-grounds the paper against LKM's existing graph via `$lkm-api`'s `/search` reverse trace (best-effort; skips when the paper isn't in the corpus). Emit conforms to the upstream Gaia knowledge-package spec. Run Gaia quality gates (`gaia build compile`, `gaia build check --hole`, `gaia run infer` — see upstream `docs/for-users/cli-commands.md`) after emission.
 3. **Raw LKM API Task** — `$lkm-api` directly when the user only wants raw API output, no Gaia formalization.
 4. **Evidence Graph Only** — `$evidence-subgraph` only when the user explicitly asks for a closure-chain or evidence graph without Gaia formalization. Root must be chain-backed (`total_chains > 0`).
 5. **Scholarly Synthesis** — `$scholarly-synthesis` only on explicit request. Requires audited evidence graph + audit table + `data.papers`. Kept separate from package construction.
-6. **Visualization** — no project-local render skill. Use the upstream `gaia run render` command after `gaia compile` / `gaia infer` (see upstream `SiliconEinstein/Gaia` docs `docs/for-users/cli-commands.md`).
+6. **Visualization** — no project-local render skill. Use the upstream `gaia run render` command after `gaia build compile` / `gaia run infer` (see upstream `SiliconEinstein/Gaia` docs `docs/for-users/cli-commands.md`).
 
 ## How an agent uses this repo
 

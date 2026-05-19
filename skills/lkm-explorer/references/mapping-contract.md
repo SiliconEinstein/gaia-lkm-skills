@@ -256,11 +256,11 @@ They do not apply to the raw `$lkm-api` skill or sibling graph/synthesis skills.
   and the `graph_growth_log.jsonl` event shape — emitted by this skill;
   transitional, pending LKM-side refresh.
 - The full `priors.py` shape — follow current package examples and verify with
-  `gaia check --hole`.
+  `gaia build check --hole`.
 - The shape of `pyproject.toml` — follow current package examples and verify
-  with `gaia compile`.
+  with `gaia build compile`.
 - BP interpretation and weakness analysis — handled by caller/user review after
-  `gaia infer`.
+  `gaia run infer`.
 - Render-time choices — use upstream `gaia run render` or package-specific
   render commands after compilation/inference (see
   `docs/for-users/cli-commands.md`).

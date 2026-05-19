@@ -82,14 +82,14 @@ Before handoff:
 The orchestrator/caller accepts the emitted source only after running:
 
 ```bash
-gaia compile .
-gaia check --brief .
-gaia check --hole .
-gaia infer .
+gaia build compile .
+gaia build check --brief .
+gaia build check --hole .
+gaia run infer .
 gaia inquiry review --strict .
 ```
 
-If `gaia check --hole .` reports missing priors, fill `priors.py` and rerun the
+If `gaia build check --hole .` reports missing priors, fill `priors.py` and rerun the
 gate. If inquiry review reports unreviewed warrants or duplicates, log or
 resolve them according to Step 4 and rerun the gate.
 After each quality-gate attempt, append a `quality_gate_result` event to

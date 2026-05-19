@@ -129,7 +129,7 @@ External citations appearing in step prose use the `[@key]` form, where
 e.g. `[@Smith2020]`). Do **not** leave numeric paper-style citations like
 `[33]`, `Ref. 5`, or `Smith et al., 2020` in step prose; convert at write
 time. If a key cannot be derived from the paper's bibliography, use
-`@unknown_<n>` (bare `@key`, **no brackets** — `gaia compile` rejects
+`@unknown_<n>` (bare `@key`, **no brackets** — `gaia build compile` rejects
 bracketed `[@unknown_n]` as an unresolvable strict reference; bare `@key`
 is opportunistic) and note the gap so Phase 4 can record it in
 `mapping_audit.md`. The full citation contract (allowed prose forms,

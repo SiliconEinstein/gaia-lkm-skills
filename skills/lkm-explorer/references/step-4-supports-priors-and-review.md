@@ -82,7 +82,7 @@ Log every merge, equivalence, keep-distinct, and ambiguous verdict in
 
 ## Leaf Priors
 
-After source emission, the caller quality gate runs `gaia check --hole .`.
+After source emission, the caller quality gate runs `gaia build check --hole .`.
 Claims reported as leaves get entries in `priors.py`:
 
 ```python

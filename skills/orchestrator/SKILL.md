@@ -72,8 +72,8 @@ and the requested output is Gaia DSL or a Gaia knowledge package.
 3. Emit conforms to the upstream Gaia knowledge-package spec (see upstream
    `SiliconEinstein/Gaia` docs `docs/for-users/quick-start.md` and
    `docs/for-users/language-reference.md`).
-4. Run upstream Gaia quality gates after emission: `gaia compile`,
-   `gaia check --hole`, `gaia infer` (see upstream
+4. Run upstream Gaia quality gates after emission: `gaia build compile`,
+   `gaia build check --hole`, `gaia run infer` (see upstream
    `docs/for-users/cli-commands.md`).
 
 ### Raw LKM API Task

@@ -18,7 +18,7 @@ Default loop:
 5. **Audit.** The orchestrator independently reads the returned source/audit files and reruns the relevant checks. Do not rely only on the subagent summary.
 6. **Repair.** If the artifact violates a skill rule, delegate a focused repair task with the exact audit finding. Iterate until the artifact passes or the blocker is explicit.
 7. **Synthesize.** If multiple validated artifacts must become one package, use a separate synthesis task. Synthesis adds only grounded cross-artifact wiring and logs every merge, non-merge, equivalence, accepted contradiction, hypothesis-only open problem, or dismissal.
-8. **Verify.** Run the turn's final success checks from the target package. For Gaia packages this means `gaia compile .`, `gaia check --hole .`, and `gaia infer .`; external Gaia CLI/publish workflow commands also rerun their target-specific checks.
+8. **Verify.** Run the turn's final success checks from the target package. For Gaia packages this means `gaia build compile .`, `gaia build check --hole .`, and `gaia run infer .`; external Gaia CLI/publish workflow commands also rerun their target-specific checks.
 9. **Preserve audit trail.** Copy or append all raw inputs, subagent audit logs,
    repair notes, and synthesis decisions under `artifacts/lkm-discovery/` or the
    package's chosen artifact directory. For LKM-explorer package work only,
@@ -53,7 +53,7 @@ Delegate duplicate discovery and semantic merge review when the graph is nontriv
 Render/publish work uses the installed Gaia CLI or Gaia repo-provided publish
 workflow. This local skill family does not define a separate render/publish
 contract. If such work is delegated, first ensure package quality gates pass,
-run the relevant Gaia commands (`gaia render`, `gaia starmap`, etc.), inspect
+run the relevant Gaia commands (`gaia run render`, `gaia inspect starmap`, etc.), inspect
 generated outputs, and report commands/results.
 
 ### Graph-only path

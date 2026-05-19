@@ -20,8 +20,8 @@ equivalences, provenance, and obligations. Every newly retrieved LKM payload
 must be preserved verbatim and classified through the local mapping contract
 before it enters executable DSL or audit files.
 
-A Gaia package produced here compiles via `gaia compile`, propagates beliefs
-via `gaia infer`, and carries LKM provenance into `**metadata` kwargs of every
+A Gaia package produced here compiles via `gaia build compile`, propagates beliefs
+via `gaia run infer`, and carries LKM provenance into `**metadata` kwargs of every
 claim.
 
 > **Contract ownership.** Gaia knowledge-package shape (`<name>-gaia/` layout,
@@ -164,7 +164,7 @@ read-only pointer targets; do not duplicate locally):
   (`claim` / `deduction` / `support` / `contradiction` / `equivalence`),
   label discipline, module placement.
 - `docs/for-users/cli-commands.md` — full CLI reference
-  (`gaia compile` / `check` / `infer` / `run render` / etc.).
+  (`gaia build compile` / `build check` / `run infer` / `run render` / etc.).
 - `docs/for-users/hole-bridge-tutorial.md` — prior calibration tutorial.
 
 For runtime help, prefer `gaia <group> <cmd> --help`.

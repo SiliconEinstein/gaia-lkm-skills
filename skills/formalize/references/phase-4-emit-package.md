@@ -11,7 +11,7 @@ knowledge-package spec (file layout: `SiliconEinstein/Gaia`
 `docs/for-users/quick-start.md`; `claim` / `deduction` / `question` body
 discipline, label rules, `__all__` rules:
 `docs/for-users/language-reference.md`). After emission, the package must be
-ready for `gaia compile` and `gaia check --hole .` (see upstream
+ready for `gaia build compile` and `gaia build check --hole .` (see upstream
 `docs/for-users/cli-commands.md`).
 
 ## Step 0 — Decide the package name and import name
@@ -269,7 +269,7 @@ Before reporting the package as emitted, verify:
      citations (`[33]`, `Ref. 5`, `Smith et al., 2020`) must not survive
      in any prose; convert at write time. Unresolvable citations are
      emitted as `@unknown_<n>` (bare, **no brackets** — bracketed
-     `[@unknown_n]` fails `gaia compile`'s strict-reference check;
+     `[@unknown_n]` fails `gaia build compile`'s strict-reference check;
      bare `@key` is treated as opportunistic) and listed under "Metadata gaps and
      rationale" in `mapping_audit.md`.
 7. The `mapping_audit.md` row count matches the DSL: as many "Conclusions"
@@ -294,8 +294,8 @@ Report to the user:
 - The counts: conclusions, weak points, highlights, deductions.
 - Any metadata gaps recorded in `mapping_audit.md`.
 - The two follow-up commands the user is expected to run as quality gates:
-  - `gaia compile <name>-gaia/`
-  - `gaia check --hole <name>-gaia/`
+  - `gaia build compile <name>-gaia/`
+  - `gaia build check --hole <name>-gaia/`
 
 This skill does not run the quality gates itself; surfaced compile errors or
 hole-check findings come back as a follow-up obligation, not a built-in
