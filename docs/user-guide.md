@@ -11,11 +11,11 @@ tags: [gaia, lkm, knowledge-graph]
 
 本文档是 `gaia-lkm-skills` 仓库的 **LKM-side 配套指南**。本仓库只负责 LKM 接入与 LKM/Paper → Gaia 知识包的形式化 workflow；Gaia 本身的 DSL 语法、CLI 命令、知识包结构等 *upstream* 内容统一以 `SiliconEinstein/Gaia` 仓库 `docs/for-users/` 为准。
 
-**读者预设**：你已经熟悉 Gaia 基本概念（`claim` / `deduction` / `support` / `contradiction` / `prior` / BP 等）。如果还不熟悉，请先阅读 upstream `SiliconEinstein/Gaia` 仓库的：
+**读者预设**：你已经熟悉 Gaia 基本概念（`claim` / `derive` / `contradict` / `equal` / `prior` / BP 等）。如果还不熟悉，请先阅读 upstream `SiliconEinstein/Gaia` 仓库的：
 
 - `docs/for-users/quick-start.md` — 端到端入门（10 分钟构建第一个 Gaia 包）
 - `docs/for-users/language-reference.md` — Gaia DSL 语法、包结构、metadata kwargs
-- `docs/for-users/cli-commands.md` — `gaia build init/build compile/build check/run infer/run render/...` 完整命令参考
+- `docs/for-users/cli-commands.md` — `gaia` CLI 完整命令参考；v0.5 按组划分：`build` (`init`/`compile`/`check`) / `run` (`infer`/`render`) / `inspect` (`starmap`/`starmap-replay`) / `inquiry` (`focus`/`review`/`obligation`/`hypothesis`/`tactics`/`reject`) / `pkg` (`add`/`add-import`/`add-module`/`register`/`scaffold`) / `author` (cli-as-client 知识包编辑：`claim`/`note`/`question`/`derive`/`observe`/`compute`/`infer`/`relations`/`scaffolds`) / `bayes` (`model`/`compare`/`distribution`) / `trace` (`verify`/`review`/`show`)
 - `docs/for-users/hole-bridge-tutorial.md` — prior calibration 教程
 
 运行时帮助优先使用 `gaia <group> <cmd> --help`。

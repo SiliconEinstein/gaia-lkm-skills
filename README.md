@@ -25,7 +25,7 @@ Atomic skills + one thin orchestrator. Full contracts live in each skill's `SKIL
 - **`skills/evidence-subgraph/`** — build / audit / render an evidence graph from LKM chain payloads (factor diamonds, three-class edge taxonomy, chain-bounded discipline). Optional graph-only branch; not an upstream dependency of `$lkm-explorer`.
 - **`skills/scholarly-synthesis/`** — *optional / future-work*: write a domain-vocabulary scholarly synthesis from an audited evidence graph + bibliographic metadata. Not part of the LKM/Paper → Gaia package loop.
 
-For Gaia DSL primitives (`claim` / `deduction` / `support` / `contradiction` / `equivalence` body discipline, metadata kwargs, package layout) and the Gaia CLI (`build init`, `build compile`, `build check`, `run infer`, `run render`, `pkg register`, `pkg add`), see the upstream `SiliconEinstein/Gaia` docs:
+For Gaia DSL primitives (`claim` / `derive` / `contradict` / `equal` body discipline, metadata kwargs, package layout) and the Gaia CLI (`build init`, `build compile`, `build check`, `run infer`, `run render`, `pkg register`, `pkg add`, `pkg scaffold`, `author`, `bayes`), see the upstream `SiliconEinstein/Gaia` docs:
 
 - `docs/for-users/quick-start.md` — end-to-end workflow.
 - `docs/for-users/language-reference.md` — DSL primitives + package structure.

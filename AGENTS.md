@@ -45,7 +45,7 @@ Each atomic skill does **one thing** and exposes a clean contract:
 - **`$evidence-subgraph`** — graph build / audit / render only. Consumes `$lkm-api` JSON. Independent optional branch — not an upstream dependency of `$lkm-explorer`.
 - **`$scholarly-synthesis`** — audited graph → article only. Independent optional branch.
 
-Gaia DSL primitives, package layout, and CLI command reference are owned by upstream `SiliconEinstein/Gaia` — see `docs/for-users/language-reference.md`, `docs/for-users/quick-start.md`, and `docs/for-users/cli-commands.md`. This repo is LKM-side only and does not duplicate upstream teaching.
+Gaia DSL primitives (canonical v0.5: `claim` / `derive` / `contradict` / `equal`), package layout, and CLI command reference are owned by upstream `SiliconEinstein/Gaia` — see `docs/for-users/language-reference.md`, `docs/for-users/quick-start.md`, and `docs/for-users/cli-commands.md`. The cli-as-client authoring surface (`gaia author <verb>` + `gaia pkg scaffold`) is the v0.5 agent-first path for editing knowledge packages without writing Python by hand; see `docs/reference/cli/author.md`. This repo is LKM-side only and does not duplicate upstream teaching.
 
 There is no project-local render skill. For visualization of a compiled Gaia package, use the upstream `gaia run render` command (see upstream `docs/for-users/cli-commands.md`).
 
