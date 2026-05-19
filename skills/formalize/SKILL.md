@@ -124,14 +124,18 @@ paragraph. Do not invent contributions to fill the gap.
 - **One deduction per derived conclusion.** Each conclusion that has at
   least one upstream conclusion or one weak point becomes the conclusion
   of exactly one
-  `derive(conclusion, given=[premises], rationale=..., metadata={"warrant_prior": ...})`.
+  `derive(conclusion, given=[premises], rationale=..., label=...)`.
   Premises are the union of the conclusion's upstream conclusions (from
-  the cross-conclusion logic graph) and its weak-point claims.
+  the cross-conclusion logic graph) and its weak-point claims. The
+  engine `derive(...)` signature accepts only
+  `{given, background, rationale, label}` — no `metadata=` kwarg, so
+  warrant-strength intent lives in `--rationale` prose.
 - **Highlights are working-notes only.** Step-3 highlights characterize
   *why* a conclusion is unusually solid, but they do not enter the
   executable DSL — Gaia's BP semantics already handle credit through
-  priors and the `derive(...)` warrant. Highlights inform Phase 4's
-  per-deduction `warrant_prior` calibration.
+  priors and the `derive(...)` warrant. Highlights inform the qualitative
+  warrant-strength prose Phase 4 writes into each deduction's
+  `--rationale`.
 - **Probability calibration via `register_prior(...)`.** Leaf-claim priors
   come from step-3 calibrations (`prior_probability` for the weak point,
   capped at 0.9). Each justification ends with `TODO:review`. Do not

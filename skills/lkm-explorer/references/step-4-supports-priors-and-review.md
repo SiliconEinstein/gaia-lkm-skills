@@ -14,9 +14,9 @@ replacement for the legacy `support(...)` strategy — see
 
 ```python
 derive(P, given=[U_1], rationale="<what U_1 says and why it supports P>",
-       metadata={"warrant_prior": <float>})
+       label="<u1_supports_p>")
 derive(P, given=[U_2], rationale="<what U_2 says and why it supports P>",
-       metadata={"warrant_prior": <float>})
+       label="<u2_supports_p>")
 ```
 
 When several upstream claims only support the target jointly, use a joint
@@ -24,12 +24,14 @@ derivation:
 
 ```python
 derive(P, given=[U_1, U_2], rationale="<joint support rationale>",
-       metadata={"warrant_prior": <float>})
+       label="<u1_u2_supports_p>")
 ```
 
-`derive(P, given=[a], metadata={"warrant_prior": p})` means `a` supports
-`P`; high `p` means `a` nearly determines `P`. The warrant strength lives
-on the `metadata` kwarg in v0.5 rather than as a top-level `prior=` kwarg.
+`derive(P, given=[a], rationale=...)` means `a` supports `P`. The engine
+`derive(...)` signature accepts only `{given, background, rationale, label}` —
+warrant-strength intent (strong / moderate / weak / lateral) lives in the
+`rationale=` prose, not in a `metadata=` / `warrant_prior` kwarg (the CLI
+flag exists but the post-write `gaia build check` rejects).
 
 Minimum support-channel effort per frontier claim:
 
@@ -38,11 +40,13 @@ Minimum support-channel effort per frontier claim:
 - if no candidate satisfies the support standard, surface `support_not_found`
   in the hand-off report with query and rejection rationales.
 
-Warrant prior ranges:
+Warrant-strength intent (encode qualitatively in `rationale=` prose; the
+engine has no numerical warrant surface on `derive`):
 
-- Strong, same topic and directly implies: 0.85–0.95.
-- Moderate, related and partially overlaps: 0.70–0.85.
-- Weak or lateral: 0.50–0.65.
+- Strong, same topic and directly implies — say so in the rationale.
+- Moderate, related and partially overlaps — say so in the rationale.
+- Weak or lateral — say so in the rationale and name the gap (scope,
+  method, regime).
 
 The `derive(...)` warrant edge may be a scientific-review judgment rather
 than an LKM factor, but both endpoint claims must already be LKM-grounded.
@@ -54,10 +58,10 @@ than an LKM factor, but both endpoint claims must already be LKM-grounded.
 > discipline).
 
 For cross-scope supports involving different geometry, material, temperature,
-experimental extraction method, approximation, or mass definition, keep the
-warrant weak and close to neutral (`0.50–0.58`) unless the LKM-grounded source
-claim directly implies the target. Reflect the scope difference in the
-`rationale=` text.
+experimental extraction method, approximation, or mass definition, explicitly
+flag the support as weak/lateral in the `rationale=` text (e.g. "lateral
+support: scope differs in <axis>; treat as weak evidence") unless the
+LKM-grounded source claim directly implies the target.
 
 If no relevant upstream conclusion is found, do not invent one.
 
@@ -93,10 +97,10 @@ claim priors at 0.90. Do not lower a prior solely because the claim has
 `total_chains=0`; judge content, provenance clarity, method/scope specificity,
 and scientific plausibility.
 
-Accepted `contradict(...)` operators from Step 3 carry their own high
-`warrant_prior` metadata in source, normally `0.95` as defined in
-`mapping-contract.md` §4. That operator warrant is not a leaf-claim prior
-and should not be mirrored into `priors.py`.
+Accepted `contradict(...)` operators from Step 3 carry their warrant-strength
+intent in the `rationale=` prose (the engine has no `metadata=` /
+`warrant_prior` kwarg on `contradict`); that intent is not a leaf-claim
+prior and is not mirrored into `priors.py`.
 
 ## Inquiry Obligations
 

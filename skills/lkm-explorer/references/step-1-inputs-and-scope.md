@@ -50,7 +50,7 @@ Output: a standalone `<name>-gaia/` package:
 - `pyproject.toml`
 - `references.json`
 - `src/<import>/__init__.py`
-- `src/<import>/paper_<key>.py`
+- `src/<import>/priors.py`
 
 Read `package-skeleton.md` before creating or substantially reshaping a package.
 

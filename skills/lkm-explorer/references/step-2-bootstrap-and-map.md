@@ -18,7 +18,9 @@ For each chain-backed root claim, load the LKM evidence payload. Write:
 - one placeholder `claim(...)` for a chain-internal empty-content premise only
   when needed to preserve a factor-derived `derive(...)`,
 - one `derive(conclusion, given=[premises], rationale="<numbered LKM steps>",
-  metadata={"warrant_prior": 0.95})` for every `gfac_*` factor.
+  label="<gfac_id>")` for every `gfac_*` factor (the engine `derive(...)`
+  has no `metadata=` / `warrant_prior` kwarg; warrant-strength intent
+  lives in the `rationale=` prose).
 
 When `factors[].steps[]` contains usable `reasoning`, the deduction rationale
 is the full LKM evidence formatted as a numbered markdown list, preserving
@@ -65,7 +67,7 @@ Include the missing scientific scope when available:
   boundary conditions.
 
 Do not add a `prior` kwarg on `claim(...)`; leaf priors are added via
-`gaia author register-prior --file paper_<key>.py` after
+`gaia author register-prior --file priors.py` after
 `gaia build check --hole` reports remaining holes.
 
 ## Decompose Compound Claims
@@ -85,9 +87,12 @@ atomic claims, keep the original compound claim and log the limitation.
 Connect decomposed claims through `mapping-contract.md` §4:
 
 - Accepted scientific contradiction -> emit direct `contradict(A, B)` with
-  an `xx_vs_yy` label, the associated `open_problem:` rationale, and high
-  `warrant_prior` metadata.
-- Same proposition -> `equal(A, B, rationale="...", metadata={"warrant_prior": ...})`.
+  an `xx_vs_yy` label and the associated `open_problem:` rationale.
+  Warrant-strength intent (clear vs. less crisp) lives in the rationale
+  prose; the engine `contradict(...)` has no `metadata=` /
+  `warrant_prior` kwarg.
+- Same proposition -> `equal(A, B, rationale="...", label="...")`. The
+  engine `equal(...)` likewise has no `metadata=` / `warrant_prior` kwarg.
 - Useful but not-yet-promoted tension -> no Gaia operator; register an inquiry
   hypothesis instead (see Step 4).
 
@@ -104,10 +109,13 @@ suffixes when needed. Cite via `[@<key>]`.
 
 Place source:
 
-- canonical claims and `gfac_*` deductions in the package's single
-  `paper_<key>.py` sibling (or in `__init__.py` for the very first paper),
-- cross-paper operators in the same `paper_<key>.py` sibling for the relevant
-  paper (no dedicated `cross_paper.py` module — see `package-skeleton.md`).
+- canonical claims, `gfac_*` deductions, and cross-paper operators
+  (`equal` / `contradict` / `exclusive`) in `__init__.py` — the upstream
+  Mendel/Galileo two-module pattern,
+- leaf-prior `register_prior(...)` records in `priors.py` (scaffolded via
+  `gaia pkg add-module --name priors --imports register_prior`).
+
+See `package-skeleton.md` for the canonical layout.
 
 ## Step-Completion Gate
 

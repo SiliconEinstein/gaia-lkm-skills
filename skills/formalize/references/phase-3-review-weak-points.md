@@ -2,8 +2,8 @@
 
 Load this file after Phase 2 is complete. Phase 3 is the analytical heart of
 the skill: it produces the load-bearing uncertainties (weak points) and
-load-bearing strengths (highlights) for each conclusion, and the probability
-calibrations that drive `priors.py` and the `derive(...)` warrants.
+load-bearing strengths (highlights) for each conclusion, and the leaf-claim
+prior calibrations that drive `priors.py`.
 
 ## Goal
 
@@ -15,8 +15,8 @@ Phase 2 and produce in working notes:
    `register_prior(...)` entry in Phase 4.
 2. **Highlights** — load-bearing strengths whose presence is a substantive
    reason to credit the conclusion. Highlights are working-notes only; they
-   inform calibration of the `derive(...)` warrant prior but do not enter
-   the executable DSL.
+   inform the qualitative warrant-strength prose Phase 4 writes into each
+   `derive(...)` `--rationale`, but do not enter the executable DSL.
 3. **Per-conclusion synthesis** — an integrated `prior_probability` and a
    short narrative explaining how the weak points and highlights interact for
    that conclusion.
@@ -194,18 +194,19 @@ The reviewer fields (`weakness_reason`, `failure_mode` for weak points;
 `credit` for highlights) are reviewer commentary written **about** the body
 and live in Phase 3 working notes only — they do not enter the executable
 DSL and do not get emitted as audit artifacts in the post-purge SOP. They
-inform Phase 4's `warrant_prior` calibration and the agent's own hand-off
-narrative.
+inform the qualitative warrant-strength prose Phase 4 writes into each
+deduction's `--rationale` and the agent's own hand-off narrative.
 
 ## Reviewer-Field Writing Rules (`weakness_reason` / `failure_mode` / `credit`)
 
 These three fields are where Phase 3's analytical value materializes for the
 reviewing agent. Gaia's BP propagation only consumes the numeric
-`prior_probability` (and the deduction `warrant_prior` Phase 4 calibrates
-off of these notes); the textual reasoning behind those numbers — what
-makes a weak point worth surfacing, what would break if it failed, why a
-highlight underwrites the conclusion — lives only in working notes.
-Sloppy writing here means Phase 4's calibration is unjustified.
+`prior_probability` on leaf claims (via `register_prior`); the textual
+reasoning behind those numbers — what makes a weak point worth surfacing,
+what would break if it failed, why a highlight underwrites the conclusion —
+lives only in working notes and informs the warrant-strength prose Phase 4
+writes into each deduction's `--rationale`. Sloppy writing here means
+Phase 4's rationale and the agent's own hand-off narrative are unjustified.
 
 All three are read alongside the `body` they annotate and may freely refer
 to its contents — they do **not** need to restate the body's setup, and
@@ -345,8 +346,9 @@ not default everything to 0.7–0.8.
 
 `prior_probability` is consumed by Phase 4's `register_prior(...)` emission
 for this weak point. `p1` and `p2` are reviewer working-notes only — they
-inform Phase 4's `warrant_prior` calibration but are not emitted into the
-package; BP does not consume them.
+inform the qualitative warrant-strength prose Phase 4 writes into the
+`derive(...)` `--rationale` but are not emitted into the package; BP does
+not consume them.
 
 ## Per-Conclusion Synthesis
 
@@ -360,12 +362,13 @@ synthesis for that conclusion:
   Phase 4 this number is consumed in two ways: (1) for isolated
   conclusions (no upstream, no weak points → no `derive(...)`) it becomes
   the conclusion's `register_prior(...)` value because the conclusion is a
-  leaf in that case; (2) for derived conclusions it informs the
-  `warrant_prior` calibration on the `derive(...)` (alongside per-highlight
-  and per-gap adjustments — see Phase 4 Step 4a). The `derive(...)`
-  `warrant_prior` metadata value is a different number — see upstream
-  `docs/for-users/language-reference.md` (deduction warrant calibration).
-  Calibration:
+  leaf in that case; (2) for derived conclusions it informs the qualitative
+  warrant-strength prose Phase 4 writes into the `derive(...)` `--rationale`
+  (alongside per-highlight and per-gap commentary — see Phase 4 Step 4a).
+  The engine `derive(...)` signature has no `metadata=` / `warrant_prior`
+  kwarg, so warrant-strength intent does not live as a number on the
+  deduction itself; numerical priors live only on leaf claims via
+  `register_prior`. Calibration:
   - A conclusion with several high-`p2` weak points cannot have a high
     prior, even with highlights.
   - A conclusion with no load-bearing weak points and at least one

@@ -90,8 +90,10 @@ For each final-scan `accepted_contradiction`, emit direct
 )
 ```
 
-The operator's warrant strength lives on its `metadata` (e.g.
-`metadata={"warrant_prior": 0.95}`) rather than as a top-level `prior=` kwarg.
+The engine `contradict(...)` signature accepts only
+`{background, rationale, label}` — no `metadata=` / `warrant_prior` /
+`prior=` kwarg. Warrant-strength intent lives in the `rationale=` prose
+alongside the `open_problem:` clause.
 
 The `rationale` field must include `open_problem:`. If no specific open
 problem can be written, the candidate is not ready for
@@ -103,11 +105,13 @@ Register the same open problem:
 gaia inquiry hypothesis add "<open problem>" --scope <namespace>::<op_label>
 ```
 
-Warrant prior ranges for accepted contradiction operators:
+Warrant-strength intent for accepted contradiction operators (encode
+qualitatively in `rationale=` prose; the engine has no numerical warrant
+surface on `contradict`):
 
-- Clear accepted contradiction: `0.95`.
-- Accepted but less crisp scope/test relation: `0.85–0.92`.
-- Do not lower the operator prior solely because the pair is method/method,
+- Clear accepted contradiction: say "clear accepted contradiction".
+- Accepted but less crisp scope/test relation: say so explicitly.
+- Do not downgrade the rationale solely because the pair is method/method,
   theory/computation, or finite-size/extrapolation mediated.
 
 ## Hypothesis-Only Output
@@ -132,7 +136,8 @@ Before moving to Step 4:
   search or surfaced a `conflict_not_found` note in the hand-off report.
 - Accepted contradictions have direct `contradict(A, B)` operators whose
   labels identify both sides with the `xx_vs_yy` convention, with an
-  `open_problem:` rationale and high `warrant_prior` metadata.
+  `open_problem:` rationale and warrant-strength intent encoded in the
+  rationale prose (no `metadata=` kwarg on `contradict`).
 - Non-promoted but useful tensions are registered as inquiry hypotheses.
 - Mark Step 3 complete, mark Step 4 in progress, then load
   `step-4-supports-priors-and-review.md`.

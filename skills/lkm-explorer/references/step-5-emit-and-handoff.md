@@ -37,8 +37,17 @@ fresh packages):
 The legacy `support([U], target, reason=..., prior=...)` strategy is
 replaced by `derive(target, given=[U], rationale=...)` per the migration
 table at `docs/for-users/language-reference.md` "Notable migration rows".
-The warrant strength carries over via `--metadata '{"warrant_prior":
-<float>}'` instead of the legacy `prior=` kwarg on the strategy.
+The engine `derive(...)` signature accepts only `{given, background,
+rationale, label}` — there is no `metadata=` / `warrant_prior` kwarg on
+`derive` / `equal` / `contradict` / `exclusive` / `observe`. The CLI
+exposes `--metadata` on these verbs but the post-write `gaia build check`
+rejects, so warrant-strength intent (legacy `prior=` on the strategy)
+moves into the `--rationale` prose instead.
+
+`--metadata` remains valid on `gaia author claim` / `note` / `question`
+(those underlying engine constructors accept `**metadata`), so
+LKM provenance kwargs (`provenance_source`, `lkm_id`) continue to flow
+through `claim --metadata`.
 
 Errors surface in the envelope's `diagnostics` array with a `kind`
 dispatch key (`prewrite.collision`, `prewrite.reference_unresolved`,
@@ -49,27 +58,36 @@ CLI guarantees no partial writes on pre-write failure.
 ## Batch Output
 
 For batch mode, emit a new standalone `<name>-gaia/` package. Bootstrap the
-package directory and the per-paper sibling module with the CLI:
+package and its `priors.py` sibling with the CLI (matches the upstream
+Mendel/Galileo two-module layout):
 
 ```bash
 gaia pkg scaffold \
     --target <name>-gaia \
     --name <name>-gaia \
+    --namespace <namespace> \
     --with-uuid \
     --description "<one-line description of this LKM-rooted package>"
 
-gaia pkg add-module --target <name>-gaia --name paper_<key>
+gaia pkg add-module \
+    --name priors \
+    --imports register_prior \
+    --target <name>-gaia
 ```
 
 `gaia pkg scaffold` writes `pyproject.toml` (with `[tool.gaia] type =
 "knowledge-package"` and a freshly-minted `uuid`),
 `src/<import_name>/__init__.py` seeded with a minimal DSL import, and
-`.gaia/.gitkeep`. `add-module` creates `src/<import_name>/paper_<key>.py`.
+`.gaia/.gitkeep`. `--namespace` matches `gaia example mendel` / `gaia
+example galileo` (both pass `--namespace example`); set it to whatever
+namespace the orchestrator has chosen for this run. `add-module --name
+priors --imports register_prior` creates `src/<import_name>/priors.py`
+with the `register_prior` import pre-seeded.
 
-All emissions for this paper — claims, deductions, cross-paper operators
-(`equal` / `contradict` / `exclusive`), and `register_prior(...)` calls —
-route to that single `paper_<key>.py` sibling. Add one new
-`paper_<key>.py` sibling per source paper as the package grows.
+All DSL emissions for this package — claims, deductions, cross-paper
+operators (`equal` / `contradict` / `exclusive`) — go in `__init__.py`
+(the default `--file` target). Leaf-prior `register_prior(...)` records
+go in `priors.py` via `gaia author register-prior --file priors.py`.
 
 Resulting layout after Step 4 + Step 5 emissions complete:
 
@@ -79,35 +97,42 @@ Resulting layout after Step 4 + Step 5 emissions complete:
 ├── references.json
 └── src/<import>/
     ├── __init__.py
-    └── paper_<key>.py
+    └── priors.py
 ```
 
-For refreshes, extend existing modules rather than replacing prior emitted
-statements. Reuse existing labels where possible.
+`references.json` is a JSON object keyed by citation key, CSL-JSON entry
+shape; each entry must include `type` (drawn from the CSL allowlist). See
+upstream spec `docs/specs/2026-04-09-references-and-at-syntax.md` in
+`SiliconEinstein/Gaia` for the full schema.
+
+For refreshes, extend `__init__.py` and `priors.py` rather than replacing
+prior emitted statements. Reuse existing labels where possible.
 
 ### Example invocations
 
-Source claim with LKM provenance (no-chain):
+Source claim with LKM provenance (no-chain) — `--metadata` is valid on
+`claim` because the engine `claim(...)` accepts `**metadata`:
 
 ```bash
 gaia author claim "<self-contained claim body>" \
-    --label <key>_<suffix> \
+    --dsl-binding-name <key>_<suffix> \
     --target <name>-gaia \
-    --file paper_<key>.py \
     --metadata '{"provenance_source": "lkm_no_chain", "lkm_id": "<lkm_id>"}'
 ```
 
-Factor-derived deduction (chain-backed):
+Factor-derived deduction (chain-backed). Provenance kwargs that used to
+ride `--metadata` are dropped here — the engine `derive(...)` has no
+`metadata=` kwarg. LKM provenance for chain-backed deductions lives on
+the conclusion / premise `claim --metadata` records and in the
+`--rationale` prose for the deduction itself:
 
 ```bash
 gaia author derive \
     --conclusion <key>_c<id>_<suffix> \
     --given <premise_label_1>,<premise_label_2> \
     --label <key>_c<id>_chain \
-    --rationale "<factor-chain rationale>" \
-    --target <name>-gaia \
-    --file paper_<key>.py \
-    --metadata '{"warrant_prior": 0.93, "provenance_source": "lkm:factor_chain", "lkm_id": "<chain_id>"}'
+    --rationale "<factor-chain rationale>. LKM provenance: factor=<chain_id>, source=lkm:factor_chain. Warrant intent: strong (directly implies via factor chain)." \
+    --target <name>-gaia
 ```
 
 Frontier support warrant (legacy `support([U], target, prior=p)` → canonical
@@ -118,10 +143,8 @@ gaia author derive \
     --conclusion <target_label> \
     --given <upstream_label> \
     --label <upstream>_supports_<target> \
-    --rationale "<what U says and why it supports target>" \
-    --target <name>-gaia \
-    --file paper_<key>.py \
-    --metadata '{"warrant_prior": 0.85, "provenance_source": "lkm:frontier_support"}'
+    --rationale "<what U says and why it supports target>. Provenance: lkm:frontier_support. Warrant intent: moderate (related, partial overlap)." \
+    --target <name>-gaia
 ```
 
 Cross-paper equivalence:
@@ -129,10 +152,8 @@ Cross-paper equivalence:
 ```bash
 gaia author equal --a <claim_label_from_paper_A> --b <claim_label_from_paper_B> \
     --label <key_a>_<key_b>_<short_suffix>_equiv \
-    --rationale "<why these refer to the same scientific assertion>" \
-    --target <name>-gaia \
-    --file paper_<key>.py \
-    --metadata '{"provenance_source": "lkm:factor_chain.equivalence", "lkm_id": "<lkm_equiv_id>"}'
+    --rationale "<why these refer to the same scientific assertion>. Provenance: lkm:factor_chain.equivalence, lkm_id=<lkm_equiv_id>." \
+    --target <name>-gaia
 ```
 
 Accepted scientific contradiction (per `mapping-contract.md` §4):
@@ -140,10 +161,8 @@ Accepted scientific contradiction (per `mapping-contract.md` §4):
 ```bash
 gaia author contradict --a <side_a_label> --b <side_b_label> \
     --label <side_a>_vs_<side_b>[_<quantity_or_regime>] \
-    --rationale "<why these claims are adjudicably conflicting> | open_problem: <specific discriminating question>" \
-    --target <name>-gaia \
-    --file paper_<key>.py \
-    --metadata '{"warrant_prior": 0.95, "provenance_source": "lkm:contradiction_scan"}'
+    --rationale "<why these claims are adjudicably conflicting> | open_problem: <specific discriminating question>. Provenance: lkm:contradiction_scan. Warrant intent: clear accepted contradiction." \
+    --target <name>-gaia
 ```
 
 Per author.md "the contradiction operator binds the helper Claim to
@@ -151,7 +170,7 @@ Per author.md "the contradiction operator binds the helper Claim to
 the contradiction's helper-Claim label, not a synthesized side claim. The
 `open_problem:` convention lives inside `--rationale`.
 
-Leaf prior record:
+Leaf prior record (in `priors.py`):
 
 ```bash
 gaia author register-prior \
@@ -159,9 +178,11 @@ gaia author register-prior \
     --value <float> \
     --justification "<terse rationale ending in TODO:review>" \
     --target <name>-gaia \
-    --file paper_<key>.py \
-    --source-id wp_prior_inline
+    --file priors.py
 ```
+
+The CLI auto-inserts `from <import_name> import <claim>` into `priors.py`
+when the referenced claim is not already imported.
 
 ## Refresh Output
 
@@ -169,10 +190,10 @@ For an existing standalone package, extend the existing package in place.
 `gaia author` writes are append-only by design (pre-write collision check
 refuses to overwrite a binding):
 
-- extend existing paper modules with new `gaia author` invocations carrying
-  `--target <existing-pkg>` (and `--file paper_<key>.py` to route to the
-  right module), or create new `paper_<key>.py` modules via `gaia pkg
-  add-module`,
+- extend `__init__.py` with new `gaia author` invocations carrying
+  `--target <existing-pkg>` (the default `--file` is `__init__.py`),
+- extend `priors.py` with `gaia author register-prior --file priors.py`
+  invocations,
 - reuse existing labels in `--given` / `--a` / `--b` / `--claim` to weave
   new statements into the prior graph; the CLI's pre-write reference
   resolution catches typos at write time,
@@ -196,13 +217,15 @@ verb boundary.
 The remaining checks before handoff are SOP-owned semantic content:
 
 - Every claim preserves LKM provenance metadata where available
-  (`provenance_source` and `lkm_id` flow through `--metadata`).
+  (`provenance_source` and `lkm_id` flow through `claim --metadata`).
 - Every `derive(...)` is factor-derived; no-chain source claims have no
   fabricated deductions (no `gaia author derive` invocation against a
   no-chain source claim's label unless a real factor chain backs it).
+  Factor / chain ids and warrant-strength intent live in the
+  `--rationale` prose (the engine `derive` has no `metadata=` kwarg).
 - Accepted contradictions use direct `contradict(A, B)` per
-  `mapping-contract.md` §4, with an `xx_vs_yy` label, `open_problem:` in
-  the `--rationale`, and high `warrant_prior` metadata.
+  `mapping-contract.md` §4, with an `xx_vs_yy` label and `open_problem:`
+  + warrant-strength intent in the `--rationale` prose.
 
 ## Caller Quality Gate
 

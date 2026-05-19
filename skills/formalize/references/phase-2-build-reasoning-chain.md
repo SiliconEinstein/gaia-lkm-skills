@@ -98,9 +98,12 @@ proof, record the move as such — do not silently repair it:
 - "The authors assert without derivation that ..."
 - "At this point the argument relies on a heuristic that ..."
 
-These flagged steps inform the deduction warrant prior in Phase 4;
-persistent gaps push the `metadata={"warrant_prior": ...}` value below the
-default 0.95.
+These flagged steps inform the deduction warrant intent Phase 4 writes
+into the `--rationale` prose; persistent gaps surface as explicit "the
+authors assert without derivation" / "the argument relies on a heuristic"
+sentences in the rationale (the engine `derive(...)` signature has no
+`metadata=` / `warrant_prior` kwarg, so the calibration cannot live as
+a number on the deduction itself).
 
 ### 5. No paper-internal pointers in step prose
 

@@ -41,7 +41,8 @@ Do not add a project-local install recipe unless the user explicitly asks.
 
 ## Package Layout
 
-The canonical artifact is a single growing `<domain>-gaia/` package:
+The canonical artifact is a single growing `<domain>-gaia/` package,
+matching the upstream Mendel/Galileo two-module layout:
 
 ```text
 <domain>-gaia/
@@ -49,16 +50,19 @@ The canonical artifact is a single growing `<domain>-gaia/` package:
 ├── references.json
 ├── src/<import>/
 │   ├── __init__.py
-│   └── paper_<key>.py
+│   └── priors.py
 └── .gaia/
     ├── ir.json
     ├── beliefs.json
     └── inquiry/
 ```
 
-One `paper_<key>.py` sibling per source paper. All work after cold start
-operates on this same package unless the user explicitly asks for a fork
-or fresh package.
+All DSL emissions (`claim` / `derive` / `equal` / `contradict` /
+`exclusive` / `observe` / `note` / `question`) go in `__init__.py`. Leaf
+priors (`register_prior(...)`) go in `priors.py`. There is no per-paper
+`paper_<key>.py` sibling — that pattern is not in the upstream shipping
+walkthroughs. All work after cold start operates on this same package
+unless the user explicitly asks for a fork or fresh package.
 
 ## Stage 1 — Cold Start
 
@@ -135,22 +139,26 @@ real Gaia DSL.
 - A support edge may be a scientific-review judgment rather than an LKM
   `gfac_*` factor, but both endpoints must be LKM-grounded Gaia claims.
 - Accepted support uses real Gaia DSL (canonical v0.5 form — `derive(...)`
-  with `warrant_prior` metadata replaces the legacy `support(...)` strategy;
-  see `docs/for-users/language-reference.md` "Notable migration rows"):
+  replaces the legacy `support(...)` strategy; see
+  `docs/for-users/language-reference.md` "Notable migration rows"):
 
 ```python
 derive(target_claim, given=[upstream_claim],
-       rationale="<why upstream supports target>",
-       metadata={"warrant_prior": <float>})
+       rationale="<why upstream supports target; warrant-strength intent: strong/moderate/weak>",
+       label="<upstream_supports_target>")
 ```
 
 or, when several upstream claims only support the target jointly:
 
 ```python
 derive(target_claim, given=[u1, u2],
-       rationale="<joint support rationale>",
-       metadata={"warrant_prior": <float>})
+       rationale="<joint support rationale; warrant-strength intent>",
+       label="<u1_u2_supports_target>")
 ```
+
+The engine `derive(...)` signature accepts only `{given, background,
+rationale, label}` — there is no `metadata=` / `warrant_prior` kwarg, so
+warrant-strength intent lives in the `rationale=` prose.
 
 Allow multiple accepted support candidates into the same iteration when they
 satisfy the mapping contract. If no candidate satisfies the standard,
@@ -193,9 +201,10 @@ standard and use direct Gaia DSL:
 )
 ```
 
-The operator-warrant strength lives on the call's `metadata` (e.g.
-`metadata={"warrant_prior": 0.95}`) rather than as a top-level `prior=`
-kwarg.
+The engine `contradict(...)` signature accepts only
+`{background, rationale, label}` — no `metadata=` / `warrant_prior` /
+`prior=` kwarg. Warrant-strength intent ("clear" vs. "less crisp") lives
+in the `rationale=` prose alongside the `open_problem:` clause.
 
 If no candidate satisfies the hypothesis or contradiction standards,
 surface `conflict_not_found` in the hand-off report with the queries
@@ -234,7 +243,7 @@ quality gates or review identify issues.
    - different scope/material/method/condition -> keep distinct,
    - ambiguous -> default to keep distinct.
 4. Fill leaf priors surfaced by `gaia build check --hole .` via
-   `gaia author register-prior --file paper_<key>.py`.
+   `gaia author register-prior --file priors.py`.
 5. Re-run the Quality Gates.
 
 ## Quality Gates

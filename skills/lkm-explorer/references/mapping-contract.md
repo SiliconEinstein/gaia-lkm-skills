@@ -43,14 +43,14 @@ During root-claim frontier expansion, the agent searches LKM for content that
 can directly support each frontier claim. A single target claim may have
 **multiple** accepted upstream supports. Use the canonical v0.5 deterministic
 warrant primitive (the legacy named-strategy `support(...)` is replaced by
-`derive(...)` with a `warrant_prior` metadata kwarg — see
-`docs/for-users/language-reference.md` "Notable migration rows"):
+`derive(...)` — see `docs/for-users/language-reference.md` "Notable
+migration rows"):
 
 ```python
 derive(target, given=[U_1], rationale="<what U_1 says and why it supports target>",
-       metadata={"warrant_prior": <float>})
+       label="<u1_supports_target>")
 derive(target, given=[U_2], rationale="<what U_2 says and why it supports target>",
-       metadata={"warrant_prior": <float>})
+       label="<u2_supports_target>")
 ```
 
 When several upstream claims only support the target jointly, use one joint
@@ -58,13 +58,15 @@ derivation:
 
 ```python
 derive(target, given=[U_1, U_2], rationale="<joint support rationale>",
-       metadata={"warrant_prior": <float>})
+       label="<u1_u2_supports_target>")
 ```
 
-`derive(target, given=[a], metadata={"warrant_prior": p})` is directional:
-`a` supports `target`. In Gaia v0.5 the warrant strength `p` lives on the
-deduction's metadata rather than as a top-level kwarg; higher `p` means the
-warrant is stronger; `p` close to 1 means `a` nearly determines `target`.
+`derive(target, given=[a], rationale=...)` is directional: `a` supports
+`target`. In Gaia v0.5 the engine `derive(...)` signature accepts only
+`{given, background, rationale, label}` — there is no `metadata=` /
+`warrant_prior` kwarg. Warrant-strength intent (legacy strong/moderate/weak
+bands) lives in the `rationale=` prose so the reviewer's intent is
+preserved in the source without breaking `gaia build check`.
 
 Search effort for each frontier target:
 - Run at least 2 distinct support-channel LKM match queries.
@@ -73,10 +75,11 @@ Search effort for each frontier target:
 - If no candidate satisfies the support standard, record the queries and
   rejection rationales as `support_not_found`; do not invent support.
 
-Warrant prior for each support:
-- Strong (same topic, directly implies) -> 0.85-0.95
-- Moderate (related, partially overlaps) -> 0.70-0.85
-- Weak/lateral -> 0.50-0.65
+Warrant-strength intent (encode qualitatively in `rationale=` prose; the
+engine has no numerical warrant-prior surface on `derive`):
+- Strong (same topic, directly implies) — say so in the rationale.
+- Moderate (related, partially overlaps) — say so in the rationale.
+- Weak/lateral — say so in the rationale, and explicitly note the gap.
 
 The support relation itself may be a reviewer/agent scientific judgment rather
 than an LKM `gfac_*` factor, but both endpoints must already be LKM-grounded
@@ -89,10 +92,12 @@ Gaia claims.
 > discipline).
 
 For cross-scope supports (different geometry, material, temperature, extraction
-method, approximation, or mass definition), use weak priors close to neutral
-(`0.50-0.58`) unless the LKM-grounded claim text directly implies the target.
-Reflect the scope difference in the `rationale=` text so BP does not silently
-treat lateral context as strong independent evidence.
+method, approximation, or mass definition), explicitly downgrade the warrant
+intent in the `rationale=` text (e.g. "lateral support: scope differs in
+<axis>, treat as weak evidence") unless the LKM-grounded claim text directly
+implies the target. Reflect the scope difference in the rationale so the
+reviewer reading the source can see the gap; the engine `derive` surface has
+no numerical knob to lower.
 
 Support candidates may be chain-backed or no-chain LKM source claims after cold
 start. Chain-backed candidates may add their own `claim(...)` nodes and
@@ -160,9 +165,11 @@ without opening metadata:
 )
 ```
 
-The operator-warrant strength lives on the call's `metadata` (e.g.
-`metadata={"warrant_prior": 0.95}`) rather than as a top-level `prior=`
-kwarg; the relation verb itself does not accept `prior=`.
+The engine `contradict(...)` signature accepts only
+`{background, rationale, label}` — no `metadata=` / `warrant_prior` /
+`prior=` kwarg. Warrant-strength intent (legacy "clear / less crisp"
+bands) lives in the `rationale=` prose alongside the `open_problem:`
+clause.
 
 Label rules:
 - Prefer `<side_a>_vs_<side_b>` with short semantic side names, e.g.
@@ -175,13 +182,14 @@ Label rules:
   `contradict_*`; the operator kind already supplies the relation semantics,
   while the label should identify the two conflicting sides.
 
-The `contradict(...)` operator's `warrant_prior` metadata is the warrant
-strength that this pair should be treated as an adjudicable scientific
-contradiction, not a prior on either claim being true. Use `0.95` for clear
-accepted contradictions. Use `0.85-0.92` only when the pair is accepted but
-the scope match or discriminating question is less crisp. Do not lower the
-operator warrant merely because the candidate came from different methods;
-method/method conflicts are often the point of the contradiction.
+Warrant-strength intent on a `contradict(...)` is the conviction that this
+pair should be treated as an adjudicable scientific contradiction, not a
+prior on either claim being true. Encode in the rationale: say "clear
+accepted contradiction" for the strongest cases; say "accepted but scope
+match / discriminating question is less crisp" when the candidate is
+borderline. Do not weaken the rationale merely because the candidate came
+from different methods; method/method conflicts are often the point of the
+contradiction.
 
 Avoid the word `paradox` in operator labels; it may be used only in synthesis
 prose when appropriate for the field.

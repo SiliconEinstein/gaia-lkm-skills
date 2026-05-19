@@ -90,6 +90,7 @@ Bootstrap the package directory with the CLI:
 gaia pkg scaffold \
     --target <name>-gaia \
     --name <name>-gaia \
+    --namespace <namespace> \
     --with-uuid \
     --description "<one-line description from Phase 1 motivation>"
 ```
@@ -97,18 +98,29 @@ gaia pkg scaffold \
 This writes `pyproject.toml` (with `[tool.gaia] type = "knowledge-package"`
 and a freshly-minted `uuid`), `src/<import_name>/__init__.py` seeded with
 `from gaia.engine.lang import claim`, and `.gaia/.gitkeep`. The cli refuses
-to write into a non-empty target.
+to write into a non-empty target. `--namespace` sets the Gaia package
+namespace (matches the upstream `gaia example mendel` / `gaia example
+galileo` walkthroughs, which pass `--namespace example`); use whatever
+namespace the calling SOP has chosen for this run.
 
-Then add the per-paper sibling module Phase 4 will write into:
+All Phase 4 DSL emissions for this paper — motivation question, conclusions,
+weak-point claims, deductions — go in the scaffolded `__init__.py` (the
+default target when `gaia author <verb>` is invoked without `--file`). The
+only sibling module Phase 4 creates is `priors.py`, scaffolded with the
+upstream pattern:
 
 ```bash
-gaia pkg add-module --target <name>-gaia --name paper_<key>
+gaia pkg add-module \
+    --name priors \
+    --imports register_prior \
+    --target <name>-gaia
 ```
 
-`add-module` creates `src/<import_name>/paper_<key>.py`. All Phase 4
-emissions for this paper — motivation question, conclusions, weak-point
-claims, deductions, and `register_prior(...)` calls — route to that single
-sibling via `gaia author --file paper_<key>.py`.
+`--imports register_prior` pre-seeds the import so `priors.py` can call
+`register_prior(...)` directly. This matches the canonical
+`gaia example mendel` / `gaia example galileo` walkthroughs and the
+upstream knowledge-package convention; this skill does not prescribe
+per-paper sibling modules.
 
 ## Step 3 — Write `references.json`
 
@@ -120,6 +132,11 @@ Emit a CSL-JSON record for the paper using its reference key. Fields:
 - Use the paper's own metadata; do not invent fields. Missing fields are
   omitted, not stubbed.
 
+`references.json` is a JSON object keyed by citation key, CSL-JSON entry
+shape; each entry must include `type` (drawn from the CSL allowlist). The
+full schema is owned upstream — see
+`docs/specs/2026-04-09-references-and-at-syntax.md` in `SiliconEinstein/Gaia`.
+
 `references.json` is SOP-owned — the CLI does not manage it. Write the file
 directly with the file-write tooling of choice.
 
@@ -129,47 +146,60 @@ Emit one CLI invocation per DSL statement, in the order below. Each
 invocation auto-runs `gaia build check` post-write (default), so a failure
 in any statement halts the chain at that statement.
 
-### 4a. `paper_<key>.py` — motivation, conclusions, deductions
+### 4a. `__init__.py` — motivation, conclusions, weak-point claims, deductions
 
-Route all `paper_<key>.py` emissions with `--file paper_<key>.py`.
+All Phase 4 DSL emissions for this paper go into the scaffolded
+`__init__.py`. Omit `--file` and the default is `__init__.py`, matching the
+upstream Mendel/Galileo walkthroughs.
 
 1. **Motivation as `question(...)`** — one invocation for Phase 1's
    motivation block:
 
    ```bash
    gaia author question "<motivation prose>" \
-       --label <key>_problem \
-       --target <name>-gaia \
-       --file paper_<key>.py
+       --dsl-binding-name <key>_problem \
+       --target <name>-gaia
    ```
 
-   Aligns `$formalize` with pipeline B (XML→LKM), where `<problem>` from
-   `select_conclusion.xml` becomes a `LocalVariableNode(type="question")`.
+   `gaia author question` has no `--label` flag because the underlying
+   `question(...)` constructor does not accept an engine `label=` kwarg;
+   `--dsl-binding-name` is the only label-like flag the verb exposes and
+   sets the Python LHS binding. Aligns `$formalize` with pipeline B
+   (XML→LKM), where `<problem>` from `select_conclusion.xml` becomes a
+   `LocalVariableNode(type="question")`.
 
 2. **Conclusions section** — one `gaia author claim` per Phase 1 conclusion,
    in topological order:
 
    ```bash
    gaia author claim "<self-contained conclusion body>" \
+       --dsl-binding-name <key>_c<id>_<suffix> \
        --label <key>_c<id>_<suffix> \
-       --target <name>-gaia \
-       --file paper_<key>.py
+       --target <name>-gaia
    ```
+
+   The CLI requires `--dsl-binding-name` whenever `--label` is set, so
+   pair them with the same identifier: `--dsl-binding-name` mints the
+   Python LHS the rest of the package references by name; `--label` sets
+   the engine `Claim.label` used by `[@label]` prose references and by
+   `gaia inquiry review`.
 
    Phase 3's per-conclusion synthesis posterior is consumed as the
    conclusion's leaf prior in Step 4b only when the conclusion is isolated
    (no upstream conclusions, no weak points → no `derive(...)`). For
-   derived conclusions, Phase 3's synthesis is reflected in the deduction's
-   `warrant_prior` calibration (see Step 4a step 4 below).
+   derived conclusions, Phase 3's synthesis informs the qualitative
+   warrant-strength prose written into the deduction's `--rationale`
+   (Phase 4 does not emit a numerical warrant prior; see Step 4a step 4
+   below).
 
 3. **Weak-point leaf claims section** — one `gaia author claim` per Phase 3
-   weak point, routed to the same `paper_<key>.py`:
+   weak point, into the same `__init__.py`:
 
    ```bash
    gaia author claim "<self-contained weak-point body>" \
+       --dsl-binding-name <key>_c<id>_wp_<suffix> \
        --label <key>_c<id>_wp_<suffix> \
-       --target <name>-gaia \
-       --file paper_<key>.py
+       --target <name>-gaia
    ```
 
    Each weak-point claim is defined exactly once and appears as a premise
@@ -178,7 +208,7 @@ Route all `paper_<key>.py` emissions with `--file paper_<key>.py`.
    logic graph instead (weak point ↔ one conclusion (strict) discipline).
 
 4. **Deductions section** — one `gaia author derive` per derived conclusion,
-   routed to `paper_<key>.py`. The premises list is the union of upstream
+   into `__init__.py`. The premises list is the union of upstream
    conclusion labels and weak-point labels:
 
    ```bash
@@ -186,20 +216,26 @@ Route all `paper_<key>.py` emissions with `--file paper_<key>.py`.
        --conclusion <key>_c<id>_<suffix> \
        --given <upstream_label_1>,<upstream_label_2>,<wp_label_1>,... \
        --label <key>_c<id>_chain \
-       --rationale "<Phase 2 numbered chain prose>" \
-       --target <name>-gaia \
-       --file paper_<key>.py \
-       --metadata '{"warrant_prior": <float>}'
+       --rationale "<Phase 2 numbered chain prose, with warrant-strength intent inline>" \
+       --target <name>-gaia
    ```
 
    Use the `--conclusion <ident>` shape (NOT `--conclusion-content` /
    `--conclusion-prose`) because the conclusion Claim has already been
    minted with a named label in Step 4a step 2.
 
+   **Do not pass `--metadata`.** The engine `derive(...)` signature accepts
+   only `{given, background, rationale, label}` — no `metadata=` kwarg.
+   The CLI's `--metadata` flag on `derive` is silently broken: it renders
+   `derive(..., metadata={...})` and the post-write `gaia build check`
+   rejects. The same constraint applies to `contradict` / `equal` /
+   `exclusive` / `observe`. Warrant-strength intent therefore lives in
+   `--rationale` prose, not in a metadata kwarg.
+
 5. **Open questions section (optional, opt-in)** — only when the user asks,
-   emit `gaia author question` calls into `paper_<key>.py` with labels
-   `<key>_open_question_<n>`. Pipeline B does not extract open questions;
-   this is a `$formalize` extension.
+   emit `gaia author question` calls into `__init__.py` with binding names
+   `<key>_open_question_<n>` (via `--dsl-binding-name`). Pipeline B does
+   not extract open questions; this is a `$formalize` extension.
 
 The string body of every `claim(...)` / `question(...)` is the
 self-contained body from working notes — no further rewriting in Phase 4.
@@ -207,20 +243,18 @@ The Phase 1 self-containment discipline and the Phase 3 body-writing rule
 already satisfy what the legacy step-4 prompt enforced; this phase only
 relabels and emits.
 
-For each deduction's `warrant_prior` (a warrant strength, **not** the
-conclusion's posterior), follow the additive scheme:
+Warrant-strength intent (formerly the `warrant_prior` numerical
+calibration) is encoded in `--rationale` prose: when Phase 2 surfaced an
+explicit logical gap, say so; when Phase 3 surfaced a highlight that
+specifically underwrites a step in this chain, say so. The reviewer's
+calibration shows up as qualitative prose in the deduction rationale; the
+numerical prior surface lives only on leaf claims via `register_prior` in
+`priors.py` (Step 4b).
 
-- Default 0.95.
-- **+0.02 to +0.04** for each Phase 3 highlight that specifically underwrites
-  a step in this chain. Cap at 0.99.
-- **−0.05 to −0.10** for each explicit logical gap Phase 2 had to flag.
-  Floor at 0.80.
-- Adjustments are additive from the 0.95 baseline.
-
-### 4b. Leaf priors
+### 4b. Leaf priors in `priors.py`
 
 For every leaf claim in the package, emit a `gaia author register-prior`
-invocation routed to the same `paper_<key>.py`:
+invocation routed to the scaffolded `priors.py`:
 
 - Every Phase 3 weak point is a leaf — its `prior_probability` from working
   notes goes here, capped at 0.9.
@@ -237,9 +271,11 @@ gaia author register-prior \
     --value <float> \
     --justification "<terse rationale ending in TODO:review>" \
     --target <name>-gaia \
-    --file paper_<key>.py \
-    --source-id wp_prior_inline
+    --file priors.py
 ```
+
+The CLI auto-inserts `from <import_name> import <claim>` into `priors.py`
+when the referenced claim is not already imported.
 
 Justification text format: one line, terse rationale (model assumption /
 empirical pattern / cited result / etc.) ending with `TODO:review`. Pull the
@@ -298,10 +334,15 @@ Report to the user:
 - The counts: conclusions, weak points, deductions, priors (plus the
   final `gaia author` envelope's `check.knowledge_count` /
   `check.strategy_count` / `check.operator_count` as IR-side sanity).
-- The two follow-up commands the user is expected to run as quality gates:
+- The three follow-up commands the user is expected to run as quality
+  gates (this skill produces production-quality knowledge packages, so
+  the gate goes beyond the minimum demo `gaia build compile + gaia build
+  check` of the upstream Mendel/Galileo walkthroughs):
   - `gaia build compile <name>-gaia/` — full-package compile catches
     cross-statement issues the per-write `gaia build check` cannot
     (cyclic imports, IR-hash drift, manifest emission).
+  - `gaia run infer <name>-gaia/` — belief propagation; emits
+    `.gaia/beliefs.json` so the user can inspect downstream posteriors.
   - `gaia inquiry review --strict <name>-gaia/` — strict warrant /
     obligation / duplicate-control review.
 

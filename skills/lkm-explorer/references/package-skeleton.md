@@ -1,20 +1,27 @@
 # LKM-Explorer Package Layout
 
 > Generic Gaia knowledge-package layout, naming conventions, and file
-> templates (`pyproject.toml`, `__init__.py`, `paper_<key>.py`,
+> templates (`pyproject.toml`, `__init__.py`, `priors.py`,
 > `references.json`) are owned upstream by `SiliconEinstein/Gaia` — see
-> `docs/for-users/quick-start.md` and `docs/for-users/language-reference.md`.
-> This file documents only the LKM-explorer module-routing convention.
+> `docs/for-users/quick-start.md` and `docs/for-users/language-reference.md`,
+> and the canonical shipping walkthroughs `gaia example mendel` /
+> `gaia example galileo`. This file documents only the LKM-explorer
+> module-routing convention.
 
 ## Module routing
 
-`$lkm-explorer` writes one `paper_<key>.py` sibling per source paper. All
-emissions for that paper — claims, deductions (factor-derived or warrant
-support), cross-paper operators (`equal` / `contradict` / `exclusive`) that
-mention this paper, and `register_prior(...)` calls — route to the same
-sibling. There is no dedicated `cross_paper.py` or `priors.py` sibling; the
-single per-paper module keeps the import-graph simple and the package
-self-contained.
+`$lkm-explorer` follows the upstream Mendel/Galileo two-module layout:
+
+- All DSL emissions for every source paper — `claim` / `derive` / `equal`
+  / `contradict` / `exclusive` / `observe` / `note` / `question` — go in
+  the scaffolded `__init__.py` (the default `--file` target when
+  `gaia author <verb>` is invoked without `--file`).
+- Leaf-prior records (`register_prior(...)`) go in a sibling `priors.py`,
+  scaffolded explicitly with `--imports register_prior` so the import is
+  pre-seeded.
+
+There is no per-paper `paper_<key>.py` sibling — that pattern is not in
+the upstream shipping walkthroughs and is not prescribed here.
 
 ```text
 <name>-gaia/
@@ -22,17 +29,33 @@ self-contained.
 ├── references.json
 └── src/<import>/
     ├── __init__.py
-    └── paper_<key>.py
+    └── priors.py
 ```
+
+`references.json` is a JSON object keyed by citation key, CSL-JSON entry
+shape; each entry must include `type` (drawn from the CSL allowlist). See
+upstream spec `docs/specs/2026-04-09-references-and-at-syntax.md` in
+`SiliconEinstein/Gaia` for the full schema.
 
 Scaffold with:
 
 ```bash
-gaia pkg scaffold --target <name>-gaia --name <name>-gaia --with-uuid \
+gaia pkg scaffold \
+    --target <name>-gaia \
+    --name <name>-gaia \
+    --namespace <namespace> \
+    --with-uuid \
     --description "<one-line description>"
-gaia pkg add-module --target <name>-gaia --name paper_<key>
+
+gaia pkg add-module \
+    --name priors \
+    --imports register_prior \
+    --target <name>-gaia
 ```
 
-Subsequent papers add their own `paper_<key2>.py` via another `gaia pkg
-add-module`. Cross-paper operators are emitted into whichever of the two
-papers' sibling modules is more natural for the discussion.
+`--namespace` matches the upstream walkthroughs (Mendel/Galileo pass
+`--namespace example`); set it to whatever namespace the orchestrator has
+chosen for this run. `--imports register_prior` pre-seeds the
+`register_prior` import into `priors.py` so subsequent `gaia author
+register-prior --file priors.py` invocations compile without adding the
+import by hand.

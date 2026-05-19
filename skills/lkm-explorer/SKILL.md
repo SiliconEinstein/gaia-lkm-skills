@@ -95,10 +95,12 @@ obligations, start a new five-step iteration with the new target.
   user. For every frontier science claim, the orchestrator runs both support and
   open-question/conflict LKM channels; this skill maps accepted candidates.
 - Support handling follows `mapping-contract.md` §3: real Gaia
-  `derive(target, given=[premises], rationale=..., metadata={"warrant_prior": ...})`
+  `derive(target, given=[premises], rationale=..., label=...)`
   syntax (canonical replacement for the legacy named-strategy
   `support(...)`), LKM-grounded endpoints, no synthetic bridge facts, and
-  duplicate/shared-factor controls.
+  duplicate/shared-factor controls. The engine `derive(...)` signature
+  accepts only `{given, background, rationale, label}` — warrant-strength
+  intent lives in `--rationale` prose, not in a metadata kwarg.
 - Contradiction handling follows `mapping-contract.md` §4: prioritize open
   questions, then final-scan accepted scientific contradictions into direct
   `contradict(a, b)` operators with `xx_vs_yy` labels; other useful tensions
@@ -132,8 +134,8 @@ LKM-explorer-specific (in this skill):
   claims, root-claim frontier supports, open-question-first contradiction
   handling.
 - [`references/package-skeleton.md`](references/package-skeleton.md) —
-  LKM-explorer module-routing convention (one `paper_<key>.py` per source
-  paper).
+  LKM-explorer module-routing convention (DSL emissions in `__init__.py`,
+  leaf priors in `priors.py`).
 - [`references/step-1-inputs-and-scope.md`](references/step-1-inputs-and-scope.md)
   — progressive workflow Step 1.
 - [`references/step-2-bootstrap-and-map.md`](references/step-2-bootstrap-and-map.md)
