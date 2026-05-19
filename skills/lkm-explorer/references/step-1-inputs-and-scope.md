@@ -23,13 +23,14 @@ The checklist is ephemeral and is not written to the package.
 
 ## Inputs
 
-- Raw LKM evidence JSON from `$lkm-api` for each selected chain-backed claim:
-  `GET /claims/{id}/evidence`, with `data.claim`,
-  `data.evidence_chains[].factors[]`, and `data.papers`.
-- Raw LKM source/match JSON for no-chain source claims when accepted after
+- Raw LKM reasoning JSON from `$lkm-search` for each selected chain-backed
+  claim: `GET /claims/{id}/reasoning`, with `data.reasoning_chains[]`
+  (each containing `premises / conclusion / steps / motivating_questions`),
+  `data.total_chains`, and `data.papers`.
+- Raw LKM source JSON for no-chain source claims when accepted after
   cold start.
-- Raw LKM match JSON: `POST /claims/match`, with `data.variables` and
-  `data.papers`.
+- Raw LKM search JSON: `POST /search`, with `data.variables` (typed
+  nodes — `claim` / `question` / `setting` / `action`) and `data.papers`.
 - Root-claim frontier expansion records from the orchestrator when in refresh mode:
   frontier claim labels, support-channel query payloads,
   open-question/conflict-channel query payloads, and candidate classifications.

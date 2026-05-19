@@ -496,9 +496,8 @@ per-conclusion synthesis judgment may shift.
 
 ### Procedure
 
-Use `$lkm-api`'s CLI helper. Make sure `LKM_ACCESS_KEY` is set; see
-[`$lkm-api/SKILL.md`](../../lkm-api/SKILL.md) "Authentication (access
-key)".
+Use `$lkm-search`'s CLI helper. Make sure `LKM_ACCESS_KEY` is set; see
+[`$lkm-search/SKILL.md`](../../lkm-search/SKILL.md) "Authentication".
 
 1. **Identify the input paper's `paper:<id>`.** From the paper Markdown's
    bibliographic metadata (DOI, first-author surname + year). If the
@@ -508,33 +507,41 @@ key)".
 2. **Query LKM by title or anchor phrase.** Use the paper title; if it is
    too generic, supplement with one or two distinctive anchor phrases
    from the paper's contribution sentences (Phase 1 working notes are a
-   good source).
+   good source). Filter to claim-typed nodes with reasoning backing so
+   the next step has something to trace.
 
    ```bash
-   python skills/lkm-api/scripts/lkm.py search \
+   python skills/lkm-search/scripts/lkm_search.py search \
      --query "<paper title or anchor phrase>" \
+     --scopes claim --reasoning-only \
      --top-k 50 --out search.json
    ```
 
 3. **Filter `data.variables[]`** for entries whose
    `provenance.source_packages` list contains the input paper's
    `paper:<id>`. Those are LKM claims whose provenance traces back to
-   this paper. Collect the matching `gcn_*` ids and their `data.papers`
+   this paper. Collect the matching `gcn_*` ids (each will be
+   `type=claim` because of `--reasoning-only`) and their `data.papers`
    metadata into working notes.
-4. **Fetch evidence chains for each match.** For every matching `gcn_id`:
+4. **Fetch reasoning chains for each match.** For every matching
+   `gcn_id`:
 
    ```bash
-   python skills/lkm-api/scripts/lkm.py evidence \
-     --id <gcn_id> --max-chains 10 --out evidence_<gcn_id>.json
+   python skills/lkm-search/scripts/lkm_search.py reasoning \
+     --id <gcn_id> --max-chains 10 --out reasoning_<gcn_id>.json
    ```
 
-5. **Verify chain closure.** For each `evidence_chains[]` entry, examine
-   `source_package`. A chain whose `source_package` is the input paper's
-   `paper:<id>` represents reasoning fully internal to this paper —
-   expected for a typical paper-extract claim. A chain whose
-   `source_package` is a *different* paper id indicates LKM has rooted
-   this claim in inter-paper reasoning; this paper is feeding into a
-   cross-paper provenance chain. Count the cross-paper chains per
+   Some claims may come back with `code=290008` (claim exists but has no
+   reasoning chains — `total_chains == 0`); treat those as
+   `unmatched` for verdict purposes and move on.
+
+5. **Verify chain closure.** For each `reasoning_chains[]` entry, examine
+   the chain's `paper_id` (resolves into `data.papers`). A chain whose
+   `paper_id` matches the input paper's id represents reasoning fully
+   internal to this paper — expected for a typical paper-extract claim.
+   A chain whose `paper_id` is a *different* paper indicates LKM has
+   rooted this claim in inter-paper reasoning; this paper is feeding
+   into a cross-paper provenance chain. Count the cross-paper chains per
    `gcn_id`; these are the "LKM treats as load-bearing for downstream
    reasoning" signal.
 

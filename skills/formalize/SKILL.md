@@ -1,6 +1,6 @@
 ---
 name: formalize
-description: Single-paper formalization — read one academic paper (Markdown preferred; plain-text or other readable formats also accepted) and emit a standalone Gaia knowledge package conforming to the upstream Gaia knowledge-package spec. Runs a four-phase analytical workflow (Phase 1 extract conclusions / motivation / open questions / cross-conclusion logic graph; Phase 2 reconstruct each conclusion's reasoning chain; Phase 3 audit weak points and highlights, calibrate `prior_probability` / `p1` / `p2`; Phase 4 emit Gaia DSL package files), gated by an upfront suitability check (skip review/survey/perspective papers and corrupted paper text). Surfaces 9 argument-pattern weak-point types (`measurement`, `causal`, `model`, `statistical`, `generalization`, `comparative`, `formal`, `computational`, `external`). Cross-grounds the paper against LKM's existing knowledge graph in Phase 1b via `$lkm-api`'s `/search` endpoint, filtering on `provenance.source_packages` and verifying evidence-chain closure. Sibling to `$lkm-explorer` (the LKM-driven exploratory workflow); both produce `<name>-gaia/` packages whose layout is owned upstream by `SiliconEinstein/Gaia` (see `docs/for-users/`). Use whenever the user asks to "formalize a paper into Gaia", "produce a Gaia package from this paper", "turn this paper into a knowledge package", or any variant where the upstream is a single paper text and the requested output is Gaia DSL — even if the user does not explicitly mention Gaia DSL syntax.
+description: Single-paper formalization — read one academic paper (Markdown preferred; plain-text or other readable formats also accepted) and emit a standalone Gaia knowledge package conforming to the upstream Gaia knowledge-package spec. Runs a four-phase analytical workflow (Phase 1 extract conclusions / motivation / open questions / cross-conclusion logic graph; Phase 2 reconstruct each conclusion's reasoning chain; Phase 3 audit weak points and highlights, calibrate `prior_probability` / `p1` / `p2`; Phase 4 emit Gaia DSL package files), gated by an upfront suitability check (skip review/survey/perspective papers and corrupted paper text). Surfaces 9 argument-pattern weak-point types (`measurement`, `causal`, `model`, `statistical`, `generalization`, `comparative`, `formal`, `computational`, `external`). Cross-grounds the paper against LKM's existing knowledge graph in Phase 1b via `$lkm-search`'s `/search` endpoint, filtering on `provenance.source_packages` and verifying reasoning-chain closure via `/claims/{id}/reasoning`. Sibling to `$lkm-explorer` (the LKM-driven exploratory workflow); both produce `<name>-gaia/` packages whose layout is owned upstream by `SiliconEinstein/Gaia` (see `docs/for-users/`). Use whenever the user asks to "formalize a paper into Gaia", "produce a Gaia package from this paper", "turn this paper into a knowledge package", or any variant where the upstream is a single paper text and the requested output is Gaia DSL — even if the user does not explicitly mention Gaia DSL syntax.
 ---
 
 # Formalize
@@ -65,7 +65,7 @@ the working notes produced by the earlier phases.
    [`references/phase-3-review-weak-points.md`](references/phase-3-review-weak-points.md).
    Phase 3 also contains the **Phase 1b LKM reverse-provenance trace** —
    a best-effort cross-grounding pass against LKM's existing graph via
-   `$lkm-api`'s `/search` endpoint. Skipped silently when the paper is
+   `$lkm-search`'s `/search` endpoint. Skipped silently when the paper is
    not yet in the LKM corpus.
 4. **Emit the Gaia package and audit log** — load
    [`references/phase-4-emit-package.md`](references/phase-4-emit-package.md).
@@ -157,8 +157,8 @@ paragraph. Do not invent contributions to fill the gap.
   The Python pipeline is a parallel route from paper to XML; this skill
   is the direct route from paper to Gaia.
 - It does not own the LKM API surface — Phase 1b shells out to
-  `$lkm-api`'s CLI helper. Endpoint shapes, auth, and known quirks live
-  there.
+  `$lkm-search`'s CLI helper. Endpoint shapes, auth, and known quirks
+  live there.
 - Multi-paper merges, cross-paper contradictions, and downstream rendering
   are separate concerns handled by other tools.
 
@@ -195,9 +195,9 @@ For runtime help, prefer `gaia <group> <cmd> --help`.
 
 Sibling skills (this repo):
 
-- [`$lkm-api/SKILL.md`](../lkm-api/SKILL.md) — LKM HTTP API surface used
-  by the Phase 1b reverse-provenance trace (`/search`,
-  `/claims/{id}/evidence`).
+- [`$lkm-search/SKILL.md`](../lkm-search/SKILL.md) — LKM public HTTP API
+  surface used by the Phase 1b reverse-provenance trace (`/search`,
+  `/claims/{id}/reasoning`).
 - [`$lkm-explorer/SKILL.md`](../lkm-explorer/SKILL.md) — sibling
   LKM-driven exploration workflow producing the same Gaia
   knowledge-package output shape from a different upstream.

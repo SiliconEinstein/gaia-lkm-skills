@@ -16,7 +16,7 @@ LKM-driven exploration and LKM-only mapping rules are owned by
 ```text
 user request
   -> $orchestrator reads this SOP
-  -> $lkm-api retrieves raw match/evidence payloads
+  -> $lkm-search retrieves raw search/reasoning payloads
   -> cold start: user selects one chain-backed root claim
   -> $lkm-explorer maps accepted payloads to Gaia DSL
   -> Gaia quality gates produce .gaia/ir.json
@@ -68,12 +68,17 @@ unless the user explicitly asks for a fork or fresh package.
 
 Use this stage when no package exists yet or the user asks for a fresh package.
 
-1. Read `$lkm-api/SKILL.md`.
+1. Read `$lkm-search/SKILL.md`.
 2. Run the Environment Preflight.
-3. Run a field-specific LKM match query. Use BM25-like keyword/anchor-phrase
-   queries. Raw JSON lives in the agent's scratch for the run; it is not
-   committed into the package.
-4. Fetch evidence for promising distinct candidates.
+3. Run a field-specific LKM `/search` query. For BM25-style keyword /
+   anchor-phrase retrieval, pass `--retrieval-mode lexical` with
+   `--keywords <comma,separated>`; for semantically broader recall use the
+   default `--retrieval-mode hybrid`. Filter to `--scopes claim` (and
+   optionally `--reasoning-only`) when only reasoning-backed conclusions
+   are wanted. Raw JSON lives in the agent's scratch for the run; it is
+   not committed into the package.
+4. Fetch reasoning chains for promising distinct candidates via
+   `/claims/{id}/reasoning`.
 5. For cold-start root selection, only offer candidates with `total_chains > 0`.
 6. Record no-chain LKM source claims as scratch leads, but do not offer them
    as cold-start roots.
@@ -117,10 +122,12 @@ conditions/regime | source paper/LKM id
 
 Run both channels for **every** frontier claim:
 
-- Support channel: at least **2 distinct LKM match queries**, each with
-  `top_k=10`.
-- Open-question/conflict channel: at least **5 distinct LKM match queries**, each
-  with `top_k=10`.
+- Support channel: at least **2 distinct LKM search queries** (via
+  `$lkm-search /search`, typically `--retrieval-mode lexical` with
+  scope-tuple keywords), each with `top_k=10`.
+- Open-question/conflict channel: at least **5 distinct LKM search queries**
+  (via `$lkm-search /search`, mixing lexical and hybrid modes as the
+  per-claim scope tuple suggests), each with `top_k=10`.
 
 The query count and `top_k=10` are different axes: the former is query
 diversity, the latter is candidates returned per query. Do not reduce either
@@ -131,7 +138,8 @@ without surfacing the reason in the hand-off report.
 Goal: find LKM-grounded content that can directly support the frontier claim in
 real Gaia DSL.
 
-- Fetch evidence for promising support candidates whenever possible.
+- Fetch reasoning chains (`/claims/{id}/reasoning`) for promising support
+  candidates whenever possible.
 - Chain-backed candidates may add `claim(...)` nodes and factor-derived
   `derive(...)` strategies.
 - Clear no-chain LKM source claims may enter after cold start as leaf/source

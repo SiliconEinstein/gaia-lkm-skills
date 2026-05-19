@@ -31,7 +31,7 @@ claim.
 > metadata kwargs on emitted statements.
 
 ```
-$lkm-api raw JSON + orchestrator flag files
+$lkm-search raw JSON + orchestrator flag files
         |
         v
   $lkm-explorer
@@ -51,7 +51,7 @@ from LKM evidence.
 
 Broad topic discovery, root candidate ranking, user-selection checkpoints, and
 claim-driven frontier iteration are organized by the LKM-explorer SOP through
-`$orchestrator` and `$lkm-api`. Once a mapping run starts, this skill may
+`$orchestrator` and `$lkm-search`. Once a mapping run starts, this skill may
 request focused LKM retrievals needed to complete its five-step workflow.
 
 Raw LKM payloads consumed during the run live in the agent's scratch.
@@ -114,7 +114,7 @@ obligations, start a new five-step iteration with the new target.
 
 - The SOP/orchestrator owns turn shape, broad root discovery, user checkpoints,
   sibling-skill routing, and final quality-gate acceptance.
-- `$lkm-api` owns endpoint mechanics and raw API contract details.
+- `$lkm-search` owns endpoint mechanics and raw API contract details.
 - Upstream `SiliconEinstein/Gaia` owns the unified Gaia knowledge-package
   shape and generic DSL body discipline (see
   `docs/for-users/language-reference.md` and

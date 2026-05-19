@@ -51,8 +51,8 @@ pip install -r requirements.txt
 **验证安装**：
 
 ```bash
-python skills/lkm-api/scripts/lkm.py --help
-# 输出：LKM API client usage...
+python skills/lkm-search/scripts/lkm_search.py --help
+# 输出：CLI helper for the Bohrium LKM public search API.
 ```
 
 ### 0.4 获取 LKM accessKey
@@ -89,7 +89,7 @@ echo $LKM_ACCESS_KEY
 
 ```bash
 cd ~/Code/gaia-lkm-skills
-python skills/lkm-api/scripts/lkm.py search \
+python skills/lkm-search/scripts/lkm_search.py search \
   --query "test" \
   --top-k 1
 
@@ -114,9 +114,9 @@ orchestrator 根据用户请求路由到下列 skill / SOP 之一：
 
 | 路由 | Skill | 适用场景 |
 |------|-------|---------|
-| **LKM → Gaia Package** | `lkm-api` + `lkm-explorer` | 从 LKM 检索结果构建 Gaia 包 |
+| **LKM → Gaia Package** | `lkm-search` + `lkm-explorer` | 从 LKM 检索结果构建 Gaia 包 |
 | **Paper → Gaia Package** | `formalize` | 从单篇论文 Markdown 构建 Gaia 包 |
-| **Raw LKM API Task** | `lkm-api` 直接调用 | 只需要原始 API 输出，不做形式化 |
+| **Raw LKM API Task** | `lkm-search` 直接调用（需要论文全文 markdown 时配合 `lkm-search-internal`） | 只需要原始 API 输出，不做形式化 |
 | **Evidence Graph Only** | `evidence-subgraph` | 只需要证据子图，不需要 Gaia DSL |
 | **Scholarly Synthesis** | `scholarly-synthesis` | 学术综述生成（用户显式请求时） |
 | **Visualization** | upstream `gaia run render` | 包可视化（无 project-local skill） |
@@ -129,7 +129,7 @@ orchestrator 根据用户请求路由到下列 skill / SOP 之一：
 Agent:
 1. 读 orchestrator/SKILL.md → 路由到 LKM → Gaia Package
 2. 读 orchestrator/references/lkm-explorer-sop.md → 完整 SOP
-3. 读 lkm-api/SKILL.md → 调用 search/match/evidence
+3. 读 lkm-search/SKILL.md → 调用 search / reasoning / reasoning-search / variables / papers-graph
 4. 读 lkm-explorer/SKILL.md → 五步 workflow 映射成 Gaia DSL
 5. 运行 upstream 质量门控：gaia build compile && gaia build check --hole && gaia run infer
 6. 报告结果
@@ -144,12 +144,14 @@ Agent:
 LKM API 需要 `accessKey` 认证（见 §0.4 / §0.5）。
 
 ```bash
-# 方式 1：环境变量（推荐）
+# 环境变量（CLI helper 唯一支持的注入方式）
 export LKM_ACCESS_KEY="your_access_key_here"
-
-# 方式 2：传参
-python lkm.py search --query "..." --access-key "your_key"
 ```
+
+CLI helper 不接受命令行传 access key（避免落入 shell 历史 / 进程列表）；只读
+`LKM_ACCESS_KEY` 环境变量。如果在 shell 中显式 export 不方便，可以临时
+`LKM_ACCESS_KEY=<key> python skills/lkm-search/scripts/lkm_search.py ...`
+单次注入。
 
 #### 常见认证错误
 
@@ -169,85 +171,110 @@ python lkm.py search --query "..." --access-key "your_key"
 | **Internal** | 公开 + 内部论文 |
 | **Admin** | 所有资源 + 管理接口 |
 
-### 2.2 四个核心接口
+### 2.2 五个核心接口（`$lkm-search`）
 
 **Base URL**: `https://open.bohrium.com/openapi/v1/lkm`
 
-所有接口都需要在 Header 中传 `accessKey: <your_key>`。
+所有接口都需要在 Header 中传 `accessKey: <your_key>`。字段细节见
+`skills/lkm-search/references/api-contract.md`；workflow 与决策树见
+`skills/lkm-search/SKILL.md`。
 
-#### 2.2.1 Search（公开检索）
+#### 2.2.1 Search（公开检索：claim / question）
 
-**用途**：根据查询词检索相关 claim。
+**用途**：根据自然语言 query（可选 keywords）跨 claim / question 节点检索。
 
 ```bash
 POST /search
 {
   "query": "量子纠缠",
-  "top_k": 10,
-  "filters": {"visibility": "public"}
+  "scopes": ["claim"],
+  "retrieval_mode": "hybrid",       # semantic / lexical / hybrid
+  "keywords": ["entanglement"],     # 仅影响 lexical 通道
+  "reasoning_only": true,           # 只返回有推理链的 claim
+  "filters": {"visibility": "public"},
+  "offset": 0, "limit": 20
 }
 ```
 
 **返回字段**：
-- `data.variables[]` — claim 列表（`id` / `content` / `role` / `score` / `provenance.source_packages`）
+- `data.variables[]` — 统一节点列表（`id` / `content` / `type` ∈ {claim, question, setting, action} / `score` / `provenance.source_packages`）
 - `data.papers` — 论文元数据（DOI、标题、作者、发表日期等）
+- `data.total` — 未受 limit 截断的全量计数
 
 **注意**：`score` 是检索引擎的排序信号，**不是** 科学置信度，不要当作 Gaia prior。
 
-#### 2.2.2 Match（Claim 匹配）
+#### 2.2.2 Reasoning（claim 推理链）
 
-**用途**：根据自由文本匹配已有 claim（类似 BM25）。
-
-```bash
-POST /claims/match
-{
-  "text": "量子纠缠导致非局域性",
-  "top_k": 10,
-  "filters": {"visibility": "public"}
-}
-```
-
-**与 Search 的区别**：
-- 字段名是 `text`（不是 `query`）
-- 返回 `data.new_claim_likely` 字段
-
-#### 2.2.3 Evidence（证据链）
-
-**用途**：获取某个 claim 的推导证据链。
+**用途**：获取某个 claim 的全部推理链。
 
 ```bash
-GET /claims/{claim_id}/evidence?max_chains=10&sort_by=comprehensive
+GET /claims/{claim_id}/reasoning?max_chains=10&sort_by=comprehensive
 ```
 
 **返回字段**：
-- `data.claim` — 目标 claim
-- `data.total_chains` — 找到的证据链总数
-- `data.evidence_chains[]` — 证据链列表
-  - `source_package` — 来源论文 ID
-  - `factors[]` — 推导因子（`premises` → `conclusion`，含 `factor_type` / `subtype`）
-  - `motivating_questions[]` — 驱动问题
+- `data.reasoning_chains[]` — 推理链列表，每条含 `premises` / `conclusion` / `steps` / `motivating_questions`
+- `data.total_chains` — 未截断前的链总数
+- `data.papers` — 引用到的论文元数据
 
-#### 2.2.4 Variables Batch（批量查询变量）
+约束：只接受 `type=claim` 的 id；传 `type=question` 的 id 返回 `290004`。
 
-**用途**：批量获取 `var_*` ID 的详细信息。
+#### 2.2.3 Reasoning Search（按推理过程检索）
+
+**用途**：用自然语言 query 在「整条推理过程」粒度上检索（与 `/search` 召回单节点不同，这里召回整条链）。
+
+```bash
+POST /reasoning/search
+{
+  "query": "perovskite stability",
+  "retrieval_mode": "hybrid",
+  "keywords": ["FAPbI3"],
+  "filters": {"paper_ids": ["1020661015349559308"]},
+  "offset": 0, "limit": 10
+}
+```
+
+**返回**：`data.reasoning_chains[]`（含 `chain_id` / `paper_id` / `score` / `conclusion` / `factors` / `motivating_questions`） + `data.papers`。
+
+#### 2.2.4 Variables Batch（批量取 variable 详情）
+
+**用途**：已知 variable ID 列表，批量回查完整内容、representative 表述、`local_members`、`provenance`、`papers` 等元信息。
 
 ```bash
 POST /variables/batch
-{"ids": ["var_id_1", "var_id_2"]}
+{"ids": ["gcn_abc123", "gcn_def456"]}
 ```
 
-**返回**：`data.variables[]` + `data.papers` + `data.not_found[]`。
+**返回**：`data.variables[]`（按入参顺序）+ `data.papers` + `data.not_found[]`。
+
+#### 2.2.5 Papers Graph（论文知识图谱）
+
+**用途**：按 `package_id` / `paper_id` / `doi` / `title` 任一标识取该论文的 LKM 知识图谱（variables / factors / motivations / stats）。
+
+```bash
+POST /papers/graph
+{
+  "package_id": "paper:1020661015349559308",
+  "include": ["paper", "variables", "factors", "motivations"],
+  "hydrate_factor_refs": true
+}
+```
+
+**返回**：`data.papers[]`（非 title 路径长度 1；title 路径返回候选）。
 
 ### 2.3 LKM API 常见问题
 
 **Q: `code=290001` 错误怎么办？**
-A: 已知的瞬态错误（冷启动）。重试 1-2 次通常可以解决。
+A: 服务端查询错误（ByteHouse 超时等）。重试 1-2 次通常可以解决。
 
-**Q: `code=290002` "Field validation for 'Text' failed"？**
-A: 在 `/claims/match` 接口中用了 `query` 字段，应该用 `text`。
+**Q: `code=290002` "Invalid request parameters"？**
+A: 入参校验失败 —— 例如 `reasoning_only=true` 与非 `["claim"]` 的 scopes 同时出现、`retrieval_mode` 非法、分页越界等。对照
+`$lkm-search/SKILL.md` 的 "Key constraints" 修正。
 
 **Q: 返回的 `score` 可以直接用作 Gaia prior 吗？**
 A: **不可以**。`score` 是检索排序信号，不是科学置信度。Gaia prior 由 claim 性质 + 证据强度判断，或通过 BP 计算（参考 upstream `docs/for-users/hole-bridge-tutorial.md`）。
+
+**Q: 需要论文全文 markdown？**
+A: 使用 `$lkm-search-internal` 的 `POST /papers/content/batch`（需在内部白名单内）。该端点在 `$lkm-search` 中不暴露。
 
 ---
 
@@ -259,8 +286,8 @@ A: **不可以**。`score` 是检索排序信号，不是科学置信度。Gaia 
 
 核心步骤：
 
-1. **读 API contract** — `skills/lkm-api/SKILL.md`
-2. **冷启动检索** — LKM match 查询，选择 chain-backed 根 claim（`total_chains > 0`）
+1. **读 API contract** — `skills/lkm-search/SKILL.md`（端点细节见 `skills/lkm-search/references/api-contract.md`）
+2. **冷启动检索** — 通过 `/search`（`--retrieval-mode lexical --scopes claim --reasoning-only` 推荐）做 field-specific 关键词检索，选择 chain-backed 根 claim（`total_chains > 0`，通过 `/claims/{id}/reasoning` 验证）
 3. **进入 lkm-explorer 五步 workflow** — 见 §3.2
 4. **质量门控** — `gaia build compile && gaia build check --hole && gaia run infer && gaia inquiry review --strict`（见 upstream `docs/for-users/cli-commands.md`）
 
@@ -432,7 +459,8 @@ gaia inquiry review --strict .
 | Skill | SKILL.md | 主要 references |
 |-------|----------|----------------|
 | orchestrator | `skills/orchestrator/SKILL.md` | `lkm-explorer-sop.md` / `audited-delegation.md` |
-| lkm-api | `skills/lkm-api/SKILL.md` | — |
+| lkm-search | `skills/lkm-search/SKILL.md` | `api-contract.md` |
+| lkm-search-internal | `skills/lkm-search-internal/SKILL.md` | `api-contract.md` |
 | lkm-explorer | `skills/lkm-explorer/SKILL.md` | 5 个 step + `mapping-contract.md` + `package-skeleton.md` |
 | formalize | `skills/formalize/SKILL.md` | 4 个 phase |
 | evidence-subgraph | `skills/evidence-subgraph/SKILL.md` | — |
