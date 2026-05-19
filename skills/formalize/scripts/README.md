@@ -47,6 +47,6 @@ No third-party packages, no environment variables.
 
 ### Tested with
 
-Output validated to compile via `gaia compile + gaia infer` on packages
+Output validated to compile via `gaia build compile + gaia run infer` on packages
 emitted by hand-rolled formalize phase 4 workflow (8 conclusion / 8 weak_point
 / 8 deduction case verified).
