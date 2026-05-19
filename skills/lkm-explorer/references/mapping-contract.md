@@ -25,20 +25,17 @@ Generic `claim(...)` body rules — label discipline, self-contained check, no
 `docs/for-users/language-reference.md`). The rules below are LKM-specific.
 
 - **No-chain LKM source claims.** If `total_chains = 0`, use
-  `provenance_source="lkm_no_chain"`, preserve `lkm_id`, `lkm_original`, and
-  `source_paper` when available, and log the no-chain status in the audit
-  trail. Do not create `derive(...)` without factors.
+  `provenance_source="lkm_no_chain"` and preserve `lkm_id` when available.
+  Do not create `derive(...)` without factors.
 - **Prior policy for no-chain candidates.** Do not lower a prior solely because
   `total_chains=0`. Set priors from claim content, provenance clarity,
   method/scope specificity, and scientific judgment.
 - **Chain-internal empty-content premises.** When an LKM evidence chain
   references a premise whose `content` is empty, a placeholder string plus
   `todo="revisit when LKM corpus populates this premise"` in metadata may be
-  used to preserve a factor-derived `derive(...)`. Log
-  `content_missing=true` in `mapping_audit.md`. Do not invent content.
+  used to preserve a factor-derived `derive(...)`. Do not invent content.
 - **Empty or under-provenanced match/search results outside an accepted
-  chain** are **search leads**, not placeholder claims. Record them in audit
-  files only.
+  chain** are **search leads**, not placeholder claims. Do not emit them.
 
 ## 3. Root-claim frontier supports
 
@@ -94,8 +91,8 @@ Gaia claims.
 For cross-scope supports (different geometry, material, temperature, extraction
 method, approximation, or mass definition), use weak priors close to neutral
 (`0.50-0.58`) unless the LKM-grounded claim text directly implies the target.
-Record the scope differences in `mapping_audit.md` or `merge_audit.md` so BP
-does not silently treat lateral context as strong independent evidence.
+Reflect the scope difference in the `rationale=` text so BP does not silently
+treat lateral context as strong independent evidence.
 
 Support candidates may be chain-backed or no-chain LKM source claims after cold
 start. Chain-backed candidates may add their own `claim(...)` nodes and
@@ -126,10 +123,9 @@ This section is the canonical policy for contradiction handling in the local
 LKM-explorer workflow.
 
 The workflow prioritizes open questions during discovery and mapping. When two
-source claims `A` and `B` appear to be in tension, first record the scientific
-open problem they raise. The open problem belongs in
-`artifacts/lkm-discovery/contradictions.md`, `mapping_audit.md`, and, when it
-may drive later work, `.gaia/inquiry/` as a hypothesis.
+source claims `A` and `B` appear to be in tension, first name the scientific
+open problem they raise. When the problem may drive later work, register it
+under `.gaia/inquiry/` as a hypothesis via `gaia inquiry hypothesis add`.
 
 During root-claim frontier expansion, run an open-question/conflict channel for every
 frontier claim. Minimum effort is 5 distinct LKM match queries with `top_k=10`.
@@ -187,17 +183,8 @@ the scope match or discriminating question is less crisp. Do not lower the
 operator warrant merely because the candidate came from different methods;
 method/method conflicts are often the point of the contradiction.
 
-In audit rows, record the taxonomy explicitly:
-
-```text
-decision: accepted_contradiction
-relation_type: scientific_inconsistency
-```
-
-`scientific_inconsistency` is the audit/taxonomy class for accepted
-contradictions under this workflow. It is not the Gaia node label. Avoid
-`paradox` as a formal relation type; it may be used only in synthesis prose when
-appropriate for the field.
+Avoid the word `paradox` in operator labels; it may be used only in synthesis
+prose when appropriate for the field.
 
 ### Promotion signals
 
@@ -233,28 +220,9 @@ yet promotable:
 
 For hypothesis-only rows, record why the pair is scientifically interesting,
 the best current open problem, why no `contradict(...)` operator was emitted,
-and what query or evidence would be needed to promote it later.
-
-## 8. Timeline replay logs (LKM-explorer requirement)
-
-For LKM-explorer package work, every emitted claim, deduction, support,
-contradiction, equivalence, merge, dismissal, inquiry update, and no-op search
-verdict must be indexed in `graph_growth_log.jsonl` (current shape:
-transitional, pending LKM-side refresh; see
-[`timeline-log-contract.md`](timeline-log-contract.md) for the events this
-skill emits), with links back to the LKM retrieval events and raw input
-files that grounded the decision. Each growth event must include a
-structured `graph_delta` block containing added/removed nodes and edges, so
-a frontend can replay the starmap without parsing Python source.
-
-In addition, this skill emits an LKM-specific `retrieval_log.jsonl` whose
-schema is documented in
-[`references/timeline-log-contract.md`](timeline-log-contract.md). It records
-every package-scoped `$lkm-api` call (`match`, `evidence`, `variables`) and is
-linked from each graph-growth event via `retrieval_event_ids`.
-
-These requirements are package replay/audit requirements, not Gaia DSL syntax.
-They do not apply to the raw `$lkm-api` skill or sibling graph/synthesis skills.
+and what query or evidence would be needed to promote it later. In the
+post-purge SOP these notes live in the agent's scratch and the
+`gaia inquiry hypothesis add` text, not in a dedicated audit file.
 
 ## 9. What this contract does NOT cover
 
@@ -262,14 +230,10 @@ They do not apply to the raw `$lkm-api` skill or sibling graph/synthesis skills.
   label discipline, and module placement — owned upstream
   (`SiliconEinstein/Gaia` `docs/for-users/language-reference.md`).
 - Package layout and templates (`pyproject.toml`, `__init__.py`,
-  `paper_<key>.py`, `cross_paper.py`, `priors.py`, `references.json`) — owned
-  upstream (`docs/for-users/quick-start.md`).
-- LKM-side metadata kwargs (`provenance_source`, `claim_kind`, `weak_types`,
-  `p1` / `p2` / `review_prior`, `refs` whitelist, `lkm_id` / `lkm_original`)
-  and the `graph_growth_log.jsonl` event shape — emitted by this skill;
-  transitional, pending LKM-side refresh.
-- The full `priors.py` shape — follow current package examples and verify with
-  `gaia build check --hole`.
+  `paper_<key>.py`, `references.json`) — owned upstream
+  (`docs/for-users/quick-start.md`).
+- Generic `lkm_id` / `provenance_source` metadata semantics on Gaia
+  statements — owned upstream.
 - The shape of `pyproject.toml` — follow current package examples and verify
   with `gaia build compile`.
 - BP interpretation and weakness analysis — handled by caller/user review after

@@ -63,7 +63,7 @@ CLI guarantees no partial writes on pre-write failure.
   not accept an `--import-name` override.
 
 If the paper Markdown is missing author / year, fall back to
-`<topic-slug>-gaia` and record the metadata gap in `mapping_audit.md`.
+`<topic-slug>-gaia` and note the metadata gap in the hand-off report.
 
 ## Step 1 — Mint claim labels
 
@@ -82,10 +82,7 @@ Label rules (recap; canonical rules owned upstream — see
 - No hyphens, no dots, no uppercase, no diacritics.
 - 1–4 token semantic suffixes; do not pack the entire body into the label.
 
-Record the mapping `(working-note id) → (final label)` in working notes; the
-audit log in Step 5 needs both columns.
-
-## Step 2 — Scaffold the package and copy the input
+## Step 2 — Scaffold the package
 
 Bootstrap the package directory with the CLI:
 
@@ -99,33 +96,19 @@ gaia pkg scaffold \
 
 This writes `pyproject.toml` (with `[tool.gaia] type = "knowledge-package"`
 and a freshly-minted `uuid`), `src/<import_name>/__init__.py` seeded with
-`from gaia.engine.lang import claim` plus `__all__: list[str] = []`, and
-`.gaia/.gitkeep`. The cli refuses to write into a non-empty target.
+`from gaia.engine.lang import claim`, and `.gaia/.gitkeep`. The cli refuses
+to write into a non-empty target.
 
-Then add the sibling modules Phase 4 will write into:
+Then add the per-paper sibling module Phase 4 will write into:
 
 ```bash
 gaia pkg add-module --target <name>-gaia --name paper_<key>
-gaia pkg add-module --target <name>-gaia --name weak_points_<key>
-gaia pkg add-module --target <name>-gaia --name priors
 ```
 
-Each `add-module` invocation creates `src/<import_name>/<module>.py` with a
-literal `__all__: list[str] = []`. Subsequent `gaia author --file <module>.py`
-calls auto-extend that list with every labeled statement they emit (see
-`docs/reference/cli/author.md` shared-flag table for `--file` semantics).
-
-Create the audit-dir and copy the input paper:
-
-- `mkdir -p <name>-gaia/artifacts/paper-extract/input/`
-- Copy the input paper Markdown verbatim to
-  `<name>-gaia/artifacts/paper-extract/input/<paper>.md`.
-- Initialize `<name>-gaia/artifacts/paper-extract/graph_growth_log.jsonl` and
-  append a `package_initialized` event. Establish your `actor_id`
-  (e.g. `formalize-<short-uuid>`) and `seq` counter starting at 1.
-
-`gaia pkg scaffold` does not create `artifacts/paper-extract/` — that
-directory is SOP-owned, not part of the upstream package skeleton.
+`add-module` creates `src/<import_name>/paper_<key>.py`. All Phase 4
+emissions for this paper — motivation question, conclusions, weak-point
+claims, deductions, and `register_prior(...)` calls — route to that single
+sibling via `gaia author --file paper_<key>.py`.
 
 ## Step 3 — Write `references.json`
 
@@ -157,8 +140,7 @@ Route all `paper_<key>.py` emissions with `--file paper_<key>.py`.
    gaia author question "<motivation prose>" \
        --label <key>_problem \
        --target <name>-gaia \
-       --file paper_<key>.py \
-       --metadata '{"provenance_source": "paper_extract", "source_paper": "<key>"}'
+       --file paper_<key>.py
    ```
 
    Aligns `$formalize` with pipeline B (XML→LKM), where `<problem>` from
@@ -171,46 +153,33 @@ Route all `paper_<key>.py` emissions with `--file paper_<key>.py`.
    gaia author claim "<self-contained conclusion body>" \
        --label <key>_c<id>_<suffix> \
        --target <name>-gaia \
-       --file paper_<key>.py \
-       --metadata '{"claim_kind": "conclusion", "review_prior": <float>, "provenance_source": "paper_extract", "source_paper": "<key>", "refs": [{"type": "equation", "id": "Eq.3"}, ...]}'
+       --file paper_<key>.py
    ```
 
-   `review_prior` carries the Phase 3 per-conclusion synthesis posterior
-   (capped at 0.9). It is **distinct from** the deduction's warrant
-   `--metadata '{"warrant_prior": ...}'` (see Step 4a step 4 below); both
-   numbers may differ and that is expected.
+   Phase 3's per-conclusion synthesis posterior is consumed as the
+   conclusion's leaf prior in Step 4b only when the conclusion is isolated
+   (no upstream conclusions, no weak points → no `derive(...)`). For
+   derived conclusions, Phase 3's synthesis is reflected in the deduction's
+   `warrant_prior` calibration (see Step 4a step 4 below).
 
 3. **Weak-point leaf claims section** — one `gaia author claim` per Phase 3
-   weak point, routed to `weak_points_<key>.py` (NOT `paper_<key>.py`) so
-   the labels do not leak into the root `__init__.py`'s `__all__`:
+   weak point, routed to the same `paper_<key>.py`:
 
    ```bash
    gaia author claim "<self-contained weak-point body>" \
        --label <key>_c<id>_wp_<suffix> \
        --target <name>-gaia \
-       --file weak_points_<key>.py \
-       --metadata '{"claim_kind": "weak_point", "weak_types": ["<type1>", ...], "p1": <float>, "p2": <float>, "provenance_source": "paper_extract", "source_paper": "<key>", "threatens_conclusion": "<key>_c<id>_<suffix>"}'
+       --file paper_<key>.py
    ```
 
-   Each weak-point claim is defined exactly once in `weak_points_<key>.py`
-   and appears as a premise in exactly one deduction (its target
-   conclusion's). It is NOT shared across deductions; cross-conclusion
-   uncertainty propagates through the logic graph instead (weak point ↔ one
-   conclusion (strict) discipline).
+   Each weak-point claim is defined exactly once and appears as a premise
+   in exactly one deduction (its target conclusion's). It is NOT shared
+   across deductions; cross-conclusion uncertainty propagates through the
+   logic graph instead (weak point ↔ one conclusion (strict) discipline).
 
 4. **Deductions section** — one `gaia author derive` per derived conclusion,
    routed to `paper_<key>.py`. The premises list is the union of upstream
-   conclusion labels and weak-point labels. Pre-import the weak-point labels
-   into `paper_<key>.py` first so they resolve:
-
-   ```bash
-   gaia pkg add-import --target <name>-gaia \
-       --file paper_<key>.py \
-       --from .weak_points_<key> \
-       --names <key>_c<id>_wp_<suffix>,<key>_c<id>_wp_<suffix2>,...
-   ```
-
-   Then the deduction:
+   conclusion labels and weak-point labels:
 
    ```bash
    gaia author derive \
@@ -220,7 +189,7 @@ Route all `paper_<key>.py` emissions with `--file paper_<key>.py`.
        --rationale "<Phase 2 numbered chain prose>" \
        --target <name>-gaia \
        --file paper_<key>.py \
-       --metadata '{"warrant_prior": <float>, "provenance_source": "paper_extract", "source_paper": "<key>"}'
+       --metadata '{"warrant_prior": <float>}'
    ```
 
    Use the `--conclusion <ident>` shape (NOT `--conclusion-content` /
@@ -229,9 +198,8 @@ Route all `paper_<key>.py` emissions with `--file paper_<key>.py`.
 
 5. **Open questions section (optional, opt-in)** — only when the user asks,
    emit `gaia author question` calls into `paper_<key>.py` with labels
-   `<key>_open_question_<n>` and the same provenance metadata as the
-   motivation question. Pipeline B does not extract open questions; this is
-   a `$formalize` extension.
+   `<key>_open_question_<n>`. Pipeline B does not extract open questions;
+   this is a `$formalize` extension.
 
 The string body of every `claim(...)` / `question(...)` is the
 self-contained body from working notes — no further rewriting in Phase 4.
@@ -247,13 +215,12 @@ conclusion's posterior), follow the additive scheme:
   a step in this chain. Cap at 0.99.
 - **−0.05 to −0.10** for each explicit logical gap Phase 2 had to flag.
   Floor at 0.80.
-- Adjustments are additive from the 0.95 baseline; record each adjustment
-  with its rationale in `mapping_audit.md`'s Conclusions table `notes` column.
+- Adjustments are additive from the 0.95 baseline.
 
-### 4b. `priors.py`
+### 4b. Leaf priors
 
 For every leaf claim in the package, emit a `gaia author register-prior`
-invocation routed to `priors.py`:
+invocation routed to the same `paper_<key>.py`:
 
 - Every Phase 3 weak point is a leaf — its `prior_probability` from working
   notes goes here, capped at 0.9.
@@ -262,22 +229,15 @@ invocation routed to `priors.py`:
   per-conclusion `prior_probability`, capped at 0.9.
 
 `register-prior` writes a bare `register_prior(...)` expression (no LHS
-binding); `--file priors.py` routes it there. The verb requires the target
-Claim's label to already be defined in some module the package imports —
-pre-import the weak-point labels into `priors.py`:
+binding):
 
 ```bash
-gaia pkg add-import --target <name>-gaia \
-    --file priors.py \
-    --from .weak_points_<key> \
-    --names <key>_c<id>_wp_<suffix>,<key>_c<id>_wp_<suffix2>,...
-
 gaia author register-prior \
     --claim <key>_c<id>_wp_<suffix> \
     --value <float> \
     --justification "<terse rationale ending in TODO:review>" \
     --target <name>-gaia \
-    --file priors.py \
+    --file paper_<key>.py \
     --source-id wp_prior_inline
 ```
 
@@ -287,188 +247,39 @@ rationale from the weak point's `weakness_reason` (compressed to one
 sentence) or from the conclusion's `narrative`. The `TODO:review` convention
 survives the CLI's `--justification` round-trip verbatim.
 
-### 4c. `__init__.py` — selective re-export of conclusions only
-
-Root `__init__.py` must `__all__`-export the conclusion labels and ONLY the
-conclusion labels (per the existing Phase 4 invariant). Because `gaia
-author --file <module>.py` auto-appends every labeled statement to that
-module's local `__all__`, conclusions and weak points written to
-`paper_<key>.py` would all land in `paper_<key>.py.__all__` if they shared
-that file. The Step 4a routing (weak points → `weak_points_<key>.py`,
-conclusions+deductions → `paper_<key>.py`) keeps the two label sets
-separated at the module-`__all__` boundary already.
-
-Verify the root `__init__.py` then selectively imports the conclusions:
-
-- Use `gaia pkg add-import` to bring conclusion labels into the root
-  `__init__.py` (one `--names` csv per per-paper module):
-
-  ```bash
-  gaia pkg add-import --target <name>-gaia \
-      --file __init__.py \
-      --from .paper_<key> \
-      --names <key>_c1_<suffix>,<key>_c2_<suffix>,...
-  ```
-
-- Then patch the root `__init__.py.__all__` to list the same conclusion
-  labels (the scaffold seeded `__all__: list[str] = []`, and `add-import`
-  does not edit it). This is a small literal-list edit.
-
-This verification step replaces the legacy "manually write `__init__.py`"
-ritual: the CLI manages all per-module Python source, but the cross-module
-export surface (root `__all__`) is the SOP's contract.
-
-## Step 5 — Write the audit artifacts
-
-### 5a. `artifacts/paper-extract/mapping_audit.md`
-
-Populate every section of `mapping_audit.md`:
-
-- Phase summary table.
-- Conclusions table — one row per conclusion, with the working-note id,
-  the final label, upstream labels, weak-point labels (only the ones
-  bound to this conclusion per the weak-point ↔ one-conclusion (strict)
-  discipline), `warrant_prior` (warrant strength on the deduction; matches
-  the `warrant_prior` metadata kwarg on the deduction), `review_prior`
-  (Phase 3 conclusion-synthesis posterior; same value as the
-  `review_prior` metadata kwarg on the conclusion claim), and free-text
-  notes (e.g., per-highlight +0.02/+0.04 adjustments and per-gap
-  −0.05/−0.10 adjustments to the warrant prior).
-- Weak points table — one row per weak-point label, with label, the single
-  threatened `conclusion_id` (mirrors `threatens_conclusion` metadata),
-  `also_threatens` (comma-separated audit-only list of independent
-  conclusion ids the same scientific assumption also affects but which are
-  **not** wired into BP — per the weak-point ↔ one-conclusion (strict)
-  discipline), weak_types, prior, p1, p2, full `weakness_reason` text,
-  full `failure_mode` text. Default for `also_threatens` is `(none)`.
-- Highlights table — one row per highlight with id, conclusion_id,
-  strength_types, full `credit` text, and notes (especially: did this
-  highlight raise a deduction warrant prior, and by how much).
-- Motivation block (verbatim from Phase 1).
-- Open questions block (verbatim from Phase 1).
-- Per-conclusion narratives from Phase 3 — one block per conclusion, naming
-  the conclusion's final label and its synthesis prior.
-- Metadata gaps and rationale (missing DOI, missing year, dropped
-  conclusion candidates, etc.).
-
-The audit log is the only place the full `weakness_reason`, `failure_mode`,
-and `credit` texts live in the package — they do **not** appear inside the
-DSL claim bodies.
-
-### 5b. `artifacts/paper-extract/graph_growth_log.jsonl`
-
-Append one event per emitted DSL element, in emission order. Each line is
-one JSON object. The author-CLI envelope is **not** itself the growth-log
-event — read each invocation's envelope (`payload.label`, `payload.snippet`,
-`payload.check.knowledge_count`) and emit the matching growth event into
-`graph_growth_log.jsonl` as an SOP-owned action. Required event sequence
-(paper-extract):
-
-1. **`package_initialized`** (already emitted in Step 2 above) — first
-   event, with payload `{"package": "<name>-gaia", "source_paper":
-   "<reference_key>"}`.
-2. **`accepted_claim`** — one event per `question(...)` and `claim(...)`
-   written, in the order they appear:
-   - first the **motivation** `question(...)` (`payload.node_kind="question"`,
-     `gaia_actions[].action="question"`, `graph_delta.nodes_added[].kind="question"`),
-   - then the conclusion `claim(...)` calls (`payload.claim_kind="conclusion"`,
-     each carrying `payload.review_prior=<float>` from the Phase 3
-     synthesis),
-   - then the weak-point `claim(...)` calls (`payload.claim_kind="weak_point"`),
-   - then any opt-in open-question `question(...)` calls (same shape as
-     the motivation event but with payload labels
-     `<key>_open_question_<n>`).
-   Each event's `graph_delta.nodes_added` carries one node with the
-   appropriate `kind` (`claim` or `question`), `id` matching the symbol
-   label, `source_paper` matching the reference key, and a short
-   `content_excerpt` (first ~200 chars of the body). For weak-point
-   events also include `weak_types`, `p1`, `p2` in `payload`.
-3. **`prior_added`** — one event per `priors.py` entry. Payload:
-   `{"label", "prior", "justification"}`. `graph_delta` arrays are empty;
-   the prior is metadata, not a graph node/edge.
-4. **`accepted_deduction`** — one event per `derive(...)` written,
-   regardless of how many premises that deduction has. Payload:
-   `{"premises": [...labels...], "conclusion": label, "reason_excerpt":
-   <first ~200 chars>}`. Set `warrant_prior` to the deduction's
-   `warrant_prior` metadata kwarg (the warrant strength, **not** any
-   conclusion-level posterior). `graph_delta.edges_added` lists one slim
-   `kind: "deduction"` edge per (premise → conclusion) pair carrying only
-   `{from, to, kind, prior}` — `reason_excerpt` lives on `payload`, not on
-   each edge.
-5. **`obligation_added`** — emit only if open-questions are materialized
-   as `question(...)` operators (only when explicitly requested).
-
-Every event is single-line JSON. Maintain a single monotonic `seq`
-counter for the run. Never rewrite earlier lines; corrections go in a new
-event with `supersedes_event_id` pointing at the original.
-
-## Step 6 — Patch `pyproject.toml` with formalize-specific provenance
-
-`gaia pkg scaffold --with-uuid` (Step 2) already wrote `name` and
-`[tool.gaia] type = "knowledge-package"`, `uuid`, and `namespace`. The
-formalize-specific provenance kwargs are SOP-owned and need a post-scaffold
-patch:
-
-- `[tool.gaia].generated_by`: `"formalize"`.
-- `[tool.gaia].generated_from_paper`: the reference key.
-- `[tool.gaia].generated_from_doi`: the DOI if available; omit otherwise.
-
-Patch with the file-edit tooling of choice (TOML edit). These kwargs do not
-participate in the upstream package contract; they are documentation for
-downstream reviewers of the audit dir.
-
-## Step 7 — Self-Check Before Reporting Complete
+## Step 5 — Self-Check Before Reporting Complete
 
 `gaia author --check` runs `gaia build check` automatically after each
 statement write, so pre-write reference resolution, label collision, and
-syntactic well-formedness (legacy checks 1, 2, and the syntax half of
-self-standing) are already enforced statement-by-statement. The remaining
-self-check is the SOP-owned semantic content:
+syntactic well-formedness are already enforced statement-by-statement.
+Treat any non-zero envelope `code` from Step 4 as a fix-and-retry
+obligation. The remaining self-check is the SOP-owned semantic content:
 
-1. **(automatic via `--check`)** Every label appearing in any
-   `gaia author derive --given` resolved; every `claim` / `question` / `derive`
-   label was unique. Treat any non-zero envelope `code` from Step 4 as a
-   fix-and-retry obligation, not a self-check item.
-2. **(automatic via `--check`)** Every `register_prior` `--claim` target
-   resolved.
-3. (manual) Every leaf claim (every weak point + any isolated conclusions)
-   has a `priors.py` entry; no entry's prior exceeds 0.9 or falls below
-   0.001. Every conclusion `claim(...)` has a `review_prior` metadata
-   kwarg in `[0.001, 0.9]` (Phase 3 synthesis prior).
-4. (manual) Every justification in `priors.py` ends with `TODO:review`.
-5. (manual) Every `claim(...)` body — both `claim_kind="conclusion"` and
-   `claim_kind="weak_point"` — passes the self-standing test: stripped of
-   all surrounding context, can a reader unfamiliar with the paper
-   identify the model / system / regime, the symbols, and the claim? If
-   any body fails, rewrite it before reporting completion.
-6. (manual) **Pointer and citation hygiene** (two-part check, must both
+1. (manual) Every leaf claim (every weak point + any isolated conclusions)
+   has a `register_prior(...)` entry; no entry's prior exceeds 0.9 or falls
+   below 0.001.
+2. (manual) Every justification in a `register_prior(...)` call ends with
+   `TODO:review`.
+3. (manual) Every `claim(...)` body passes the self-standing test:
+   stripped of all surrounding context, can a reader unfamiliar with the
+   paper identify the model / system / regime, the symbols, and the
+   claim? If any body fails, rewrite it before reporting completion.
+4. (manual) **Pointer and citation hygiene** (two-part check, must both
    pass):
-   - **6a.** No paper-internal pointer (`Eq. (X)` / `Fig. Y` / `Table Z` /
+   - **4a.** No paper-internal pointer (`Eq. (X)` / `Fig. Y` / `Table Z` /
      `Sec. W` / `Appendix A` / `Theorem N` / `Lemma M`) appears inside a
-     `claim(...)` body, inside a `derive(...)` `--rationale`, or inside a
-     `priors.py` justification. External bibliographic citations in
-     `[@key]` form are allowed in any prose. Pointers are also allowed
-     inside `--metadata '{"refs": [...]}'`, but only with
-     `type ∈ {"figure", "equation", "citation"}`; any other `type` value
-     (especially `"section"`, `"appendix"`, `"theorem"`, `"lemma"`,
-     `"paragraph"`, `"footnote"`) is forbidden and must be rewritten or
-     moved to `mapping_audit.md` only.
-   - **6b.** Every prose citation uses the `[@key]` form, where `key`
+     `claim(...)` body, inside a `derive(...)` `--rationale`, or inside
+     a `register_prior(...)` justification. External bibliographic
+     citations in `[@key]` form are allowed in any prose.
+   - **4b.** Every prose citation uses the `[@key]` form, where `key`
      matches an entry in `references.json`. Numeric paper-style
      citations (`[33]`, `Ref. 5`, `Smith et al., 2020`) must not survive
      in any prose; convert at write time. Unresolvable citations are
      emitted as `@unknown_<n>` (bare, **no brackets** — bracketed
      `[@unknown_n]` fails `gaia build compile`'s strict-reference check;
-     bare `@key` is treated as opportunistic) and listed under "Metadata
-     gaps and rationale" in `mapping_audit.md`.
-7. (manual) The `mapping_audit.md` row count matches the DSL: as many
-   "Conclusions" rows as `claim_kind="conclusion"` calls; as many "Weak
-   points" rows as `claim_kind="weak_point"` calls; as many "Highlights"
-   rows as Phase 3 surfaced.
-8. (manual) `references.json` contains an entry whose key matches every
-   `source_paper="..."` argument used in the DSL.
-9. (manual) The input paper is at
-   `artifacts/paper-extract/input/<paper>.md` verbatim.
+     bare `@key` is treated as opportunistic).
+5. (manual) `references.json` contains an entry whose key matches every
+   `[@key]` cited in any prose.
 
 The final invocation's envelope `payload.check.knowledge_count` /
 `check.strategy_count` / `check.operator_count` give a sanity-report count
@@ -479,15 +290,14 @@ issues to the user in the final report (e.g., conclusions you could not
 derive a self-contained body for, or metadata gaps that prevented a clean
 references.json).
 
-## Step 8 — Hand Off
+## Step 6 — Hand Off
 
 Report to the user:
 
 - The path of the emitted `<name>-gaia/` directory.
-- The counts: conclusions, weak points, highlights, deductions (plus the
+- The counts: conclusions, weak points, deductions, priors (plus the
   final `gaia author` envelope's `check.knowledge_count` /
   `check.strategy_count` / `check.operator_count` as IR-side sanity).
-- Any metadata gaps recorded in `mapping_audit.md`.
 - The two follow-up commands the user is expected to run as quality gates:
   - `gaia build compile <name>-gaia/` — full-package compile catches
     cross-statement issues the per-write `gaia build check` cannot

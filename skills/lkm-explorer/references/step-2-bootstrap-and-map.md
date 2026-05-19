@@ -8,7 +8,6 @@ payload content into Gaia DSL source.
 - `mapping-contract.md` §§0–2, 5–7 for claim, derive, references, exports,
   and module placement rules.
 - `package-skeleton.md` when creating or reshaping package files.
-- `timeline-log-contract.md` before recording accepted DSL actions.
 
 ## Bootstrap
 
@@ -28,16 +27,13 @@ step order and figure/table references.
 When `factors[].steps[]` is missing or empty, still emit the factor-derived
 `derive(...)`, but use an explicit fallback rationale:
 `LKM factor <gfac_id> links premises <ids> to conclusion <id>; step-level
-reasoning was not returned by the API.` Record `steps_missing=true` for that
-factor in `mapping_audit.md`.
+reasoning was not returned by the API.`
 
 For an accepted no-chain LKM source claim (`total_chains=0`), write only a
 leaf/source `claim(...)` with:
 
 - `provenance_source="lkm_no_chain"`,
-- preserved `lkm_id`,
-- preserved `lkm_original`,
-- `source_paper` when available.
+- preserved `lkm_id`.
 
 Do not fabricate premises, factors, steps, or `derive(...)` for no-chain
 source claims.
@@ -47,13 +43,12 @@ source claims.
 If a premise is inside an accepted chain-backed factor but has an empty
 `content`, it may enter Gaia as a placeholder only to preserve that factor's
 deduction structure. Use a content string such as
-`"<unexpanded LKM premise gcn_xxx>"`, preserve the LKM id, add
-`todo="revisit when LKM corpus populates this premise"`, and log
-`content_missing=true` in `mapping_audit.md`.
+`"<unexpanded LKM premise gcn_xxx>"`, preserve the LKM id, and add
+`todo="revisit when LKM corpus populates this premise"`.
 
 If an empty or under-provenanced item came from match/search output outside an
-accepted chain-backed factor, classify it as a search lead. Keep it in
-audit/search notes only; do not emit a placeholder claim.
+accepted chain-backed factor, classify it as a search lead. Do not emit a
+placeholder claim.
 
 ## Claim Self-Containment
 
@@ -69,10 +64,9 @@ Include the missing scientific scope when available:
 - temperature, pressure, field, sample regime, approximation domain, and
   boundary conditions.
 
-Always preserve raw wording in `lkm_original`.
-
-Do not add a `prior` kwarg on `claim(...)`; leaf priors go in `priors.py` after
-`gaia build check --hole`.
+Do not add a `prior` kwarg on `claim(...)`; leaf priors are added via
+`gaia author register-prior --file paper_<key>.py` after
+`gaia build check --hole` reports remaining holes.
 
 ## Decompose Compound Claims
 
@@ -91,17 +85,16 @@ atomic claims, keep the original compound claim and log the limitation.
 Connect decomposed claims through `mapping-contract.md` §4:
 
 - Accepted scientific contradiction -> emit direct `contradict(A, B)` with
-  an `xx_vs_yy` label, the associated `open_problem:` rationale, high
-  `warrant_prior` metadata, and audit
-  `relation_type: scientific_inconsistency`.
+  an `xx_vs_yy` label, the associated `open_problem:` rationale, and high
+  `warrant_prior` metadata.
 - Same proposition -> `equal(A, B, rationale="...", metadata={"warrant_prior": ...})`.
-- Useful but not-yet-promoted tension -> no Gaia operator; log an audit row and
-  optional inquiry hypothesis.
+- Useful but not-yet-promoted tension -> no Gaia operator; register an inquiry
+  hypothesis instead (see Step 4).
 
-Preserve the original LKM meta-claim as `claim(C, lkm_original="...")`. When an
-accepted contradiction represents the meta-claim, follow the operator rules in
-`mapping-contract.md` §4. If the result is hypothesis-only, keep C and record
-the decomposition in the audit trail instead.
+Preserve the original LKM meta-claim as a `claim(C, ...)` with its `lkm_id`
+metadata. When an accepted contradiction represents the meta-claim, follow
+the operator rules in `mapping-contract.md` §4. If the result is
+hypothesis-only, keep C and register an inquiry hypothesis instead.
 
 ## References And Modules
 
@@ -111,31 +104,23 @@ suffixes when needed. Cite via `[@<key>]`.
 
 Place source:
 
-- canonical claims in the module of the first paper they appear in,
-- `gfac_*` deductions in the module of `factor.source_package`,
-- cross-paper operators in `cross_paper.py`,
-- a single `__all__` in `__init__.py` containing selected root claims.
+- canonical claims and `gfac_*` deductions in the package's single
+  `paper_<key>.py` sibling (or in `__init__.py` for the very first paper),
+- cross-paper operators in the same `paper_<key>.py` sibling for the relevant
+  paper (no dedicated `cross_paper.py` module — see `package-skeleton.md`).
 
 ## Step-Completion Gate
 
 Before moving to Step 3:
 
-- All accepted claims are self-contained or explicitly logged as placeholders.
+- All accepted claims are self-contained or explicitly retained as placeholders.
 - Chain-backed factors have corresponding `derive(...)` calls.
-- Factors without step-level reasoning have explicit fallback reasons and
-  `steps_missing=true` audit entries.
-- Chain-internal empty premises are placeholders only when needed for a factor,
-  and have `content_missing=true` audit entries.
+- Factors without step-level reasoning have explicit fallback rationales.
+- Chain-internal empty premises are placeholders only when needed for a factor.
 - Search leads outside accepted chains do not enter executable DSL.
 - No-chain source claims are leaf/source claims only.
 - Compound claims have been decomposed according to `mapping-contract.md` §4 or
   explicitly retained with reason.
 - References and module placement decisions are ready.
-- `graph_growth_log.jsonl` has events queued or appended for selected roots,
-  emitted claims, factor-derived deductions, and retained no-op decisions.
-- Every Step 2 growth event has `schema_version`, `actor_id`, monotonic `seq`,
-  and a populated `graph_delta` block. For emitted claims and deductions,
-  `graph_delta.nodes_added` and `graph_delta.edges_added` contain frontend-ready
-  ids, kinds, labels, priors when applicable, and content/reason excerpts.
 - Mark Step 2 complete, mark Step 3 in progress, then load
   `step-3-contradictions-and-open-questions.md`.

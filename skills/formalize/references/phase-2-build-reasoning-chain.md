@@ -98,8 +98,9 @@ proof, record the move as such — do not silently repair it:
 - "The authors assert without derivation that ..."
 - "At this point the argument relies on a heuristic that ..."
 
-These flagged steps inform the deduction prior in Phase 4; persistent gaps
-push the `metadata={"warrant_prior": ...}` value below the default 0.95.
+These flagged steps inform the deduction warrant prior in Phase 4;
+persistent gaps push the `metadata={"warrant_prior": ...}` value below the
+default 0.95.
 
 ### 5. No paper-internal pointers in step prose
 
@@ -131,10 +132,10 @@ e.g. `[@Smith2020]`). Do **not** leave numeric paper-style citations like
 time. If a key cannot be derived from the paper's bibliography, use
 `@unknown_<n>` (bare `@key`, **no brackets** — `gaia build compile` rejects
 bracketed `[@unknown_n]` as an unresolvable strict reference; bare `@key`
-is opportunistic) and note the gap so Phase 4 can record it in
-`mapping_audit.md`. The full citation contract (allowed prose forms,
-`refs` whitelist, CSL-JSON / `references.json` conventions) is owned
-upstream — see `SiliconEinstein/Gaia` `docs/for-users/language-reference.md`.
+is opportunistic) and note the gap in the hand-off report. The full
+citation contract (allowed prose forms, `refs` whitelist, CSL-JSON /
+`references.json` conventions) is owned upstream — see
+`SiliconEinstein/Gaia` `docs/for-users/language-reference.md`.
 
 ### 7. Authorial voice
 

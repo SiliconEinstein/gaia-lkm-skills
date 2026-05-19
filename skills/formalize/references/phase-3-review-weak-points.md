@@ -12,10 +12,11 @@ Phase 2 and produce in working notes:
 
 1. **Weak points** — load-bearing uncertainties between the paper's evidence
    and the conclusion. Each weak point will become a leaf `claim(...)` plus a
-   `priors.py` entry in Phase 4.
+   `register_prior(...)` entry in Phase 4.
 2. **Highlights** — load-bearing strengths whose presence is a substantive
-   reason to credit the conclusion. Highlights stay in `mapping_audit.md`;
-   they may also raise the `derive(...)` warrant prior.
+   reason to credit the conclusion. Highlights are working-notes only; they
+   inform calibration of the `derive(...)` warrant prior but do not enter
+   the executable DSL.
 3. **Per-conclusion synthesis** — an integrated `prior_probability` and a
    short narrative explaining how the weak points and highlights interact for
    that conclusion.
@@ -74,10 +75,11 @@ Before committing to a weak point, it must pass all five:
   weak-point ↔ one-conclusion (strict) discipline: pick the conclusion
   with the most catastrophic failure mode (tie-break by smaller id), and
   let cross-conclusion influence propagate through the logic graph
-  (`W → C2 → C4` if C2 is upstream of C4) rather than re-binding W to C4. For independent conclusions that share a foundational assumption
-  with no logic-graph link, the BP-invisible effect on the other
-  conclusion(s) is recorded in `mapping_audit.md` as `also_threatens`,
-  audit-only.
+  (`W → C2 → C4` if C2 is upstream of C4) rather than re-binding W to C4.
+  For independent conclusions that share a foundational assumption with no
+  logic-graph link, the BP-invisible effect on the other conclusion(s) is
+  noted in working notes as `also_threatens` (working-notes only — not
+  emitted into the executable DSL).
 - **Which part of that conclusion's derivation depends on it?** — Point to
   the specific argumentative move (a Phase 2 step, an experimental design
   choice, an assumption, a comparison).
@@ -167,7 +169,8 @@ conclusion materially less credible. Use the same nine patterns
 
 Each weak point and each highlight gets a **body** — a self-standing
 scientific proposition that, in Phase 4, will become the string body of a
-`claim(...)` (for weak points) or a row in the audit log (for highlights).
+`claim(...)` (for weak points) or a working-notes line (for highlights;
+highlights do not enter the executable DSL — see formalize/SKILL.md).
 The writing rules are identical:
 
 - **Self-standing setup**: every model / system / procedure / dataset /
@@ -187,19 +190,22 @@ The writing rules are identical:
 - **Concrete subject**: the procedure, the estimator, the model, the
   measurement — not "the paper" or "this work".
 
-The audit fields (`weakness_reason`, `failure_mode` for weak points;
+The reviewer fields (`weakness_reason`, `failure_mode` for weak points;
 `credit` for highlights) are reviewer commentary written **about** the body
-and live in `mapping_audit.md`, not inside the body itself.
+and live in Phase 3 working notes only — they do not enter the executable
+DSL and do not get emitted as audit artifacts in the post-purge SOP. They
+inform Phase 4's `warrant_prior` calibration and the agent's own hand-off
+narrative.
 
 ## Reviewer-Field Writing Rules (`weakness_reason` / `failure_mode` / `credit`)
 
-These three fields are where Phase 3's analytical value materializes for a
-human reviewer downstream. Gaia's BP propagation only consumes the numeric
-`prior_probability` / `p1` / `p2`; the textual reasoning behind those
-numbers — what makes a weak point worth surfacing, what would break if it
-failed, why a highlight underwrites the conclusion — lives only in these
-fields, surfaced in `mapping_audit.md`. Sloppy writing here means the audit
-log is useless even when the numbers are right.
+These three fields are where Phase 3's analytical value materializes for the
+reviewing agent. Gaia's BP propagation only consumes the numeric
+`prior_probability` (and the deduction `warrant_prior` Phase 4 calibrates
+off of these notes); the textual reasoning behind those numbers — what
+makes a weak point worth surfacing, what would break if it failed, why a
+highlight underwrites the conclusion — lives only in working notes.
+Sloppy writing here means Phase 4's calibration is unjustified.
 
 All three are read alongside the `body` they annotate and may freely refer
 to its contents — they do **not** need to restate the body's setup, and
@@ -337,9 +343,10 @@ not default everything to 0.7–0.8.
 - **`p2`** — necessity: if the weak-point claim is false, how strongly does
   the conclusion fail? `p2 ≈ P(conclusion false | weak point false)`.
 
-These three are stored as metadata kwargs on the `claim(...)` in Phase 4
-(`prior_probability` goes into `priors.py`; `p1` and `p2` go on the claim).
-BP does not consume `p1`/`p2` directly, but reviewers do.
+`prior_probability` is consumed by Phase 4's `register_prior(...)` emission
+for this weak point. `p1` and `p2` are reviewer working-notes only — they
+inform Phase 4's `warrant_prior` calibration but are not emitted into the
+package; BP does not consume them.
 
 ## Per-Conclusion Synthesis
 
@@ -349,13 +356,13 @@ synthesis for that conclusion:
 - **`prior_probability`** (a number in `[0.001, 0.9]`) — the reviewer's
   overall credibility judgment (posterior) for the conclusion, integrating
   its weak points and highlights. This is **not** a mechanical function of
-  the weak points' probabilities; it is informed by both findings. In Phase 4
-  this number is emitted as `review_prior=<X>` metadata on the conclusion
-  `claim(...)` (capped at 0.9 — `review_prior` semantics are owned
-  upstream; see `SiliconEinstein/Gaia` `docs/for-users/language-reference.md`);
-  for isolated conclusions (no upstream, no weak points → no
-  `derive(...)`) it is **also** used as the conclusion's `priors.py`
-  value because the conclusion is a leaf in that case. The `derive(...)`
+  the weak points' probabilities; it is informed by both findings. In
+  Phase 4 this number is consumed in two ways: (1) for isolated
+  conclusions (no upstream, no weak points → no `derive(...)`) it becomes
+  the conclusion's `register_prior(...)` value because the conclusion is a
+  leaf in that case; (2) for derived conclusions it informs the
+  `warrant_prior` calibration on the `derive(...)` (alongside per-highlight
+  and per-gap adjustments — see Phase 4 Step 4a). The `derive(...)`
   `warrant_prior` metadata value is a different number — see upstream
   `docs/for-users/language-reference.md` (deduction warrant calibration).
   Calibration:
@@ -470,19 +477,19 @@ existing knowledge graph as evidence chains rooted in this paper's
 `paper:<id>`. The pass surfaces:
 
 - Which Phase 1 conclusions have been independently formalized by LKM
-  with provenance back to *this* paper (their `gcn_*` ids can be joined
-  onto the paper-extract `claim(...)` metadata).
+  with provenance back to *this* paper (their `gcn_*` ids become the
+  `lkm_id=` metadata on the paper-extract `claim(...)`).
 - Which Phase 3 weak points threaten conclusions that LKM treats as
   load-bearing for downstream multi-paper reasoning (cross-paper evidence
-  fan-out). Those weak points carry extra audit weight: their failure
-  doesn't just collapse one paper's claim, it perturbs an inter-paper
-  reasoning chain.
+  fan-out). The reviewer should weight those weak points heavier in the
+  per-conclusion synthesis prior: their failure doesn't just collapse one
+  paper's claim, it perturbs an inter-paper reasoning chain.
 
 This is **best-effort cross-grounding**, not a gate. Papers not yet
 ingested by LKM yield no trace; that is a no-op, not a failure. The
-underlying `claim(...)` bodies, conclusion list, and weak-point
-priors are not changed by Phase 1b — only audit weights and `lkm_id=`
-metadata are.
+underlying `claim(...)` bodies and conclusion list are not changed by
+Phase 1b — only `lkm_id=` metadata is added in Phase 4, and the reviewer's
+per-conclusion synthesis judgment may shift.
 
 ### Procedure
 
@@ -493,8 +500,8 @@ key)".
 1. **Identify the input paper's `paper:<id>`.** From the paper Markdown's
    bibliographic metadata (DOI, first-author surname + year). If the
    paper id cannot be derived (corrupted bibliography, unindexed
-   preprint), skip Phase 1b entirely and note it in `mapping_audit.md`'s
-   "Metadata gaps and rationale" section.
+   preprint), skip Phase 1b entirely and note it in the hand-off report's
+   metadata-gaps section.
 2. **Query LKM by title or anchor phrase.** Use the paper title; if it is
    too generic, supplement with one or two distinctive anchor phrases
    from the paper's contribution sentences (Phase 1 working notes are a
@@ -510,7 +517,7 @@ key)".
    `provenance.source_packages` list contains the input paper's
    `paper:<id>`. Those are LKM claims whose provenance traces back to
    this paper. Collect the matching `gcn_*` ids and their `data.papers`
-   metadata for the audit table.
+   metadata into working notes.
 4. **Fetch evidence chains for each match.** For every matching `gcn_id`:
 
    ```bash
@@ -530,35 +537,32 @@ key)".
 
 ### Outputs
 
-- **`mapping_audit.md` Phase 1b table** (a new section, paper-extract
-  only). Columns:
+- **Phase 1b LKM-trace table in working notes.** Columns:
   `gcn_id | matched_paper_claim_label | chain_total | cross_paper_chains | LKM_provenance_verdict`.
   The verdict is one of `single-paper-internal`, `cross-paper-fanout`,
-  or `unmatched`. Place this section above "Metadata gaps and rationale".
+  or `unmatched`. Surface a summary count in the hand-off report.
 - **`lkm_id=` metadata on Phase 1 conclusion claims.** Whenever a
   matched `gcn_id` corresponds to a Phase 1 conclusion (mapped by content
   similarity in working notes), record the join so Phase 4 can emit
   `lkm_id="gcn_..."` on that conclusion's `claim(...)`. Paper-extract
   emitters reuse `lkm_id` purely as a provenance join.
-- **Audit-weight bump on cross-paper-fanout weak points.** When a Phase
-  3 weak point threatens a conclusion whose matched `gcn_id` has
-  `cross_paper_chains > 0`, add a `notes` annotation in `mapping_audit.md`
-  flagging the cross-paper exposure (e.g. `notes: LKM cross-paper fanout
-  via gcn_X (3 chains) — failure here perturbs inter-paper reasoning`).
-  Phase 1b does **not** automatically lower or raise the weak point's
-  numeric `prior_probability` / `p1` / `p2` — those reflect the paper's
-  own evidence, not LKM downstream consumption. The bump is purely
-  reviewer signal.
+- **Reviewer-signal bump on cross-paper-fanout weak points.** When a
+  Phase 3 weak point threatens a conclusion whose matched `gcn_id` has
+  `cross_paper_chains > 0`, note the cross-paper exposure in working
+  notes; the reviewer may use it to nudge the per-conclusion synthesis
+  prior or the deduction warrant downward. Phase 1b does **not**
+  automatically lower or raise the weak point's numeric
+  `prior_probability` / `p1` / `p2` — those reflect the paper's own
+  evidence, not LKM downstream consumption.
 
 ### When to skip
 
 - **Paper not in LKM corpus.** Step 3 yields no `data.variables[]` whose
-  `provenance.source_packages` includes the paper's `paper:<id>`. Write a
-  one-line entry in `mapping_audit.md`: `Phase 1b: paper not found in LKM
-  corpus; reverse trace skipped`. Phase 4 emit proceeds without
+  `provenance.source_packages` includes the paper's `paper:<id>`. Note
+  the skip in the hand-off report; Phase 4 emit proceeds without
   cross-grounding.
-- **Network or API failure.** Best-effort. Log the failure mode (e.g.
-  `code=290001` retry exhausted, network timeout) in `mapping_audit.md`
+- **Network or API failure.** Best-effort. Note the failure mode (e.g.
+  `code=290001` retry exhausted, network timeout) in the hand-off report
   and continue. Phase 4 emit proceeds.
 - **Paper too recent for LKM ingestion cutoff.** Same handling as
   not-found.
@@ -590,8 +594,8 @@ Before moving to Phase 4:
   underwritten, scope of credit) and is not generic praise or
   paper-description.
 - Each conclusion has a synthesis (`prior_probability` + `narrative`).
-- Phase 1b LKM reverse-trace has either run (results captured in
-  `mapping_audit.md` Phase 1b table; `lkm_id` joins recorded for Phase 4)
-  or been skipped with the skip reason logged.
+- Phase 1b LKM reverse-trace has either run (results captured in working
+  notes; `lkm_id` joins recorded for Phase 4) or been skipped with the
+  skip reason noted for the hand-off report.
 - The next todo is marked in progress before loading
   `phase-4-emit-package.md`.

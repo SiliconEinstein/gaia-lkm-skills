@@ -40,8 +40,8 @@ The `description` is what an agent reads to decide whether to invoke the skill. 
 Each atomic skill does **one thing** and exposes a clean contract:
 
 - **`$lkm-api`** — HTTP I/O against LKM only. No graph logic, no DSL emission.
-- **`$lkm-explorer`** — contract-driven LKM exploration → Gaia knowledge package per the upstream Gaia spec. LKM evidence → Gaia DSL via a five-step contradiction-driven workflow. Owns the `lkm-discovery/` audit dir and the LKM-specific `retrieval_log.jsonl`. No HTTP, no rendering.
-- **`$formalize`** — paper-driven sibling to `$lkm-explorer`. Reads a single paper Markdown and emits a Gaia knowledge package per the upstream Gaia spec via a four-phase analytical workflow. Owns the `artifacts/paper-extract/` audit dir.
+- **`$lkm-explorer`** — contract-driven LKM exploration → Gaia knowledge package per the upstream Gaia spec. LKM evidence → Gaia DSL via a five-step contradiction-driven workflow. No HTTP, no rendering.
+- **`$formalize`** — paper-driven sibling to `$lkm-explorer`. Reads a single paper Markdown and emits a Gaia knowledge package per the upstream Gaia spec via a four-phase analytical workflow.
 - **`$evidence-subgraph`** — graph build / audit / render only. Consumes `$lkm-api` JSON. Independent optional branch — not an upstream dependency of `$lkm-explorer`.
 - **`$scholarly-synthesis`** — audited graph → article only. Independent optional branch.
 
@@ -64,13 +64,12 @@ If a `SKILL.md` is over ~300 lines, push reference material out into `references
 
 ## Audit-trail discipline
 
-Any skill that writes to a `<domain>-gaia/` package MUST preserve the audit trail defined by the active SOP (`skills/orchestrator/references/lkm-explorer-sop.md` — the single maintained workflow; support search and contradiction/open-question search are channels inside it):
+Any skill that writes to a `<domain>-gaia/` package MUST preserve prior emitted statements (`skills/orchestrator/references/lkm-explorer-sop.md` — the single maintained workflow; support search and contradiction/open-question search are channels inside it):
 
-- Append, never silently overwrite, in the package's audit area.
-- Prior verdicts are honoured. A pair already merged stays merged; a candidate already dismissed is not re-introduced silently.
-- Raw LKM payloads are preserved verbatim before any classification or DSL emission.
+- Refresh runs are append-only at the DSL boundary. A claim or operator already in the package stays — `gaia author`'s pre-write collision check enforces this at the CLI surface.
+- Inquiry state under `.gaia/inquiry/` survives across rounds.
 
-The exact file shapes (verdict files, dismissed/, todo files, inquiry state) are owned by the active SOP and the `$lkm-explorer` workflow — refer to those documents for ground truth.
+The exact emission and refresh semantics are owned by the active SOP and the `$lkm-explorer` workflow — refer to those documents for ground truth.
 
 ## Field-neutrality
 
