@@ -1,6 +1,6 @@
 ---
 name: evidence-subgraph
-description: Build, audit, and render a methodological-decomposition evidence graph rooted on a chain-backed quantitative claim of the form "<system or setting> has <quantity> = <value>" or "<computation / measurement> yields <observable>". The graph is the anatomy of how that single result is closed inside one paper's reasoning — observational / experimental constraints, theoretical or computational inputs, intermediate computed quantities, derivation / inversion / fitting steps, parameter and approximation choices, and external-paper / setting context. Multiple labelled joint-support factor diamonds, three-class edge taxonomy (chain support / background / verification support — render in the user's locale, e.g. 链式支撑 / 背景 / 核验支撑 in Chinese), auto-layout (Graphviz neato/sfdp or Mermaid flowchart with linkStyle for per-edge classes — Mermaid mindmap is NOT acceptable), CJK-safe fonts and labels. Domain-agnostic: physics, chemistry, materials, biology, ML, climate, astrophysics, etc. Input is an LKM chain payload (`/claims/match` + `/claims/{id}/evidence` JSON, plus the `data.papers` metadata block). The graph is strictly chain-bounded — only LKM-returned premises and their explicit content are admitted as nodes; no synthetic bridging from external sources.
+description: Use when building, auditing, or rendering a chain-bounded evidence graph from Bohrium LKM claim chains and paper metadata.
 ---
 
 # Evidence Subgraph
