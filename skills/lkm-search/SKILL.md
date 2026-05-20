@@ -1,6 +1,6 @@
 ---
 name: lkm-search
-description: Search the Bohrium LKM knowledge graph — find scientific claims and research questions (`POST /search`), trace how a conclusion was derived (`GET /claims/{id}/reasoning`), find papers with similar reasoning patterns (`POST /reasoning/search`), batch-fetch variable details with v2 metadata (`POST /variables/batch`), and retrieve a paper's full knowledge graph (`POST /papers/graph`). Use when the user wants to explore what LKM knows about a topic, trace the reasoning behind a claim, compare reasoning processes across papers, or inspect a paper's structured knowledge. Atomic: this skill covers the public LKM HTTP API surface; it does not prescribe retrieval methodology or downstream Gaia formalization.
+description: Search the Bohrium LKM knowledge graph — find scientific claims and research questions (`POST /search`), trace how a conclusion was derived (`GET /claims/{id}/reasoning`), find papers with similar reasoning patterns (`POST /reasoning/search`), batch-fetch variable details with v2 metadata (`POST /variables/batch`), and retrieve a paper's full knowledge graph (`POST /papers/graph`). Use when the user wants to explore what LKM knows about a topic, trace the reasoning behind a claim, compare reasoning processes across papers, or inspect a paper's structured knowledge. Atomic — this skill covers the public LKM HTTP API surface; it does not prescribe retrieval methodology or downstream Gaia formalization.
 ---
 
 # LKM Search
