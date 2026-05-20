@@ -1,6 +1,6 @@
 ---
 name: formalize
-description: Use when turning a single academic paper into a Gaia knowledge package or Gaia DSL source, with optional LKM cross-grounding.
+description: Use when turning a single academic paper (Markdown preferred; plain-text also accepted) into a standalone Gaia knowledge package via a four-phase workflow — Phase 1 extracts conclusions / motivation / open questions / cross-conclusion logic graph, Phase 2 reconstructs each conclusion's reasoning chain, Phase 3 audits 9 argument-pattern weak-point types (`measurement` / `causal` / `model` / `statistical` / `generalization` / `comparative` / `formal` / `computational` / `external`) and calibrates `prior_probability` / `p1` / `p2`, Phase 4 emits the Gaia DSL package via `gaia author`. Suitability gate skips review / survey / perspective papers. Phase 1b best-effort cross-grounds against LKM via `$lkm-search`'s `/search` + `/claims/{id}/reasoning`. Sibling to `$lkm-explorer` (LKM-driven); both produce `<name>-gaia/` packages. Trigger phrases include 'formalize this paper into Gaia', 'paper.md → gaia', 'review 这文章', 'turn this paper into a knowledge package' — fires without explicit 'Gaia DSL' mention.
 ---
 
 # Formalize
