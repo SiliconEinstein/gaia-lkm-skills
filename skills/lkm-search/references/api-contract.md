@@ -176,7 +176,7 @@ _No JSON schema published in the OpenAPI export._
 - `offset` / `limit`：分页，默认 `0 / 20`，`offset` 最大 10000，`limit` 最大 100
 
 **响应要点**：
-- `variables[]`：统一节点列表，按 `variables[i].type` 区分 claim / setting / question / action
+- `variables[]`：统一节点列表，按 `variables[i].type` 区分 claim / question
 - `total`：不受 limit 截断的全量计数，下一页判定：`offset + len(variables) < total`
 
 **业务码**（HTTP 始终 200）：
@@ -202,7 +202,7 @@ _No JSON schema published in the OpenAPI export._
 
 | Name | In | Type | Required | Default | Description |
 |------|----|------|----------|---------|-------------|
-| `AccessKey` | header | string | no |  |  |
+| `accessKey` | header | string | no |  |  |
 
 ### Request Body
 
@@ -245,7 +245,7 @@ _No JSON schema published in the OpenAPI export._
 
 | Name | In | Type | Required | Default | Description |
 |------|----|------|----------|---------|-------------|
-| `AccessKey` | header | string | no |  |  |
+| `accessKey` | header | string | no |  |  |
 
 ### Request Body
 
