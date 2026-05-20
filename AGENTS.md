@@ -29,11 +29,17 @@ Every `skills/<name>/SKILL.md` opens with YAML frontmatter:
 ```yaml
 ---
 name: <skill-name>           # kebab-case, matches directory name
-description: <one paragraph> # what this skill does + when to invoke it
+description: <one sentence>  # when to invoke this skill
 ---
 ```
 
-The `description` is what an agent reads to decide whether to invoke the skill. Keep it self-contained and trigger-rich. Mention domain neutrality if applicable.
+The `description` is what an agent reads to decide whether to *open* the skill body. Three rules:
+
+- **Length ≤ 1024 characters.** Codex CLI silently skips longer skills. Claude / Cursor are more lenient, but 1024 is the binding cross-host cap.
+- **Trigger-shaped.** Prefer a single `Use when ...` sentence over a contract restatement. The full contract belongs in the SKILL.md body; the description's job is to make an agent open the body. Domain neutrality is implied by the contract in `## Field-neutrality` below — restate it in the description only when the trigger keyword would otherwise read as field-specific.
+- **YAML-safe.** Avoid bare `key: value` patterns (colon followed by a space) in plain-scalar values; some strict YAML parsers read them as nested mappings. Wrap in backticks (`` `key: value` ``) or quotes when unavoidable.
+
+`scripts/check_skill_frontmatter.py` enforces the length rule (hard error) and warns on colon-space patterns. CI runs it on every PR touching `skills/**/SKILL.md`; run `python scripts/check_skill_frontmatter.py` locally before pushing.
 
 ### Atomicity discipline
 
