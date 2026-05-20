@@ -1,6 +1,6 @@
 ---
 name: scholarly-synthesis
-description: Use when writing a scholarly synthesis from an audited LKM evidence graph, audit table, and paper metadata.
+description: Use when writing a domain-vocabulary scholarly synthesis centered on one chain-backed quantitative claim about a system or setting (any field — physics, chemistry, materials, biology, ML, climate, astrophysics). Section structure traces the closure chain — observational / experimental anchors → theoretical or computational inputs → derivation / inversion / fitting → cross-method comparison → open problems. Heavy on equations, units, and author-year references resolved via the supplied `data.papers` block. Best-effort quoting of source figures and tables with `Adapted from <author-year>` attribution; surfaces a missing-material list rather than fabricating when the payload lacks the asset. Banned-phrase audit (no system / pipeline vocabulary in the main narrative). **Mandatory inputs** — an audited evidence graph (source + rendered raster), an audit table with payload anchors, and the `data.papers` block. If the graph is not provided, stop and instruct the user to supply one.
 ---
 
 # Scholarly Synthesis
