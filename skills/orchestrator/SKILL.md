@@ -1,6 +1,6 @@
 ---
 name: orchestrator
-description: Thin router for project-local LKM/Gaia skills. Use first for LKM-driven or Gaia-graph tasks. Classifies the user request and points the agent to the right atomic skill or SOP. Two main maintained workflows -- LKM -> Gaia package via $lkm-search and $lkm-explorer (claim-driven, contradiction-driven), and Paper -> Gaia package via $formalize (single-paper, 4-phase). Both emit Gaia knowledge packages per the upstream Gaia spec. $lkm-search-internal provides paper full-text access. Evidence-subgraph and scholarly-synthesis are independent optional branches.
+description: Thin router for project-local LKM/Gaia skills. Use first for LKM-driven or Gaia-graph tasks. Classifies the user request and points the agent to the right atomic skill or SOP. Two main maintained workflows -- LKM -> Gaia package via $lkm-search and $lkm-explorer (claim-driven, contradiction-driven), and Paper -> Gaia package via $formalize (single-paper, 4-phase). Both emit Gaia knowledge packages per the upstream Gaia spec. Evidence-subgraph and scholarly-synthesis are independent optional branches.
 ---
 
 # Orchestrator
@@ -23,9 +23,6 @@ DSL/CLI/package-layout teaching.
   trace reasoning chains, search by reasoning pattern, batch-fetch variable
   details, and retrieve paper knowledge graphs. The primary API skill for all
   external LKM interactions.
-- **`$lkm-search-internal`** -- Bohrium LKM internal API: fetch paper full-text
-  markdown and images (`POST /papers/content/batch`). Requires internal
-  whitelist access.
 - **`$lkm-explorer`** -- contract-driven LKM exploration that maps LKM raw
   match/evidence/source payloads into Gaia DSL per the upstream Gaia
   knowledge-package spec, via its progressive five-step workflow.
@@ -84,8 +81,7 @@ and the requested output is Gaia DSL or a Gaia knowledge package.
 ### Raw LKM Search Task
 
 Use `$lkm-search` directly when the user only asks to search, inspect, or
-compare LKM claims/reasoning and does not ask for Gaia formalization. Use
-`$lkm-search-internal` if they additionally need paper full-text markdown.
+compare LKM claims/reasoning and does not ask for Gaia formalization.
 
 ### Evidence Graph Only
 

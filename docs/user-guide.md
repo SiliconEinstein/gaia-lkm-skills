@@ -1,9 +1,9 @@
 ---
 title: Gaia LKM 使用指南（LKM-side 配套）
 created: 2026-05-13
-updated: 2026-05-18
+updated: 2026-05-21
 version: gaia-lkm-skills (LKM-side only)
-status: draft
+status: maintained
 tags: [gaia, lkm, knowledge-graph]
 ---
 
@@ -40,13 +40,10 @@ tags: [gaia, lkm, knowledge-graph]
 cd ~/Code
 git clone https://github.com/SiliconEinstein/gaia-lkm-skills.git
 cd gaia-lkm-skills
-
-# 使用 uv
-uv sync
-
-# 或使用 pip
-pip install -r requirements.txt
 ```
+
+本仓库的 LKM helper 使用 Python 标准库实现；clone 后即可运行，不需要安装
+project-local Python dependencies。Gaia 本体仍按 upstream 文档安装。
 
 **验证安装**：
 
@@ -116,7 +113,7 @@ orchestrator 根据用户请求路由到下列 skill / SOP 之一：
 |------|-------|---------|
 | **LKM → Gaia Package** | `lkm-search` + `lkm-explorer` | 从 LKM 检索结果构建 Gaia 包 |
 | **Paper → Gaia Package** | `formalize` | 从单篇论文 Markdown 构建 Gaia 包 |
-| **Raw LKM API Task** | `lkm-search` 直接调用（需要论文全文 markdown 时配合 `lkm-search-internal`） | 只需要原始 API 输出，不做形式化 |
+| **Raw LKM Search Task** | `lkm-search` 直接调用 | 只需要原始搜索 / 推理输出，不做形式化 |
 | **Evidence Graph Only** | `evidence-subgraph` | 只需要证据子图，不需要 Gaia DSL |
 | **Scholarly Synthesis** | `scholarly-synthesis` | 学术综述生成（用户显式请求时） |
 | **Visualization** | upstream `gaia run render` | 包可视化（无 project-local skill） |
@@ -273,9 +270,6 @@ A: 入参校验失败 —— 例如 `reasoning_only=true` 与非 `["claim"]` 的
 **Q: 返回的 `score` 可以直接用作 Gaia prior 吗？**
 A: **不可以**。`score` 是检索排序信号，不是科学置信度。Gaia prior 由 claim 性质 + 证据强度判断，或通过 BP 计算（参考 upstream `docs/for-users/hole-bridge-tutorial.md`）。
 
-**Q: 需要论文全文 markdown？**
-A: 使用 `$lkm-search-internal` 的 `POST /papers/content/batch`（需在内部白名单内）。该端点在 `$lkm-search` 中不暴露。
-
 ---
 
 ## 3. LKM → Gaia 形式化 workflow
@@ -399,17 +393,18 @@ gaia inquiry review --strict .
 
 ### Q1: LKM 返回结果不完整
 
-**症状**：`/claims/{id}/evidence` 返回的 `total_chains` 很少，或 `factors[]` 为空。
+**症状**：`/claims/{id}/reasoning` 返回 `total_chains = 0`、`reasoning_chains[]` 为空，或业务码为 `290008`。
 
 **可能原因**：
-1. Claim 是新 claim（LKM 中没有证据链）
+1. Claim 是新 claim，或当前还没有推理链
 2. LKM 数据库尚未索引该论文
 3. `max_chains` 参数太小
 
 **解决方案**：
-1. 检查 `data.new_claim_likely` 字段
-2. 增加 `max_chains` 参数（如 `max_chains=50`）
-3. 如果确实是新 claim，考虑用 Paper → Gaia 流程（`$formalize`）
+1. 在 `/search` 结果中优先选择 `has_reasoning=true` 的 claim
+2. 调用 `lkm_search.py reasoning --id <claim_id> --max-chains 50` 复查
+3. 如果仍无推理链，冷启动时不要把它作为 root；冷启动后可按 `$lkm-explorer` 规则作为 no-chain leaf/source claim 处理
+4. 如果目标论文尚未进入 LKM，考虑用 Paper → Gaia 流程（`$formalize`）
 
 ### Q2: 包 Cleanness 纪律
 
@@ -460,7 +455,6 @@ gaia inquiry review --strict .
 |-------|----------|----------------|
 | orchestrator | `skills/orchestrator/SKILL.md` | `lkm-explorer-sop.md` / `audited-delegation.md` |
 | lkm-search | `skills/lkm-search/SKILL.md` | `api-contract.md` |
-| lkm-search-internal | `skills/lkm-search-internal/SKILL.md` | `api-contract.md` |
 | lkm-explorer | `skills/lkm-explorer/SKILL.md` | 5 个 step + `mapping-contract.md` + `package-skeleton.md` |
 | formalize | `skills/formalize/SKILL.md` | 4 个 phase |
 | evidence-subgraph | `skills/evidence-subgraph/SKILL.md` | — |
@@ -477,13 +471,13 @@ gaia inquiry review --strict .
 
 | 术语 | 英文 | 说明 |
 |------|------|------|
-| 大知识模型 | Large Knowledge Model (LKM) | Bohrium 的知识检索 / 证据链服务 |
-| 证据链 | Evidence Chain | LKM 中的推导路径 |
+| 大知识模型 | Large Knowledge Model (LKM) | Bohrium 的知识检索 / 推理链服务 |
+| 推理链 | Reasoning Chain | LKM 中的推导路径；旧文档中有时称 evidence chain |
 | 因子 | Factor | 推导关系的基本单元（LKM `gfac_*`） |
 | 冷启动 | Cold Start | 第一次构建 Gaia 包；需要选择 chain-backed root claim |
 | Frontier | Frontier | LKM-explorer 中正在扩展的 claim 集合（后续展开的起点） |
-| Support channel | Support Channel | 每个 frontier claim 至少 2 distinct match queries 找 support |
-| Open-question / conflict channel | — | 每个 frontier claim 至少 5 distinct match queries 找矛盾 / 开放问题 |
+| Support channel | Support Channel | 每个 frontier claim 至少 2 distinct search queries 找 support |
+| Open-question / conflict channel | — | 每个 frontier claim 至少 5 distinct search queries 找矛盾 / 开放问题 |
 | chain-backed | — | LKM `total_chains > 0` 的 claim；冷启动 root 必须 chain-backed |
 | no-chain source claim | — | `total_chains = 0` 的 LKM source claim；冷启动后可以作为 leaf 进入 |
 

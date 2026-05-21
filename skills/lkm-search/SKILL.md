@@ -18,7 +18,6 @@ Preserve raw responses verbatim — every field (claim ids, source packages, fac
 | Find papers that use a similar reasoning pattern | `POST /reasoning/search` |
 | Batch-fetch full variable details (metadata, multi-source references) | `POST /variables/batch` |
 | Inspect a single paper's complete knowledge graph | `POST /papers/graph` |
-| Get paper full-text markdown | Use `$lkm-search-internal` instead |
 
 ## Base URL
 
