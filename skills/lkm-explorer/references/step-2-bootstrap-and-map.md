@@ -19,8 +19,8 @@ For each chain-backed root claim, load the LKM evidence payload. Write:
   when needed to preserve a factor-derived `derive(...)`,
 - one `derive(conclusion, given=[premises], rationale="<numbered LKM steps>",
   label="<gfac_id>")` for every `gfac_*` factor (the engine `derive(...)`
-  has no `metadata=` / `warrant_prior` kwarg; warrant-strength intent
-  lives in the `rationale=` prose).
+  has no `metadata=` kwarg; warrant-strength intent lives in the
+  `rationale=` prose).
 
 When `factors[].steps[]` contains usable `reasoning`, the deduction rationale
 is the full LKM evidence formatted as a numbered markdown list, preserving
@@ -89,10 +89,9 @@ Connect decomposed claims through `mapping-contract.md` §4:
 - Accepted scientific contradiction -> emit direct `contradict(A, B)` with
   an `xx_vs_yy` label and the associated `open_problem:` rationale.
   Warrant-strength intent (clear vs. less crisp) lives in the rationale
-  prose; the engine `contradict(...)` has no `metadata=` /
-  `warrant_prior` kwarg.
+  prose; the engine `contradict(...)` has no `metadata=` kwarg.
 - Same proposition -> `equal(A, B, rationale="...", label="...")`. The
-  engine `equal(...)` likewise has no `metadata=` / `warrant_prior` kwarg.
+  engine `equal(...)` likewise has no `metadata=` kwarg.
 - Useful but not-yet-promoted tension -> no Gaia operator; register an inquiry
   hypothesis instead (see Step 4).
 

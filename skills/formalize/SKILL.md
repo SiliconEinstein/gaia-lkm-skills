@@ -189,6 +189,9 @@ read-only pointer targets; do not duplicate locally):
   `references.json` (CSL-JSON) conventions.
 - `docs/for-users/cli-commands.md` — full CLI reference (`gaia build compile`
   / `build check` / `run infer` / `run render`).
+- `docs/reference/cli/author.md` — the agent-first authoring CLI surface
+  (`gaia author <verb>`, `gaia pkg scaffold`); authoritative for the
+  `--label` / `--target` / `--file` flags Phase 4 emits against.
 - `docs/for-users/hole-bridge-tutorial.md` — prior calibration tutorial.
 
 For runtime help, prefer `gaia <group> <cmd> --help`.

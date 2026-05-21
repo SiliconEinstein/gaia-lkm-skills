@@ -157,14 +157,15 @@ upstream Mendel/Galileo walkthroughs.
 
    ```bash
    gaia author question "<motivation prose>" \
-       --dsl-binding-name <key>_problem \
+       --label <key>_problem \
        --target <name>-gaia
    ```
 
-   `gaia author question` has no `--label` flag because the underlying
-   `question(...)` constructor does not accept an engine `label=` kwarg;
-   `--dsl-binding-name` is the only label-like flag the verb exposes and
-   sets the Python LHS binding. Aligns `$formalize` with pipeline B
+   `--label` is the single identifier flag on every statement-emitting
+   `gaia author` verb (`question` included); it sets the Python LHS
+   binding name. The `question(...)` constructor itself has no engine
+   `label=` kwarg — `gaia build compile` auto-assigns the node label from
+   the Python variable name. Aligns `$formalize` with pipeline B
    (XML→LKM), where `<problem>` from `select_conclusion.xml` becomes a
    `LocalVariableNode(type="question")`.
 
@@ -173,16 +174,15 @@ upstream Mendel/Galileo walkthroughs.
 
    ```bash
    gaia author claim "<self-contained conclusion body>" \
-       --dsl-binding-name <key>_c<id>_<suffix> \
        --label <key>_c<id>_<suffix> \
        --target <name>-gaia
    ```
 
-   The CLI requires `--dsl-binding-name` whenever `--label` is set, so
-   pair them with the same identifier: `--dsl-binding-name` mints the
-   Python LHS the rest of the package references by name; `--label` sets
-   the engine `Claim.label` used by `[@label]` prose references and by
-   `gaia inquiry review`.
+   `--label` is the single identifier flag: it mints the Python LHS
+   binding the rest of the package references by name, and
+   `gaia build compile` auto-assigns the engine `Claim.label` (used by
+   `[@label]` prose references and by `gaia inquiry review`) from that
+   same name.
 
    Phase 3's per-conclusion synthesis posterior is consumed as the
    conclusion's leaf prior in Step 4b only when the conclusion is isolated
@@ -197,7 +197,6 @@ upstream Mendel/Galileo walkthroughs.
 
    ```bash
    gaia author claim "<self-contained weak-point body>" \
-       --dsl-binding-name <key>_c<id>_wp_<suffix> \
        --label <key>_c<id>_wp_<suffix> \
        --target <name>-gaia
    ```
@@ -234,7 +233,7 @@ upstream Mendel/Galileo walkthroughs.
 
 5. **Open questions section (optional, opt-in)** — only when the user asks,
    emit `gaia author question` calls into `__init__.py` with binding names
-   `<key>_open_question_<n>` (via `--dsl-binding-name`). Pipeline B does
+   `<key>_open_question_<n>` (via `--label`). Pipeline B does
    not extract open questions; this is a `$formalize` extension.
 
 The string body of every `claim(...)` / `question(...)` is the
@@ -243,7 +242,7 @@ The Phase 1 self-containment discipline and the Phase 3 body-writing rule
 already satisfy what the legacy step-4 prompt enforced; this phase only
 relabels and emits.
 
-Warrant-strength intent (formerly the `warrant_prior` numerical
+Warrant-strength intent (formerly carried as a numerical warrant
 calibration) is encoded in `--rationale` prose: when Phase 2 surfaced an
 explicit logical gap, say so; when Phase 3 surfaced a highlight that
 specifically underwrites a step in this chain, say so. The reviewer's

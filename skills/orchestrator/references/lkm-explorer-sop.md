@@ -165,8 +165,8 @@ derive(target_claim, given=[u1, u2],
 ```
 
 The engine `derive(...)` signature accepts only `{given, background,
-rationale, label}` — there is no `metadata=` / `warrant_prior` kwarg, so
-warrant-strength intent lives in the `rationale=` prose.
+rationale, label}` — there is no `metadata=` kwarg, so warrant-strength
+intent lives in the `rationale=` prose.
 
 Allow multiple accepted support candidates into the same iteration when they
 satisfy the mapping contract. If no candidate satisfies the standard,
@@ -210,8 +210,8 @@ standard and use direct Gaia DSL:
 ```
 
 The engine `contradict(...)` signature accepts only
-`{background, rationale, label}` — no `metadata=` / `warrant_prior` /
-`prior=` kwarg. Warrant-strength intent ("clear" vs. "less crisp") lives
+`{background, rationale, label}` — no `metadata=` / `prior=` kwarg.
+Warrant-strength intent ("clear" vs. "less crisp") lives
 in the `rationale=` prose alongside the `open_problem:` clause.
 
 If no candidate satisfies the hypothesis or contradiction standards,

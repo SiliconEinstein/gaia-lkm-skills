@@ -157,6 +157,9 @@ read-only pointer targets; do not duplicate locally):
   label discipline, module placement.
 - `docs/for-users/cli-commands.md` — full CLI reference
   (`gaia build compile` / `build check` / `run infer` / `run render` / etc.).
+- `docs/reference/cli/author.md` — the agent-first authoring CLI surface
+  (`gaia author <verb>`, `gaia pkg scaffold`); authoritative for the
+  `--label` / `--target` / `--file` flags Step 5 emits against.
 - `docs/for-users/hole-bridge-tutorial.md` — prior calibration tutorial.
 
 For runtime help, prefer `gaia <group> <cmd> --help`.

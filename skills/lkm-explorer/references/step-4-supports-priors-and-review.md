@@ -30,8 +30,9 @@ derive(P, given=[U_1, U_2], rationale="<joint support rationale>",
 `derive(P, given=[a], rationale=...)` means `a` supports `P`. The engine
 `derive(...)` signature accepts only `{given, background, rationale, label}` —
 warrant-strength intent (strong / moderate / weak / lateral) lives in the
-`rationale=` prose, not in a `metadata=` / `warrant_prior` kwarg (the CLI
-flag exists but the post-write `gaia build check` rejects).
+`rationale=` prose, not in a `metadata=` kwarg (the CLI exposes `--metadata`
+but `derive` has no `metadata=` kwarg, so the post-write `gaia build check`
+rejects).
 
 Minimum support-channel effort per frontier claim:
 
@@ -84,13 +85,21 @@ Rules:
 ## Leaf Priors
 
 After source emission, the caller quality gate runs `gaia build check --hole .`.
-Claims reported as leaves get entries in `priors.py`:
+Each claim reported as a leaf gets a `register_prior(...)` record in
+`priors.py`, emitted in Step 5 via `gaia author register-prior --file
+priors.py` (one invocation per leaf):
 
 ```python
-PRIORS = {
-    <label>: (<float>, "<heuristic tag + LKM context + TODO:review>"),
-}
+register_prior(
+    <label>,
+    <float>,
+    justification="<heuristic tag + LKM context + TODO:review>",
+)
 ```
+
+Do **not** write a legacy `PRIORS = {...}` dict — v0.5 `gaia build compile`
+rejects it with a migration error because the dict form carries no
+per-source provenance. `register_prior(...)` is the only v0.5 prior surface.
 
 The float is a direct judgment of correctness, not LKM match score. Cap source
 claim priors at 0.90. Do not lower a prior solely because the claim has
@@ -98,9 +107,9 @@ claim priors at 0.90. Do not lower a prior solely because the claim has
 and scientific plausibility.
 
 Accepted `contradict(...)` operators from Step 3 carry their warrant-strength
-intent in the `rationale=` prose (the engine has no `metadata=` /
-`warrant_prior` kwarg on `contradict`); that intent is not a leaf-claim
-prior and is not mirrored into `priors.py`.
+intent in the `rationale=` prose (the engine has no `metadata=` kwarg on
+`contradict`); that intent is not a leaf-claim prior and is not mirrored
+into `priors.py`.
 
 ## Inquiry Obligations
 

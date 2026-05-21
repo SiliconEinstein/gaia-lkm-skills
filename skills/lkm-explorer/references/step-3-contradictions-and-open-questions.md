@@ -91,8 +91,8 @@ For each final-scan `accepted_contradiction`, emit direct
 ```
 
 The engine `contradict(...)` signature accepts only
-`{background, rationale, label}` — no `metadata=` / `warrant_prior` /
-`prior=` kwarg. Warrant-strength intent lives in the `rationale=` prose
+`{background, rationale, label}` — no `metadata=` / `prior=` kwarg.
+Warrant-strength intent lives in the `rationale=` prose
 alongside the `open_problem:` clause.
 
 The `rationale` field must include `open_problem:`. If no specific open

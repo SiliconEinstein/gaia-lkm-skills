@@ -102,8 +102,8 @@ These flagged steps inform the deduction warrant intent Phase 4 writes
 into the `--rationale` prose; persistent gaps surface as explicit "the
 authors assert without derivation" / "the argument relies on a heuristic"
 sentences in the rationale (the engine `derive(...)` signature has no
-`metadata=` / `warrant_prior` kwarg, so the calibration cannot live as
-a number on the deduction itself).
+`metadata=` kwarg, so the calibration cannot live as a number on the
+deduction itself).
 
 ### 5. No paper-internal pointers in step prose
 

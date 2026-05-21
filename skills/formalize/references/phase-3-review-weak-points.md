@@ -365,9 +365,9 @@ synthesis for that conclusion:
   leaf in that case; (2) for derived conclusions it informs the qualitative
   warrant-strength prose Phase 4 writes into the `derive(...)` `--rationale`
   (alongside per-highlight and per-gap commentary — see Phase 4 Step 4a).
-  The engine `derive(...)` signature has no `metadata=` / `warrant_prior`
-  kwarg, so warrant-strength intent does not live as a number on the
-  deduction itself; numerical priors live only on leaf claims via
+  The engine `derive(...)` signature has no `metadata=` kwarg, so
+  warrant-strength intent does not live as a number on the deduction
+  itself; numerical priors live only on leaf claims via
   `register_prior`. Calibration:
   - A conclusion with several high-`p2` weak points cannot have a high
     prior, even with highlights.

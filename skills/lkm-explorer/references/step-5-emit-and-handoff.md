@@ -38,7 +38,7 @@ The legacy `support([U], target, reason=..., prior=...)` strategy is
 replaced by `derive(target, given=[U], rationale=...)` per the migration
 table at `docs/for-users/language-reference.md` "Notable migration rows".
 The engine `derive(...)` signature accepts only `{given, background,
-rationale, label}` — there is no `metadata=` / `warrant_prior` kwarg on
+rationale, label}` — there is no `metadata=` kwarg on
 `derive` / `equal` / `contradict` / `exclusive` / `observe`. The CLI
 exposes `--metadata` on these verbs but the post-write `gaia build check`
 rejects, so warrant-strength intent (legacy `prior=` on the strategy)
@@ -115,7 +115,7 @@ Source claim with LKM provenance (no-chain) — `--metadata` is valid on
 
 ```bash
 gaia author claim "<self-contained claim body>" \
-    --dsl-binding-name <key>_<suffix> \
+    --label <key>_<suffix> \
     --target <name>-gaia \
     --metadata '{"provenance_source": "lkm_no_chain", "lkm_id": "<lkm_id>"}'
 ```

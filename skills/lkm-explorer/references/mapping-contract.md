@@ -63,9 +63,9 @@ derive(target, given=[U_1, U_2], rationale="<joint support rationale>",
 
 `derive(target, given=[a], rationale=...)` is directional: `a` supports
 `target`. In Gaia v0.5 the engine `derive(...)` signature accepts only
-`{given, background, rationale, label}` — there is no `metadata=` /
-`warrant_prior` kwarg. Warrant-strength intent (legacy strong/moderate/weak
-bands) lives in the `rationale=` prose so the reviewer's intent is
+`{given, background, rationale, label}` — there is no `metadata=` kwarg.
+Warrant-strength intent (legacy strong/moderate/weak bands) lives in the
+`rationale=` prose so the reviewer's intent is
 preserved in the source without breaking `gaia build check`.
 
 Search effort for each frontier target:
@@ -166,8 +166,8 @@ without opening metadata:
 ```
 
 The engine `contradict(...)` signature accepts only
-`{background, rationale, label}` — no `metadata=` / `warrant_prior` /
-`prior=` kwarg. Warrant-strength intent (legacy "clear / less crisp"
+`{background, rationale, label}` — no `metadata=` / `prior=` kwarg.
+Warrant-strength intent (legacy "clear / less crisp"
 bands) lives in the `rationale=` prose alongside the `open_problem:`
 clause.
 
