@@ -1,7 +1,7 @@
 ---
 title: Gaia LKM 使用指南（LKM-side 配套）
 created: 2026-05-13
-updated: 2026-05-18
+updated: 2026-05-21
 version: gaia-lkm-skills (LKM-side only)
 status: draft
 tags: [gaia, lkm, knowledge-graph]
@@ -34,21 +34,21 @@ tags: [gaia, lkm, knowledge-graph]
 
 按照 upstream `SiliconEinstein/Gaia` 仓库 `docs/for-users/quick-start.md` 的安装指引安装 Gaia 本体，并通过 `gaia --version` / `gaia build compile --help` 验证。
 
-### 0.3 安装 gaia-lkm-skills
+### 0.3 获取 / 注册 gaia-lkm-skills
 
 ```bash
 cd ~/Code
 git clone https://github.com/SiliconEinstein/gaia-lkm-skills.git
 cd gaia-lkm-skills
-
-# 使用 uv
-uv sync
-
-# 或使用 pip
-pip install -r requirements.txt
 ```
 
-**验证安装**：
+本仓库是 runtime-agnostic 的 skill 目录集合。将 `skills/` 注册到你的 agent host（或复制 /
+symlink 到 host 的 skill 目录）即可；仓库根目录没有 repo-level `pyproject.toml` /
+`requirements.txt`，不要用 `uv sync` 或 `pip install -r requirements.txt` 安装本仓库。
+
+LKM CLI helper 是 Python stdlib-only，可以直接运行。
+
+**验证 helper 可用**：
 
 ```bash
 python skills/lkm-search/scripts/lkm_search.py --help
@@ -161,7 +161,7 @@ CLI helper 不接受命令行传 access key（避免落入 shell 历史 / 进程
 | `403 Forbidden` | 无权限访问该资源 | 联系管理员开通权限（如私有论文访问） |
 | `accessKey not found` | 环境变量未设置 | 检查 `echo $LKM_ACCESS_KEY`，重新 export |
 | `Connection refused` | LKM 服务不可达 | 检查网络连接，确认 Base URL 正确 |
-| `Timeout` | 请求超时 | 检查网络，或减少 `top_k` 参数 |
+| `Timeout` | 请求超时 | 检查网络；搜索任务减少 `--top-k`，reasoning 任务减少 `--max-chains`，reasoning-search 减少 `--limit` |
 
 #### 权限级别
 
@@ -184,22 +184,38 @@ CLI helper 不接受命令行传 access key（避免落入 shell 历史 / 进程
 **用途**：根据自然语言 query（可选 keywords）跨 claim / question 节点检索。
 
 ```bash
-POST /search
+python skills/lkm-search/scripts/lkm_search.py search \
+  --query "量子纠缠" \
+  --scopes claim \
+  --retrieval-mode hybrid \
+  --keywords "entanglement" \
+  --reasoning-only \
+  --top-k 20 \
+  --out search.json
+```
+
+对应 HTTP endpoint 是 `POST /search`；helper 当前发送 `query`、`top_k`、
+`scopes`、`retrieval_mode`、`keywords`、`reasoning_only`、`filters` 和 `offset`。
+字段级 contract 见 `skills/lkm-search/references/api-contract.md`，实际运行优先使用
+`skills/lkm-search/SKILL.md` 与 helper 的 `--help`。
+
+```json
 {
   "query": "量子纠缠",
+  "top_k": 20,
   "scopes": ["claim"],
-  "retrieval_mode": "hybrid",       # semantic / lexical / hybrid
-  "keywords": ["entanglement"],     # 仅影响 lexical 通道
-  "reasoning_only": true,           # 只返回有推理链的 claim
+  "retrieval_mode": "hybrid",
+  "keywords": ["entanglement"],
+  "reasoning_only": true,
   "filters": {"visibility": "public"},
-  "offset": 0, "limit": 20
+  "offset": 0
 }
 ```
 
 **返回字段**：
 - `data.variables[]` — 统一节点列表（`id` / `content` / `type` ∈ {claim, question, setting, action} / `score` / `provenance.source_packages`）
 - `data.papers` — 论文元数据（DOI、标题、作者、发表日期等）
-- `data.total` — 未受 limit 截断的全量计数
+- `data.total` — 服务端匹配总数，通常可能大于本页返回的 `variables[]` 数量
 
 **注意**：`score` 是检索引擎的排序信号，**不是** 科学置信度，不要当作 Gaia prior。
 
@@ -399,17 +415,21 @@ gaia inquiry review --strict .
 
 ### Q1: LKM 返回结果不完整
 
-**症状**：`/claims/{id}/evidence` 返回的 `total_chains` 很少，或 `factors[]` 为空。
+**症状**：`/claims/{id}/reasoning` 返回 `code=290008` / `total_chains=0`，或
+`reasoning_chains[]` 很少、链内 `factors` 信息不完整。
 
 **可能原因**：
 1. Claim 是新 claim（LKM 中没有证据链）
 2. LKM 数据库尚未索引该论文
-3. `max_chains` 参数太小
+3. `max_chains` 参数太小，截断了可用推理链
 
 **解决方案**：
-1. 检查 `data.new_claim_likely` 字段
-2. 增加 `max_chains` 参数（如 `max_chains=50`）
-3. 如果确实是新 claim，考虑用 Paper → Gaia 流程（`$formalize`）
+1. 对照 `code` / `msg` / `data.total_chains` 判断是无链、超时还是入参错误。
+2. 对 chain-backed 候选增加 `--max-chains`（如 `--max-chains 50`）并重试。
+3. 如果是 `total_chains=0` 的 post-cold-start source claim，可按 `$lkm-explorer`
+   contract 作为 leaf/source `claim(...)` 进入；不要编造 premises 或 `derive(...)`。
+4. 如果需要论文全文而 LKM reasoning 不足，走 `$lkm-search-internal`；如果论文本身不在
+   LKM corpus，考虑用 Paper → Gaia 流程（`$formalize`）。
 
 ### Q2: 包 Cleanness 纪律
 

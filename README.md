@@ -7,7 +7,7 @@ The repo ships a family of atomic skills plus a thin orchestrator that classifie
 ## Documentation
 
 - **[User Guide](docs/user-guide.md)** -- LKM-side companion guide (installation, authentication, LKM workflows). Assumes the reader already knows Gaia from upstream `SiliconEinstein/Gaia` docs `docs/for-users/`.
-- **[Environment Setup](docs/user-guide.md#0-环境准备)** -- install Gaia, install gaia-lkm-skills, configure LKM accessKey
+- **[Environment Setup](docs/user-guide.md#0-环境准备)** -- install Gaia, clone/register gaia-lkm-skills, configure LKM accessKey
 - **[Agent Usage](docs/user-guide.md#1-agent-使用指南)** -- how AI agents should use this repo
 
 ## Entry point
@@ -19,7 +19,7 @@ The repo ships a family of atomic skills plus a thin orchestrator that classifie
 Atomic skills + one thin orchestrator. Full contracts live in each skill's `SKILL.md`; one-line purpose each:
 
 - **`skills/orchestrator/`** — thin router. Classifies the user request and points to the right atomic skill or SOP. Routing paths: LKM → Gaia package, Paper → Gaia package, raw LKM search task, evidence graph only, scholarly synthesis, visualization (no local skill — use upstream `gaia run render` per `docs/for-users/cli-commands.md`).
-- **`skills/lkm-search/`** — Bohrium LKM public HTTP API: search claims/questions, trace reasoning chains, search by reasoning pattern, batch-fetch variable details with v2 metadata, and retrieve paper knowledge graphs. Workflow-driven skill covering the full external surface (search → reasoning → variables → papers/graph → reasoning/search).
+- **`skills/lkm-search/`** — Bohrium LKM public HTTP API: search claims/questions, trace reasoning chains, search by reasoning pattern, batch-fetch variable details with v2 metadata, and retrieve paper knowledge graphs. Workflow-driven skill covering the full external surface (search → reasoning → variables → papers/graph → reasoning/search). The bundled `lkm_search.py` helper is Python-stdlib-only; no repo-level `pip install` / `uv sync` step is required for it.
 - **`skills/lkm-search-internal/`** — Bohrium LKM internal API: fetch paper full-text markdown and embedded images (`POST /papers/content/batch`). Requires internal whitelist access.
 - **`skills/lkm-explorer/`** — contract-driven LKM exploration → Gaia knowledge package per the upstream Gaia spec. Maps raw LKM search/reasoning/source payloads into Gaia DSL via a five-step contradiction-driven workflow. Two modes: `batch` (fresh package) and `refresh` (extend or repair an existing package in place).
 - **`skills/formalize/`** — paper-driven sibling to `$lkm-explorer`. Reads a single physics paper Markdown and emits a Gaia knowledge package per the upstream Gaia spec via a four-phase analytical workflow (extract conclusions → reconstruct reasoning chain → audit weak points → emit DSL). Phase 1b cross-grounds the paper against LKM's existing graph via `$lkm-search`'s `/search` reverse trace (best-effort; skips silently when the paper isn't in the corpus).
@@ -49,7 +49,7 @@ For runtime help, prefer `gaia <group> <cmd> --help`; the upstream CLI is self-d
 1. Clone the repo.
 2. Read `skills/orchestrator/SKILL.md` first; follow its `$lkm-search`, `$lkm-search-internal`, `$lkm-explorer`, `$formalize`, `$evidence-subgraph`, `$scholarly-synthesis` references on demand. For Gaia DSL syntax, CLI command reference, and package layout, follow upstream `SiliconEinstein/Gaia` docs `docs/for-users/`.
 3. Each `skills/<name>/SKILL.md` is the contract for that skill. Per-skill `references/` directories carry on-demand supporting material (SOPs, palettes, templates).
-4. Skills are plain Markdown directories -- runtime-agnostic. Any host that supports a "skill" or "rule" surface can register them by pointing at `skills/`.
+4. Skills are plain Markdown directories -- runtime-agnostic. Any host that supports a "skill" or "rule" surface can register them by pointing at `skills/`; the LKM HTTP helpers under `skills/*/scripts/` run directly with Python.
 
 ## Design boundary
 
