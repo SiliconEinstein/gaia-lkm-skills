@@ -113,7 +113,7 @@ orchestrator 根据用户请求路由到下列 skill / SOP 之一：
 |------|-------|---------|
 | **LKM → Gaia Package** | `lkm-search` + `lkm-explorer` | 从 LKM 检索结果构建 Gaia 包 |
 | **Paper → Gaia Package** | `formalize` | 从单篇论文 Markdown 构建 Gaia 包 |
-| **Raw LKM Search Task** | `lkm-search` 直接调用（需要论文全文 markdown 时配合 `lkm-search-internal`） | 只需要原始搜索 / 推理输出，不做形式化 |
+| **Raw LKM Search Task** | `lkm-search` 直接调用 | 只需要原始搜索 / 推理输出，不做形式化 |
 | **Evidence Graph Only** | `evidence-subgraph` | 只需要证据子图，不需要 Gaia DSL |
 | **Scholarly Synthesis** | `scholarly-synthesis` | 学术综述生成（用户显式请求时） |
 | **Visualization** | upstream `gaia run render` | 包可视化（无 project-local skill） |
@@ -269,9 +269,6 @@ A: 入参校验失败 —— 例如 `reasoning_only=true` 与非 `["claim"]` 的
 
 **Q: 返回的 `score` 可以直接用作 Gaia prior 吗？**
 A: **不可以**。`score` 是检索排序信号，不是科学置信度。Gaia prior 由 claim 性质 + 证据强度判断，或通过 BP 计算（参考 upstream `docs/for-users/hole-bridge-tutorial.md`）。
-
-**Q: 需要论文全文 markdown？**
-A: 使用 `$lkm-search-internal` 的 `POST /papers/content/batch`（需在内部白名单内）。该端点在 `$lkm-search` 中不暴露。
 
 ---
 
@@ -458,7 +455,6 @@ gaia inquiry review --strict .
 |-------|----------|----------------|
 | orchestrator | `skills/orchestrator/SKILL.md` | `lkm-explorer-sop.md` / `audited-delegation.md` |
 | lkm-search | `skills/lkm-search/SKILL.md` | `api-contract.md` |
-| lkm-search-internal | `skills/lkm-search-internal/SKILL.md` | `api-contract.md` |
 | lkm-explorer | `skills/lkm-explorer/SKILL.md` | 5 个 step + `mapping-contract.md` + `package-skeleton.md` |
 | formalize | `skills/formalize/SKILL.md` | 4 个 phase |
 | evidence-subgraph | `skills/evidence-subgraph/SKILL.md` | — |

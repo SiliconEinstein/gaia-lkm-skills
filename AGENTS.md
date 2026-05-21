@@ -46,7 +46,6 @@ The `description` is what an agent reads to decide whether to *open* the skill b
 Each atomic skill does **one thing** and exposes a clean contract:
 
 - **`$lkm-search`** — HTTP I/O against the LKM public API (search / reasoning / reasoning-search / variables / papers-graph). No graph logic, no DSL emission.
-- **`$lkm-search-internal`** — HTTP I/O against the LKM internal API (paper full-text markdown via `POST /papers/content/batch`). Whitelisted users only.
 - **`$lkm-explorer`** — contract-driven LKM exploration → Gaia knowledge package per the upstream Gaia spec. LKM evidence → Gaia DSL via a five-step contradiction-driven workflow. No HTTP, no rendering.
 - **`$formalize`** — paper-driven sibling to `$lkm-explorer`. Reads a single paper Markdown and emits a Gaia knowledge package per the upstream Gaia spec via a four-phase analytical workflow.
 - **`$evidence-subgraph`** — graph build / audit / render only. Consumes `$lkm-search` JSON. Independent optional branch — not an upstream dependency of `$lkm-explorer`.
